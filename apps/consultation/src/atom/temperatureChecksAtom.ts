@@ -7,8 +7,10 @@ import type { TransactionStatus } from "@radixdlt/radix-dapp-toolkit";
 import { Array as A, Data, Effect, Layer, Option, pipe, Ref } from "effect";
 import { StokenetGatewayApiClientLayer } from "shared/gateway";
 import { Config, GovernanceComponent } from "shared/governance/index";
+import type { MakeTemperatureCheckInput } from "shared/governance/schemas";
 import { parseSbor } from "shared/helpers/parseSbor";
 import { TemperatureCheckCreatedEvent } from "shared/schemas";
+import { getCurrentAccount } from "@/lib/selectedAccount";
 import { makeAtomRuntime } from "@/atom/makeRuntimeAtom";
 import { RadixDappToolkit } from "@/lib/dappToolkit";
 import { withToast } from "./withToast";
@@ -65,14 +67,7 @@ export class NoAccountConnectedError extends Data.TaggedError(
 	message: string;
 }> {}
 
-type MakeTemperatureCheckFormInput = {
-	title: string;
-	shortDescription: string;
-	description: string;
-	links: string[];
-	voteOptions: string[];
-	maxSelections: number;
-};
+type MakeTemperatureCheckFormInput = Omit<MakeTemperatureCheckInput, "authorAccount">;
 
 export const makeTemperatureCheckAtom = runtime.fn(
 	Effect.fn(
@@ -82,38 +77,20 @@ export const makeTemperatureCheckAtom = runtime.fn(
 			const rdt = yield* Ref.get(rdtRef);
 			const gatewayApiClient = yield* GatewayApiClient;
 
-			// TODO: Replace with global current account state instead of getting from walletData each time
-			const walletData = rdt.walletApi.getWalletData();
-			const currentAccount = walletData?.accounts[0];
+			const currentAccountOption = yield* getCurrentAccount;
 
-			if (!currentAccount) {
+			if (Option.isNone(currentAccountOption)) {
 				return yield* new NoAccountConnectedError({
 					message: "Please connect your wallet first",
 				});
 			}
 
+			const currentAccount = currentAccountOption.value;
 			const authorAccount = AccountAddress.make(currentAccount.address);
 
-			// Filter valid links (keep as strings, schema will validate)
-			const validLinks: string[] = [];
-			for (const link of input.links) {
-				if (link.trim()) {
-					try {
-						new URL(link); // Validate it's a valid URL
-						validLinks.push(link);
-					} catch {
-						yield* Effect.logWarning(`Skipping invalid URL: ${link}`);
-					}
-				}
-			}
-
 			const manifest = yield* governanceComponent.makeTemperatureCheckManifest({
-				title: input.title,
-				shortDescription: input.shortDescription,
-				description: input.description,
-				links: validLinks,
-				voteOptions: input.voteOptions,
-				maxSelections: input.maxSelections,
+				...input,
+				links: input.links.filter((link) => link.trim() !== ""),
 				authorAccount,
 			});
 

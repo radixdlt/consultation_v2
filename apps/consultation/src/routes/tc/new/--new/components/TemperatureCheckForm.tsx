@@ -1,8 +1,7 @@
 import { Result, useAtom } from "@effect-atom/atom-react";
 import { useStore } from "@tanstack/react-form";
-import { ParseResult, Schema } from "effect";
-import { FileTextIcon, LoaderIcon, PlusIcon, Trash2Icon, UploadIcon } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { LoaderIcon } from "lucide-react";
+import { useEffect, useId, useRef } from "react";
 import { makeTemperatureCheckAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,12 +24,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppForm } from "../formHook";
 import { temperatureCheckFormOpts } from "../formOptions";
 import {
-	DescriptionSchema,
-	LinkSchema,
+	effectSchemaValidator,
+	RadixTalkUrlSchema,
 	ShortDescriptionSchema,
 	TemperatureCheckFormSchema,
 	TitleSchema,
 } from "../schema";
+import { LinksField } from "./LinksField";
+import { MarkdownUploadField } from "./MarkdownUploadField";
 import { MaxSelectionsField } from "./MaxSelectionsField";
 import { VoteOptionsField } from "./VoteOptionsField";
 
@@ -39,30 +40,14 @@ type TemperatureCheckFormProps = {
 	onSuccess?: (result: unknown) => void;
 };
 
-function effectSchemaValidator<T, I>(schema: Schema.Schema<T, I>) {
-	return ({ value }: { value: unknown }) => {
-		const result = Schema.decodeUnknownEither(schema)(value);
-		if (result._tag === "Left") {
-			const errors = ParseResult.ArrayFormatter.formatErrorSync(result.left);
-			return errors;
-		}
-		return undefined;
-	};
-}
-
 export function TemperatureCheckForm({
 	maxVoteOptions = 10,
 	onSuccess,
 }: TemperatureCheckFormProps) {
 	const [makeResult, makeTemperatureCheck] = useAtom(makeTemperatureCheckAtom);
-	const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
-	const [linkIds, setLinkIds] = useState<string[]>(() => [crypto.randomUUID()]);
-	const fileInputRef = useRef<HTMLInputElement>(null);
 	const formId = useId();
 	const titleId = `${formId}-title`;
 	const shortDescriptionId = `${formId}-shortDescription`;
-	const descriptionId = `${formId}-description`;
-	const descriptionFileId = `${formId}-description-file`;
 
 	const form = useAppForm({
 		...temperatureCheckFormOpts,
@@ -70,12 +55,19 @@ export function TemperatureCheckForm({
 			onSubmit: effectSchemaValidator(TemperatureCheckFormSchema),
 		},
 		onSubmit: ({ value }) => {
+			// Combine radixTalkUrl with additional links
+			const allLinks = [
+				value.radixTalkUrl,
+				...value.links.filter((link) => link.trim() !== ""),
+			];
+			// Transform vote options from {id, label} to just labels
+			const voteOptionLabels = value.voteOptions.map((option) => option.label);
 			makeTemperatureCheck({
 				title: value.title,
 				shortDescription: value.shortDescription,
 				description: value.description,
-				links: value.links.filter((link) => link.trim() !== ""),
-				voteOptions: value.voteOptions,
+				links: allLinks,
+				voteOptions: voteOptionLabels,
 				maxSelections: value.maxSelections,
 			});
 		},
@@ -89,7 +81,6 @@ export function TemperatureCheckForm({
 		form.store,
 		(state) => state.values.maxSelections,
 	);
-	const links = useStore(form.store, (state) => state.values.links);
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
 
 	// Auto-adjust maxSelections if it exceeds option count (useEffect prevents render-during-render)
@@ -113,30 +104,6 @@ export function TemperatureCheckForm({
 			})
 			.orNull();
 	}, [makeResult, onSuccess]);
-
-	const handleFileUpload = useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>) => {
-			const file = event.target.files?.[0];
-			if (!file) return;
-
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				const content = e.target?.result as string;
-				form.setFieldValue("description", content);
-				setUploadedFileName(file.name);
-			};
-			reader.readAsText(file);
-		},
-		[form],
-	);
-
-	const handleRemoveFile = useCallback(() => {
-		form.setFieldValue("description", "");
-		setUploadedFileName(null);
-		if (fileInputRef.current) {
-			fileInputRef.current.value = "";
-		}
-	}, [form]);
 
 	return (
 		<Card className="w-full max-w-2xl">
@@ -221,10 +188,16 @@ export function TemperatureCheckForm({
 						</form.Field>
 
 						{/* Description (Markdown File Upload) */}
+						<MarkdownUploadField form={form} />
+
+						<Separator />
+
+						{/* RadixTalk URL */}
 						<form.Field
-							name="description"
+							name="radixTalkUrl"
 							validators={{
-								onBlur: effectSchemaValidator(DescriptionSchema),
+								onBlur: effectSchemaValidator(RadixTalkUrlSchema),
+								onChange: effectSchemaValidator(RadixTalkUrlSchema),
 							}}
 						>
 							{(field) => {
@@ -232,52 +205,22 @@ export function TemperatureCheckForm({
 									field.state.meta.isTouched && !field.state.meta.isValid;
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor={descriptionId}>
-											Full Description (Markdown)
+										<FieldLabel htmlFor={`${formId}-radixTalkUrl`}>
+											RadixTalk URL *
 										</FieldLabel>
 										<FieldDescription>
-											Upload a markdown (.md) file with the full description, or
-											type/paste directly.
+											Link to the RFC discussion on RadixTalk.
 										</FieldDescription>
-
-										<div className="flex flex-col gap-2">
-											<input
-												ref={fileInputRef}
-												type="file"
-												accept=".md,.txt,.markdown"
-												onChange={handleFileUpload}
-												className="hidden"
-												id={descriptionFileId}
-											/>
-
-											{uploadedFileName ? (
-												<div className="flex items-center gap-2 rounded-md border border-input bg-muted/50 px-3 py-2">
-													<FileTextIcon className="size-4 text-muted-foreground" />
-													<span className="flex-1 text-sm">{uploadedFileName}</span>
-													<Button
-														type="button"
-														variant="ghost"
-														size="icon"
-														className="size-6"
-														onClick={handleRemoveFile}
-													>
-														<Trash2Icon className="size-3" />
-													</Button>
-												</div>
-											) : (
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													onClick={() => fileInputRef.current?.click()}
-													className="w-fit"
-												>
-													<UploadIcon className="size-4" />
-													Upload Markdown File
-												</Button>
-											)}
-										</div>
-
+										<Input
+											id={`${formId}-radixTalkUrl`}
+											name={field.name}
+											type="url"
+											value={field.state.value}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+											aria-invalid={isInvalid}
+											placeholder="https://radixtalk.com/..."
+										/>
 										{isInvalid && (
 											<FieldError errors={field.state.meta.errors} />
 										)}
@@ -286,95 +229,8 @@ export function TemperatureCheckForm({
 							}}
 						</form.Field>
 
-						<Separator />
-
-						{/* Links */}
-						<FieldGroup>
-							<FieldLabel>Links</FieldLabel>
-							<FieldDescription>
-								Add relevant links (discussion threads, documentation, etc.)
-							</FieldDescription>
-
-							<div className="flex flex-col gap-2">
-								{links.map((_, index) => (
-									<form.Field
-										key={linkIds[index] ?? `link-fallback-${index}`}
-										name={`links[${index}]`}
-										validators={{
-											onBlur: effectSchemaValidator(LinkSchema),
-											onChange: effectSchemaValidator(LinkSchema),
-										}}
-									>
-										{(linkField) => {
-											const isLinkInvalid =
-												linkField.state.meta.isTouched &&
-												!linkField.state.meta.isValid;
-											const linkInputId = `${formId}-link-${linkIds[index] ?? index}`;
-
-											return (
-												<Field data-invalid={isLinkInvalid}>
-													<div className="flex gap-2">
-														<Input
-															id={linkInputId}
-															name={linkField.name}
-															type="url"
-															value={linkField.state.value}
-															onBlur={linkField.handleBlur}
-															onChange={(e) =>
-																linkField.handleChange(e.target.value)
-															}
-															aria-invalid={isLinkInvalid}
-															placeholder="https://..."
-															className="flex-1"
-														/>
-														<Button
-															type="button"
-															variant="outline"
-															size="icon"
-															onClick={() => {
-																const newLinks = [...links];
-																newLinks.splice(index, 1);
-																const newLinkIds = [...linkIds];
-																newLinkIds.splice(index, 1);
-																form.setFieldValue(
-																	"links",
-																	newLinks.length > 0 ? newLinks : [""],
-																);
-																setLinkIds(
-																	newLinkIds.length > 0
-																		? newLinkIds
-																		: [crypto.randomUUID()],
-																);
-															}}
-															disabled={links.length <= 1}
-															aria-label={`Remove link ${index + 1}`}
-														>
-															<Trash2Icon className="size-4" />
-														</Button>
-													</div>
-													{isLinkInvalid && (
-														<FieldError errors={linkField.state.meta.errors} />
-													)}
-												</Field>
-											);
-										}}
-									</form.Field>
-								))}
-							</div>
-
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								onClick={() => {
-									form.setFieldValue("links", [...links, ""]);
-									setLinkIds([...linkIds, crypto.randomUUID()]);
-								}}
-							>
-								<PlusIcon className="size-4" />
-								Add Link
-							</Button>
-						</FieldGroup>
+						{/* Additional Links */}
+						<LinksField form={form} />
 
 						<Separator />
 

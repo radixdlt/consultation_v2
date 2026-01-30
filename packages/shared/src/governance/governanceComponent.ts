@@ -170,13 +170,6 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
             .map((url) => `"${url}"`)
             .join(', ')
 
-          const descriptionEscaped = parsedInput.description
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t')
-
           const maxSelectionsManifest =
             parsedInput.maxSelections === 1
               ? 'Enum<0u8>()'
@@ -190,7 +183,7 @@ CALL_METHOD
   Tuple(
     "${parsedInput.title}",
     "${parsedInput.shortDescription}",
-    "${descriptionEscaped}",
+    ${JSON.stringify(parsedInput.description)},
     Array<Tuple>(${voteOptions}),
     Array<String>(${links}),
     ${maxSelectionsManifest}

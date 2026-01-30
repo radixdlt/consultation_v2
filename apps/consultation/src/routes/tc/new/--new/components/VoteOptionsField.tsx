@@ -1,5 +1,4 @@
 import { PlusIcon, Trash2Icon } from "lucide-react";
-import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Field,
@@ -10,7 +9,11 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { withForm } from "../formHook";
-import { temperatureCheckFormOpts } from "../formOptions";
+import {
+	createVoteOption,
+	temperatureCheckFormOpts,
+	type VoteOption,
+} from "../formOptions";
 
 export const VoteOptionsField = withForm({
 	...temperatureCheckFormOpts,
@@ -18,12 +21,6 @@ export const VoteOptionsField = withForm({
 		maxOptions: 10,
 	},
 	render: function Render({ form, maxOptions }) {
-		// Stable IDs for each option to use as React keys
-		const optionIdsRef = useRef<string[]>([
-			crypto.randomUUID(),
-			crypto.randomUUID(),
-		]);
-
 		return (
 			<form.Field
 				name="voteOptions"
@@ -36,23 +33,16 @@ export const VoteOptionsField = withForm({
 				}}
 			>
 				{(field) => {
-					const voteOptions: string[] = field.state.value;
+					const voteOptions: VoteOption[] = field.state.value;
 					const isInvalid =
 						field.state.meta.isTouched && !field.state.meta.isValid;
 
-					// Ensure we have enough IDs
-					while (optionIdsRef.current.length < voteOptions.length) {
-						optionIdsRef.current.push(crypto.randomUUID());
-					}
-
 					const handleRemove = (index: number) => {
-						optionIdsRef.current.splice(index, 1);
 						field.removeValue(index);
 					};
 
 					const handleAdd = () => {
-						optionIdsRef.current.push(crypto.randomUUID());
-						field.pushValue("");
+						field.pushValue(createVoteOption());
 					};
 
 					return (
@@ -64,10 +54,10 @@ export const VoteOptionsField = withForm({
 							</FieldDescription>
 
 							<div className="flex flex-col gap-3">
-								{voteOptions.map((_option, index) => (
-									<div key={optionIdsRef.current[index]} className="flex gap-2">
+								{voteOptions.map((option, index) => (
+									<div key={option.id} className="flex gap-2">
 										<form.Field
-											name={`voteOptions[${index}]`}
+											name={`voteOptions[${index}].label`}
 											validators={{
 												onBlur: ({ value }) =>
 													!value ? { message: "Label is required" } : undefined,
@@ -85,7 +75,7 @@ export const VoteOptionsField = withForm({
 														className="flex-1"
 													>
 														<Input
-															id={`vote-option-${index}`}
+															id={`vote-option-${option.id}`}
 															name={subField.name}
 															value={subField.state.value}
 															onBlur={subField.handleBlur}
