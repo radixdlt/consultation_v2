@@ -5,7 +5,11 @@ import {
   KeyValueStoreDataService,
   StateEntityDetails
 } from '@radix-effects/gateway'
-import { StateVersion, TransactionManifestString } from '@radix-effects/shared'
+import {
+  AccountAddress,
+  StateVersion,
+  TransactionManifestString
+} from '@radix-effects/shared'
 import { Array as A, Data, Effect, Option, pipe, Schema } from 'effect'
 import { parseSbor } from '../helpers/parseSbor'
 import {
@@ -21,6 +25,8 @@ import { Config } from './config'
 import {
   type MakeTemperatureCheckInput,
   MakeTemperatureCheckInputSchema,
+  MakeTemperatureCheckVoteInput,
+  MakeTemperatureCheckVoteInputSchema,
   TemperatureCheckSchema,
   TemperatureCheckVoteSchema
 } from './schemas'
@@ -267,11 +273,43 @@ CALL_METHOD
           `)
         })
 
+      const makeTemperatureCheckVoteManifest = (
+        input: MakeTemperatureCheckVoteInput
+      ) =>
+        Effect.gen(function* () {
+          const parsedInput = yield* Schema.decodeUnknown(
+            MakeTemperatureCheckVoteInputSchema
+          )(input)
+
+          return TransactionManifestString.make(`
+            CALL_METHOD
+              Address("${parsedInput.accountAddress}")
+              "lock_fee"
+              Decimal("10")
+            ;
+    
+            CALL_METHOD
+              Address("${config.componentAddress}")
+              "vote_on_temperature_check"
+              Address("${parsedInput.accountAddress}") # account to vote with
+              0u64
+              Enum<${parsedInput.vote === 'For' ? 0 : 1}u8>() # for or against temp check, this is "for", Enum<1u8>() would be "against"
+            ;
+    
+            CALL_METHOD
+              Address("${parsedInput.accountAddress}")
+              "deposit_batch"
+              Expression("ENTIRE_WORKTOP")
+            ;
+          `)
+        })
+
       return {
         getTemperatureChecks,
         getTemperatureChecksVotes,
         makeTemperatureCheckManifest,
-        getTemperatureCheckById
+        getTemperatureCheckById,
+        makeTemperatureCheckVoteManifest
       }
     })
   }

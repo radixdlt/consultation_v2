@@ -12,20 +12,28 @@ import {
 	GovernanceComponent,
 	type TemperatureCheckId,
 } from "shared/governance/index";
-import type { MakeTemperatureCheckInput } from "shared/governance/schemas";
+import type {
+	MakeTemperatureCheckInput,
+	MakeTemperatureCheckVoteInput,
+} from "shared/governance/schemas";
 import { parseSbor } from "shared/helpers/parseSbor";
 import { TemperatureCheckCreatedEvent } from "shared/schemas";
 import { getCurrentAccount } from "@/lib/selectedAccount";
 import { makeAtomRuntime } from "@/atom/makeRuntimeAtom";
-import { RadixDappToolkit } from "@/lib/dappToolkit";
+import {
+	RadixDappToolkit,
+	SendTransaction,
+	WalletErrorResponse,
+} from "@/lib/dappToolkit";
 import { withToast } from "./withToast";
 
 const runtime = makeAtomRuntime(
 	Layer.mergeAll(
 		GovernanceComponent.Default,
 		GetLedgerStateService.Default,
-		RadixDappToolkit.Live,
+		SendTransaction.Default,
 	).pipe(
+		Layer.provideMerge(RadixDappToolkit.Live),
 		Layer.provideMerge(StokenetGatewayApiClientLayer),
 		Layer.provide(Config.StokenetLive),
 	),
@@ -46,22 +54,6 @@ export const temperatureChecksAtom = runtime.atom(
 	}),
 );
 
-export class UnexpectedWalletError extends Data.TaggedError(
-	"UnexpectedWalletError",
-)<{
-	error: unknown;
-}> {}
-
-export class WalletErrorResponse extends Data.TaggedError(
-	"WalletErrorResponse",
-)<{
-	error: string;
-	jsError?: unknown;
-	message?: string;
-	transactionIntentHash?: string;
-	status?: TransactionStatus;
-}> {}
-
 export class EventNotFoundError extends Data.TaggedError("EventNotFoundError")<{
 	message: string;
 }> {}
@@ -78,9 +70,8 @@ export const makeTemperatureCheckAtom = runtime.fn(
 	Effect.fn(
 		function* (input: MakeTemperatureCheckFormInput) {
 			const governanceComponent = yield* GovernanceComponent;
-			const rdtRef = yield* RadixDappToolkit;
-			const rdt = yield* Ref.get(rdtRef);
 			const gatewayApiClient = yield* GatewayApiClient;
+			const sendTransaction = yield* SendTransaction;
 
 			const currentAccountOption = yield* getCurrentAccount;
 
@@ -101,18 +92,10 @@ export const makeTemperatureCheckAtom = runtime.fn(
 
 			yield* Effect.log("Transaction manifest:", manifest);
 
-			const result = yield* Effect.tryPromise({
-				try: () =>
-					rdt.walletApi.sendTransaction({ transactionManifest: manifest }),
-				catch: (error) => new UnexpectedWalletError({ error }),
-			});
-
-			if (result.isErr()) {
-				return yield* new WalletErrorResponse(result.error);
-			}
+			const result = yield* sendTransaction.sendTransaction(manifest);
 
 			const events = yield* gatewayApiClient.transaction
-				.getCommittedDetails(result.value.transactionIntentHash)
+				.getCommittedDetails(result.transactionIntentHash)
 				.pipe(
 					Effect.map((result) =>
 						Option.fromNullable(result.transaction.receipt?.events),
@@ -155,6 +138,19 @@ export const makeTemperatureCheckAtom = runtime.fn(
 			},
 		}),
 	),
+);
+
+export const voteOnTemperatureCheckAtom = runtime.fn(
+	Effect.fn(function* (input: MakeTemperatureCheckVoteInput) {
+		const governanceComponent = yield* GovernanceComponent;
+
+		const sendTransaction = yield* SendTransaction;
+
+		const manifest =
+			yield* governanceComponent.makeTemperatureCheckVoteManifest(input);
+
+		return yield* sendTransaction.sendTransaction(manifest);
+	}),
 );
 
 export const getTemperatureCheckByIdAtom = Atom.family(
