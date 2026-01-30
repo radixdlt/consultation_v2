@@ -1,5 +1,7 @@
 import { Result, useAtomValue } from "@effect-atom/atom-react";
 import { Cause } from "effect";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import { getTemperatureCheckByIdAtom } from "@/atom/temperatureChecksAtom";
 import { InlineCode } from "@/components/ui/typography";
@@ -15,8 +17,14 @@ export function Page({ id }: { id: TemperatureCheckId }) {
 			return (
 				<div>
 					<h1>{temperatureCheck.title}</h1>
-					<p>{temperatureCheck.description}</p>
-					<p>{temperatureCheck.radixTalkUrl.toString()}</p>
+					<div className="prose dark:prose-invert">
+						<Markdown remarkPlugins={[remarkGfm]}>
+							{temperatureCheck.description}
+						</Markdown>
+					</div>
+					<p>
+						{temperatureCheck.links.map((link) => link.toString()).join(", ")}
+					</p>
 					<p>
 						{temperatureCheck.voteOptions
 							.map((option) => option.label)

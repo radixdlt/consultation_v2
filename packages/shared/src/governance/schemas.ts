@@ -1,6 +1,7 @@
 import { AccountAddress } from '@radix-effects/shared'
 import { Schema } from 'effect'
 import { KeyValueStoreAddress } from '../schemas'
+import { TemperatureCheckId } from './brandedTypes'
 
 export const MakeTemperatureCheckInputSchema = Schema.Struct({
   title: Schema.String,
@@ -61,7 +62,7 @@ export const TemperatureCheckSchema = Schema.asSchema(
           id: option.id[0],
           label: option.label
         })),
-        links: fromA.links.map((link) => new URL(link)),
+        links: fromA.links,
         author: AccountAddress.make(fromA.author)
       }),
       encode: (values) => ({
@@ -105,3 +106,12 @@ export const TemperatureCheckVoteSchema = Schema.transform(
     })
   }
 )
+
+export const MakeTemperatureCheckVoteInputSchema = Schema.Struct({
+  accountAddress: AccountAddress,
+  temperatureCheckId: TemperatureCheckId,
+  vote: Schema.Literal('For', 'Against')
+})
+
+export type MakeTemperatureCheckVoteInput =
+  typeof MakeTemperatureCheckVoteInputSchema.Encoded
