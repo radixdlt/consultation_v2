@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import { getTemperatureCheckByIdAtom } from "@/atom/temperatureChecksAtom";
 import { InlineCode } from "@/components/ui/typography";
+import { VotingSection } from "./components/VotingSection";
 
 export function Page({ id }: { id: TemperatureCheckId }) {
 	const temperatureCheck = useAtomValue(getTemperatureCheckByIdAtom(id));
@@ -16,22 +17,26 @@ export function Page({ id }: { id: TemperatureCheckId }) {
 		})
 		.onSuccess((temperatureCheck) => {
 			return (
-				<div>
-					<h1>{temperatureCheck.title}</h1>
-					<div className="prose dark:prose-invert">
-						<Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-							{temperatureCheck.description}
-						</Markdown>
+				<div className="space-y-6">
+					<div>
+						<h1 className="text-2xl font-bold">{temperatureCheck.title}</h1>
+						<div className="prose dark:prose-invert mt-2">
+							<Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+								{temperatureCheck.description}
+							</Markdown>
+						</div>
+						<p className="mt-2">
+							{temperatureCheck.links.map((link) => link.toString()).join(", ")}
+						</p>
+						<p>
+							{temperatureCheck.voteOptions
+								.map((option) => option.label)
+								.join(", ")}
+						</p>
+						<p>{temperatureCheck.votes.toString()}</p>
 					</div>
-					<p>
-						{temperatureCheck.links.map((link) => link.toString()).join(", ")}
-					</p>
-					<p>
-						{temperatureCheck.voteOptions
-							.map((option) => option.label)
-							.join(", ")}
-					</p>
-					<p>{temperatureCheck.votes.toString()}</p>
+
+					<VotingSection temperatureCheckId={id} />
 				</div>
 			);
 		})
