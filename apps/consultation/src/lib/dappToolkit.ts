@@ -2,14 +2,32 @@ import {
 	DataRequestBuilder,
 	Logger,
 	RadixDappToolkit as RadixDappToolkitFactory,
+	TransactionStatus,
 } from "@radixdlt/radix-dapp-toolkit";
 import { Context, Data, Effect, Layer, Ref } from "effect";
 import { envVars } from "./envVars";
+import { TransactionManifestString } from "@radix-effects/shared";
 
 class BrowserNotAvailableError extends Data.TaggedError(
 	"BrowserNotAvailableError",
 )<{
 	message: string;
+}> {}
+
+export class UnexpectedWalletError extends Data.TaggedError(
+	"UnexpectedWalletError",
+)<{
+	error: unknown;
+}> {}
+
+export class WalletErrorResponse extends Data.TaggedError(
+	"WalletErrorResponse",
+)<{
+	error: string;
+	jsError?: unknown;
+	message?: string;
+	transactionIntentHash?: string;
+	status?: TransactionStatus;
 }> {}
 
 export class RadixDappToolkit extends Context.Tag("RadixDappToolkit")<
@@ -43,3 +61,26 @@ export class RadixDappToolkit extends Context.Tag("RadixDappToolkit")<
 		}),
 	);
 }
+
+export class SendTransaction extends Effect.Service<SendTransaction>()(
+	"SendTransaction",
+	{
+		effect: Effect.gen(function* () {
+			const rdtRef = yield* RadixDappToolkit;
+
+			return Effect.fn(function* (
+				transactionManifest: TransactionManifestString,
+			) {
+				const rdt = yield* Ref.get(rdtRef);
+				const result = yield* Effect.tryPromise({
+					try: () => rdt.walletApi.sendTransaction({ transactionManifest }),
+					catch: (error) => new UnexpectedWalletError({ error }),
+				});
+				if (result.isErr()) {
+					return yield* new WalletErrorResponse(result.error);
+				}
+				return result.value;
+			});
+		}),
+	},
+) {}
