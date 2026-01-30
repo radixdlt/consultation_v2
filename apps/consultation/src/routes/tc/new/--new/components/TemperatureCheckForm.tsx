@@ -1,7 +1,8 @@
-import { Result, useAtom } from "@effect-atom/atom-react";
+import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import { useStore } from "@tanstack/react-form";
 import { LoaderIcon } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
+import { accountsAtom } from "@/atom/dappToolkitAtom";
 import { makeTemperatureCheckAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,7 @@ export function TemperatureCheckForm({
 	onSuccess,
 }: TemperatureCheckFormProps) {
 	const [makeResult, makeTemperatureCheck] = useAtom(makeTemperatureCheckAtom);
+	const accountsResult = useAtomValue(accountsAtom);
 	const formId = useId();
 	const titleId = `${formId}-title`;
 	const shortDescriptionId = `${formId}-shortDescription`;
@@ -105,20 +107,39 @@ export function TemperatureCheckForm({
 			.orNull();
 	}, [makeResult, onSuccess]);
 
-	return (
+	const noAccountsCard = (
 		<Card className="w-full max-w-2xl">
 			<CardHeader>
 				<CardTitle>Create Temperature Check</CardTitle>
 			</CardHeader>
+			<CardContent className="py-8 text-center text-muted-foreground">
+				Please connect your wallet to create a temperature check.
+			</CardContent>
+		</Card>
+	);
 
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					form.handleSubmit();
-				}}
-			>
-				<CardContent>
-					<FieldGroup>
+	return Result.builder(accountsResult)
+		.onInitial(() => noAccountsCard)
+		.onFailure(() => noAccountsCard)
+		.onSuccess((accounts) => {
+			if (accounts.length === 0) {
+				return noAccountsCard;
+			}
+
+			return (
+				<Card className="w-full max-w-2xl">
+					<CardHeader>
+						<CardTitle>Create Temperature Check</CardTitle>
+					</CardHeader>
+
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							form.handleSubmit();
+						}}
+					>
+						<CardContent>
+							<FieldGroup>
 						{/* Title */}
 						<form.Field
 							name="title"
@@ -244,23 +265,25 @@ export function TemperatureCheckForm({
 					</FieldGroup>
 				</CardContent>
 
-				<CardFooter>
-					<Button
-						type="submit"
-						disabled={!canSubmit || makeResult.waiting}
-						className="w-full mt-4"
-					>
-						{makeResult.waiting ? (
-							<>
-								<LoaderIcon className="size-4 animate-spin" />
-								Creating...
-							</>
-						) : (
-							"Create Temperature Check"
-						)}
-					</Button>
-				</CardFooter>
-			</form>
-		</Card>
-	);
+					<CardFooter>
+						<Button
+							type="submit"
+							disabled={!canSubmit || makeResult.waiting}
+							className="w-full mt-4"
+						>
+							{makeResult.waiting ? (
+								<>
+									<LoaderIcon className="size-4 animate-spin" />
+									Creating...
+								</>
+							) : (
+								"Create Temperature Check"
+							)}
+						</Button>
+					</CardFooter>
+				</form>
+			</Card>
+			);
+		})
+		.render();
 }
