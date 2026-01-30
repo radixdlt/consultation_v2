@@ -1,3 +1,4 @@
+import { Atom } from "@effect-atom/atom-react";
 import {
 	GatewayApiClient,
 	GetLedgerStateService,
@@ -6,7 +7,11 @@ import { AccountAddress, StateVersion } from "@radix-effects/shared";
 import type { TransactionStatus } from "@radixdlt/radix-dapp-toolkit";
 import { Array as A, Data, Effect, Layer, Option, pipe, Ref } from "effect";
 import { StokenetGatewayApiClientLayer } from "shared/gateway";
-import { Config, GovernanceComponent } from "shared/governance/index";
+import {
+	Config,
+	GovernanceComponent,
+	type TemperatureCheckId,
+} from "shared/governance/index";
 import type { MakeTemperatureCheckInput } from "shared/governance/schemas";
 import { parseSbor } from "shared/helpers/parseSbor";
 import { TemperatureCheckCreatedEvent } from "shared/schemas";
@@ -150,4 +155,14 @@ export const makeTemperatureCheckAtom = runtime.fn(
 			},
 		}),
 	),
+);
+
+export const getTemperatureCheckByIdAtom = Atom.family(
+	(id: TemperatureCheckId) =>
+		runtime.atom(
+			Effect.gen(function* () {
+				const governanceComponent = yield* GovernanceComponent;
+				return yield* governanceComponent.getTemperatureCheckById(id);
+			}),
+		),
 );
