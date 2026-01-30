@@ -1,0 +1,36 @@
+{
+	"name": "vote-collector",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"dev:inspect": "tsx --inspect-brk src/index.ts",
+		"build": "tsdown",
+		"test": "vitest"
+	},
+	"dependencies": {
+		"@effect/opentelemetry": "catalog:",
+		"@effect/platform": "catalog:",
+		"@effect/platform-node": "catalog:",
+		"@effect/rpc": "catalog:",
+		"@effect/sql": "catalog:",
+		"@effect/sql-drizzle": "catalog:",
+		"@effect/sql-pg": "catalog:",
+		"@radix-effects/gateway": "catalog:",
+		"@radix-effects/shared": "catalog:",
+		"@radixdlt/babylon-gateway-api-sdk": "catalog:",
+		"@types/node": "catalog:",
+		"bignumber.js": "catalog:",
+		"db": "workspace:*",
+		"shared": "workspace:*",
+		"effect": "catalog:",
+		"sbor-ez-mode": "catalog:"
+	},
+	"devDependencies": {
+		"@effect/language-service": "catalog:",
+		"@effect/vitest": "catalog:",
+		"@testcontainers/postgresql": "^11.10.0",
+		"tsdown": "catalog:",
+		"tsx": "catalog:",
+		"vitest": "catalog:"
+	}
+}

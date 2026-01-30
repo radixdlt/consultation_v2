@@ -1,0 +1,28 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"exactOptionalPropertyTypes": true,
+		"noUnusedLocals": true,
+		"noImplicitOverride": true,
+		"moduleDetection": "force",
+		"composite": false,
+		"downlevelIteration": true,
+		"resolveJsonModule": true,
+		"esModuleInterop": false,
+		"declaration": false,
+		"declarationMap": true,
+		"sourceMap": true,
+		"skipLibCheck": true,
+		"moduleResolution": "bundler",
+		"module": "preserve",
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"incremental": true,
+		"noEmit": true,
+		"plugins": [
+			{
+				"name": "@effect/language-service"
+			}
+		]
+	}
+}

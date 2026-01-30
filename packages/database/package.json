@@ -1,0 +1,20 @@
+{
+	"name": "db",
+	"type": "module",
+	"exports": {
+		"./src/*": "./src/*.ts"
+	},
+	"scripts": {
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:studio": "drizzle-kit studio"
+	},
+	"dependencies": {
+		"drizzle-orm": "catalog:",
+		"pg": "^8.16.3"
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.31.8",
+		"@types/node": "catalog:"
+	}
+}

@@ -1,0 +1,24 @@
+{
+	"name": "shared",
+	"type": "module",
+	"exports": {
+		"./*": "./src/*.ts"
+	},
+	"dependencies": {
+		"@effect/opentelemetry": "catalog:",
+		"@effect/platform": "catalog:",
+		"@effect/platform-node": "catalog:",
+		"@effect/rpc": "catalog:",
+		"@effect/sql": "catalog:",
+		"@effect/sql-drizzle": "catalog:",
+		"@effect/sql-pg": "catalog:",
+		"@radix-effects/gateway": "catalog:",
+		"@radix-effects/shared": "catalog:",
+		"@radixdlt/babylon-gateway-api-sdk": "catalog:",
+		"@types/node": "catalog:",
+		"bignumber.js": "catalog:",
+		"db": "workspace:*",
+		"effect": "catalog:",
+		"sbor-ez-mode": "catalog:"
+	}
+}
