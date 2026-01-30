@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { TemperatureCheckId } from "shared/governance/brandedTypes";
 import { Page } from "./-$id";
 
@@ -8,5 +8,9 @@ export const Route = createFileRoute("/tc/$id/")({
 
 function RouteComponent() {
 	const { id } = Route.useParams();
-	return <Page id={TemperatureCheckId.make(Number(id))} />;
+	return (
+		<ClientOnly>
+			<Page id={TemperatureCheckId.make(Number(id))} />
+		</ClientOnly>
+	);
 }
