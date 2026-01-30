@@ -64,7 +64,10 @@ export class NoAccountConnectedError extends Data.TaggedError(
 	message: string;
 }> {}
 
-type MakeTemperatureCheckFormInput = Omit<MakeTemperatureCheckInput, "authorAccount">;
+type MakeTemperatureCheckFormInput = Omit<
+	MakeTemperatureCheckInput,
+	"authorAccount"
+>;
 
 export const makeTemperatureCheckAtom = runtime.fn(
 	Effect.fn(
@@ -92,7 +95,7 @@ export const makeTemperatureCheckAtom = runtime.fn(
 
 			yield* Effect.log("Transaction manifest:", manifest);
 
-			const result = yield* sendTransaction.sendTransaction(manifest);
+			const result = yield* sendTransaction(manifest);
 
 			const events = yield* gatewayApiClient.transaction
 				.getCommittedDetails(result.transactionIntentHash)
@@ -149,7 +152,7 @@ export const voteOnTemperatureCheckAtom = runtime.fn(
 		const manifest =
 			yield* governanceComponent.makeTemperatureCheckVoteManifest(input);
 
-		return yield* sendTransaction.sendTransaction(manifest);
+		return yield* sendTransaction(manifest);
 	}),
 );
 
