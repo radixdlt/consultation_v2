@@ -1,6 +1,7 @@
 import { Result, useAtomValue } from "@effect-atom/atom-react";
 import { Cause } from "effect";
 import Markdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import { getTemperatureCheckByIdAtom } from "@/atom/temperatureChecksAtom";
@@ -18,7 +19,7 @@ export function Page({ id }: { id: TemperatureCheckId }) {
 				<div>
 					<h1>{temperatureCheck.title}</h1>
 					<div className="prose dark:prose-invert">
-						<Markdown remarkPlugins={[remarkGfm]}>
+						<Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
 							{temperatureCheck.description}
 						</Markdown>
 					</div>
