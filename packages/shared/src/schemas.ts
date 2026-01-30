@@ -30,6 +30,7 @@ export const TemperatureCheckKeyValueStoreKey = s.number()
 
 export const TemperatureCheckKeyValueStoreValue = s.struct({
   title: s.string(),
+  short_description: s.string(),
   description: s.string(),
   vote_options: s.array(
     s.struct({
@@ -37,14 +38,7 @@ export const TemperatureCheckKeyValueStoreValue = s.struct({
       label: s.string()
     })
   ),
-  attachments: s.array(
-    s.struct({
-      kvs_address: s.string(),
-      component_address: s.address(),
-      file_hash: s.string()
-    })
-  ),
-  rfc_url: s.string(),
+  links: s.array(s.string()),
   quorum: s.decimal(),
   max_selections: s.enum([
     {
@@ -61,7 +55,9 @@ export const TemperatureCheckKeyValueStoreValue = s.struct({
       variant: 'None',
       schema: s.structNullable({})
     }
-  ])
+  ]),
+  author: s.address(),
+  last_vote_at: s.instant()
 })
 
 export const KeyValueStoreAddress = Schema.String.pipe(

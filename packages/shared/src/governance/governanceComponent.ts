@@ -86,7 +86,6 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
               address: componentState.temperature_checks
             })
           ),
-          Effect.tap((result) => Effect.log(JSON.stringify(result, null, 2))),
           Effect.map((result) =>
             pipe(
               result.entries,
@@ -164,28 +163,37 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
           )(input)
 
           const voteOptions = parsedInput.voteOptions
-            .map(
-              (option) =>
-                `Tuple(
-                    Tuple(${option.id}u32),
-                    "${option.label}"
-                  )`
-            )
+            .map((option) => `Tuple("${option}")`)
             .join(', ')
 
+          const links = parsedInput.links
+            .map((url) => `"${url}"`)
+            .join(', ')
+
+          const maxSelectionsManifest =
+            parsedInput.maxSelections === 1
+              ? 'Enum<0u8>()'
+              : `Enum<1u8>(${parsedInput.maxSelections}u32)`
+
           return TransactionManifestString.make(`
-            CALL_METHOD
-              Address("${config.componentAddress}")
-              "make_temperature_check"
-              Tuple(
-                "${parsedInput.title}",
-                "${parsedInput.description}",
-                Array<Tuple>(${voteOptions}),
-                Array<Tuple>(),
-                "${parsedInput.radixTalkUrl.toString()}",
-                Enum<0u8>()
-              )
-            ;
+CALL_METHOD
+  Address("${config.componentAddress}")
+  "make_temperature_check"
+  Address("${parsedInput.authorAccount}")
+  Tuple(
+    "${parsedInput.title}",
+    "${parsedInput.shortDescription}",
+    ${JSON.stringify(parsedInput.description)},
+    Array<Tuple>(${voteOptions}),
+    Array<String>(${links}),
+    ${maxSelectionsManifest}
+  )
+;
+CALL_METHOD
+  Address("${parsedInput.authorAccount}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;
           `)
         })
 

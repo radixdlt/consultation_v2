@@ -1,8 +1,8 @@
-import { Result, useAtom } from "@effect-atom/atom-react";
+import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import { useStore } from "@tanstack/react-form";
-import { ParseResult, Schema } from "effect";
 import { LoaderIcon } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
+import { accountsAtom } from "@/atom/dappToolkitAtom";
 import { makeTemperatureCheckAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +25,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppForm } from "../formHook";
 import { temperatureCheckFormOpts } from "../formOptions";
 import {
-	DescriptionSchema,
+	effectSchemaValidator,
 	RadixTalkUrlSchema,
+	ShortDescriptionSchema,
 	TemperatureCheckFormSchema,
 	TitleSchema,
 } from "../schema";
+import { LinksField } from "./LinksField";
+import { MarkdownUploadField } from "./MarkdownUploadField";
 import { MaxSelectionsField } from "./MaxSelectionsField";
 import { VoteOptionsField } from "./VoteOptionsField";
 
@@ -38,22 +41,15 @@ type TemperatureCheckFormProps = {
 	onSuccess?: (result: unknown) => void;
 };
 
-function effectSchemaValidator<T, I>(schema: Schema.Schema<T, I>) {
-	return ({ value }: { value: unknown }) => {
-		const result = Schema.decodeUnknownEither(schema)(value);
-		if (result._tag === "Left") {
-			const errors = ParseResult.ArrayFormatter.formatErrorSync(result.left);
-			return errors;
-		}
-		return undefined;
-	};
-}
-
 export function TemperatureCheckForm({
 	maxVoteOptions = 10,
 	onSuccess,
 }: TemperatureCheckFormProps) {
 	const [makeResult, makeTemperatureCheck] = useAtom(makeTemperatureCheckAtom);
+	const accountsResult = useAtomValue(accountsAtom);
+	const formId = useId();
+	const titleId = `${formId}-title`;
+	const shortDescriptionId = `${formId}-shortDescription`;
 
 	const form = useAppForm({
 		...temperatureCheckFormOpts,
@@ -61,11 +57,19 @@ export function TemperatureCheckForm({
 			onSubmit: effectSchemaValidator(TemperatureCheckFormSchema),
 		},
 		onSubmit: ({ value }) => {
+			// Combine radixTalkUrl with additional links
+			const allLinks = [
+				value.radixTalkUrl,
+				...value.links.filter((link) => link.trim() !== ""),
+			];
+			// Transform vote options from {id, label} to just labels
+			const voteOptionLabels = value.voteOptions.map((option) => option.label);
 			makeTemperatureCheck({
 				title: value.title,
+				shortDescription: value.shortDescription,
 				description: value.description,
-				radixTalkUrl: value.radixTalkUrl,
-				voteOptions: value.voteOptions,
+				links: allLinks,
+				voteOptions: voteOptionLabels,
 				maxSelections: value.maxSelections,
 			});
 		},
@@ -103,20 +107,39 @@ export function TemperatureCheckForm({
 			.orNull();
 	}, [makeResult, onSuccess]);
 
-	return (
+	const noAccountsCard = (
 		<Card className="w-full max-w-2xl">
 			<CardHeader>
 				<CardTitle>Create Temperature Check</CardTitle>
 			</CardHeader>
+			<CardContent className="py-8 text-center text-muted-foreground">
+				Please connect your wallet to create a temperature check.
+			</CardContent>
+		</Card>
+	);
 
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					form.handleSubmit();
-				}}
-			>
-				<CardContent>
-					<FieldGroup>
+	return Result.builder(accountsResult)
+		.onInitial(() => noAccountsCard)
+		.onFailure(() => noAccountsCard)
+		.onSuccess((accounts) => {
+			if (accounts.length === 0) {
+				return noAccountsCard;
+			}
+
+			return (
+				<Card className="w-full max-w-2xl">
+					<CardHeader>
+						<CardTitle>Create Temperature Check</CardTitle>
+					</CardHeader>
+
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							form.handleSubmit();
+						}}
+					>
+						<CardContent>
+							<FieldGroup>
 						{/* Title */}
 						<form.Field
 							name="title"
@@ -130,9 +153,9 @@ export function TemperatureCheckForm({
 									field.state.meta.isTouched && !field.state.meta.isValid;
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor="title">Title</FieldLabel>
+										<FieldLabel htmlFor={titleId}>Title</FieldLabel>
 										<Input
-											id="title"
+											id={titleId}
 											name={field.name}
 											value={field.state.value}
 											onBlur={field.handleBlur}
@@ -148,12 +171,12 @@ export function TemperatureCheckForm({
 							}}
 						</form.Field>
 
-						{/* Description */}
+						{/* Short Description */}
 						<form.Field
-							name="description"
+							name="shortDescription"
 							validators={{
-								onBlur: effectSchemaValidator(DescriptionSchema),
-								onChange: effectSchemaValidator(DescriptionSchema),
+								onBlur: effectSchemaValidator(ShortDescriptionSchema),
+								onChange: effectSchemaValidator(ShortDescriptionSchema),
 							}}
 						>
 							{(field) => {
@@ -161,17 +184,22 @@ export function TemperatureCheckForm({
 									field.state.meta.isTouched && !field.state.meta.isValid;
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor="description">Description</FieldLabel>
+										<FieldLabel htmlFor={shortDescriptionId}>
+											Short Description
+										</FieldLabel>
 										<Textarea
-											id="description"
+											id={shortDescriptionId}
 											name={field.name}
 											value={field.state.value}
 											onBlur={field.handleBlur}
 											onChange={(e) => field.handleChange(e.target.value)}
 											aria-invalid={isInvalid}
-											placeholder="Describe what this temperature check is about"
-											className="min-h-[120px]"
+											placeholder="A brief summary of the temperature check (max 500 characters)"
+											className="min-h-[80px]"
 										/>
+										<FieldDescription>
+											This will be displayed in the temperature check list.
+										</FieldDescription>
 										{isInvalid && (
 											<FieldError errors={field.state.meta.errors} />
 										)}
@@ -180,7 +208,12 @@ export function TemperatureCheckForm({
 							}}
 						</form.Field>
 
-						{/* Radix Talk URL */}
+						{/* Description (Markdown File Upload) */}
+						<MarkdownUploadField form={form} />
+
+						<Separator />
+
+						{/* RadixTalk URL */}
 						<form.Field
 							name="radixTalkUrl"
 							validators={{
@@ -193,11 +226,14 @@ export function TemperatureCheckForm({
 									field.state.meta.isTouched && !field.state.meta.isValid;
 								return (
 									<Field data-invalid={isInvalid}>
-										<FieldLabel htmlFor="radixTalkUrl">
-											Radix Talk URL
+										<FieldLabel htmlFor={`${formId}-radixTalkUrl`}>
+											RadixTalk URL *
 										</FieldLabel>
+										<FieldDescription>
+											Link to the RFC discussion on RadixTalk.
+										</FieldDescription>
 										<Input
-											id="radixTalkUrl"
+											id={`${formId}-radixTalkUrl`}
 											name={field.name}
 											type="url"
 											value={field.state.value}
@@ -206,9 +242,6 @@ export function TemperatureCheckForm({
 											aria-invalid={isInvalid}
 											placeholder="https://radixtalk.com/..."
 										/>
-										<FieldDescription>
-											Link to the Radix Talk discussion thread.
-										</FieldDescription>
 										{isInvalid && (
 											<FieldError errors={field.state.meta.errors} />
 										)}
@@ -216,6 +249,9 @@ export function TemperatureCheckForm({
 								);
 							}}
 						</form.Field>
+
+						{/* Additional Links */}
+						<LinksField form={form} />
 
 						<Separator />
 
@@ -229,23 +265,25 @@ export function TemperatureCheckForm({
 					</FieldGroup>
 				</CardContent>
 
-				<CardFooter>
-					<Button
-						type="submit"
-						disabled={!canSubmit || makeResult.waiting}
-						className="w-full mt-4"
-					>
-						{makeResult.waiting ? (
-							<>
-								<LoaderIcon className="size-4 animate-spin" />
-								Creating...
-							</>
-						) : (
-							"Create Temperature Check"
-						)}
-					</Button>
-				</CardFooter>
-			</form>
-		</Card>
-	);
+					<CardFooter>
+						<Button
+							type="submit"
+							disabled={!canSubmit || makeResult.waiting}
+							className="w-full mt-4"
+						>
+							{makeResult.waiting ? (
+								<>
+									<LoaderIcon className="size-4 animate-spin" />
+									Creating...
+								</>
+							) : (
+								"Create Temperature Check"
+							)}
+						</Button>
+					</CardFooter>
+				</form>
+			</Card>
+			);
+		})
+		.render();
 }
