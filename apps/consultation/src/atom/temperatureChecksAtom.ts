@@ -2,12 +2,11 @@ import {
 	GatewayApiClient,
 	GetLedgerStateService,
 } from "@radix-effects/gateway";
-import { StateVersion } from "@radix-effects/shared";
+import { AccountAddress, StateVersion } from "@radix-effects/shared";
 import type { TransactionStatus } from "@radixdlt/radix-dapp-toolkit";
 import { Array as A, Data, Effect, Layer, Option, pipe, Ref } from "effect";
 import { StokenetGatewayApiClientLayer } from "shared/gateway";
 import { Config, GovernanceComponent } from "shared/governance/index";
-import type { MakeTemperatureCheckInput } from "shared/governance/schemas";
 import { parseSbor } from "shared/helpers/parseSbor";
 import { TemperatureCheckCreatedEvent } from "shared/schemas";
 import { makeAtomRuntime } from "@/atom/makeRuntimeAtom";
@@ -60,18 +59,65 @@ export class EventNotFoundError extends Data.TaggedError("EventNotFoundError")<{
 	message: string;
 }> {}
 
+export class NoAccountConnectedError extends Data.TaggedError(
+	"NoAccountConnectedError",
+)<{
+	message: string;
+}> {}
+
+type MakeTemperatureCheckFormInput = {
+	title: string;
+	shortDescription: string;
+	description: string;
+	links: string[];
+	voteOptions: string[];
+	maxSelections: number;
+};
+
 export const makeTemperatureCheckAtom = runtime.fn(
 	Effect.fn(
-		function* (input: MakeTemperatureCheckInput) {
+		function* (input: MakeTemperatureCheckFormInput) {
 			const governanceComponent = yield* GovernanceComponent;
 			const rdtRef = yield* RadixDappToolkit;
 			const rdt = yield* Ref.get(rdtRef);
 			const gatewayApiClient = yield* GatewayApiClient;
 
-			const manifest =
-				yield* governanceComponent.makeTemperatureCheckManifest(input);
+			// TODO: Replace with global current account state instead of getting from walletData each time
+			const walletData = rdt.walletApi.getWalletData();
+			const currentAccount = walletData?.accounts[0];
 
-			yield* Effect.log(manifest);
+			if (!currentAccount) {
+				return yield* new NoAccountConnectedError({
+					message: "Please connect your wallet first",
+				});
+			}
+
+			const authorAccount = AccountAddress.make(currentAccount.address);
+
+			// Filter valid links (keep as strings, schema will validate)
+			const validLinks: string[] = [];
+			for (const link of input.links) {
+				if (link.trim()) {
+					try {
+						new URL(link); // Validate it's a valid URL
+						validLinks.push(link);
+					} catch {
+						yield* Effect.logWarning(`Skipping invalid URL: ${link}`);
+					}
+				}
+			}
+
+			const manifest = yield* governanceComponent.makeTemperatureCheckManifest({
+				title: input.title,
+				shortDescription: input.shortDescription,
+				description: input.description,
+				links: validLinks,
+				voteOptions: input.voteOptions,
+				maxSelections: input.maxSelections,
+				authorAccount,
+			});
+
+			yield* Effect.log("Transaction manifest:", manifest);
 
 			const result = yield* Effect.tryPromise({
 				try: () =>
@@ -114,12 +160,17 @@ export const makeTemperatureCheckAtom = runtime.fn(
 		withToast({
 			whenLoading: "Making temperature check...",
 			whenSuccess: "Temperature check made successfully",
-			whenFailure: ({ cause }) =>
-				Option.some(
-					cause._tag === "Fail" && cause.error instanceof WalletErrorResponse
-						? cause.error.message
-						: "Failed to make temperature check",
-				),
+			whenFailure: ({ cause }) => {
+				if (cause._tag === "Fail") {
+					if (cause.error instanceof WalletErrorResponse) {
+						return Option.some(cause.error.message ?? "Wallet error");
+					}
+					if (cause.error instanceof NoAccountConnectedError) {
+						return Option.some(cause.error.message);
+					}
+				}
+				return Option.some("Failed to make temperature check");
+			},
 		}),
 	),
 );

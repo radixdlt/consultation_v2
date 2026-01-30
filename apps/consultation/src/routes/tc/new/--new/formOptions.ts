@@ -1,15 +1,13 @@
 import { formOptions } from "@tanstack/react-form";
 
-export const DEFAULT_VOTE_OPTIONS: Array<{ id: number; label: string }> = [
-	{ id: 0, label: "" },
-	{ id: 1, label: "" },
-];
+export const DEFAULT_VOTE_OPTIONS: string[] = ["", ""];
 
 export const temperatureCheckFormOpts = formOptions({
 	defaultValues: {
 		title: "",
+		shortDescription: "",
 		description: "",
-		radixTalkUrl: "",
+		links: [""] as string[],
 		voteOptions: DEFAULT_VOTE_OPTIONS,
 		maxSelections: 1,
 	},
