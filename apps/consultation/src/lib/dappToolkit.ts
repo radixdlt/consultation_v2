@@ -68,21 +68,19 @@ export class SendTransaction extends Effect.Service<SendTransaction>()(
 		effect: Effect.gen(function* () {
 			const rdtRef = yield* RadixDappToolkit;
 
-			return {
-				sendTransaction: Effect.fn(function* (
-					transactionManifest: TransactionManifestString,
-				) {
-					const rdt = yield* Ref.get(rdtRef);
-					const result = yield* Effect.tryPromise({
-						try: () => rdt.walletApi.sendTransaction({ transactionManifest }),
-						catch: (error) => new UnexpectedWalletError({ error }),
-					});
-					if (result.isErr()) {
-						return yield* new WalletErrorResponse(result.error);
-					}
-					return result.value;
-				}),
-			};
+			return Effect.fn(function* (
+				transactionManifest: TransactionManifestString,
+			) {
+				const rdt = yield* Ref.get(rdtRef);
+				const result = yield* Effect.tryPromise({
+					try: () => rdt.walletApi.sendTransaction({ transactionManifest }),
+					catch: (error) => new UnexpectedWalletError({ error }),
+				});
+				if (result.isErr()) {
+					return yield* new WalletErrorResponse(result.error);
+				}
+				return result.value;
+			});
 		}),
 	},
 ) {}
