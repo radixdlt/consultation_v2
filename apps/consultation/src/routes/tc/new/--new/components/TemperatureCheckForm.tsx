@@ -107,39 +107,39 @@ export function TemperatureCheckForm({
 			.orNull();
 	}, [makeResult, onSuccess]);
 
-	const noAccountsCard = (
+	const hasNoAccounts = Result.builder(accountsResult)
+		.onInitial(() => false)
+		.onFailure(() => false)
+		.onSuccess((accounts) => accounts.length === 0)
+		.orNull() ?? false;
+
+	if (hasNoAccounts) {
+		return (
+			<Card className="w-full max-w-2xl">
+				<CardHeader>
+					<CardTitle>Create Temperature Check</CardTitle>
+				</CardHeader>
+				<CardContent className="py-8 text-center text-muted-foreground">
+					Please connect your wallet to create a temperature check.
+				</CardContent>
+			</Card>
+		);
+	}
+
+	return (
 		<Card className="w-full max-w-2xl">
 			<CardHeader>
 				<CardTitle>Create Temperature Check</CardTitle>
 			</CardHeader>
-			<CardContent className="py-8 text-center text-muted-foreground">
-				Please connect your wallet to create a temperature check.
-			</CardContent>
-		</Card>
-	);
 
-	return Result.builder(accountsResult)
-		.onInitial(() => noAccountsCard)
-		.onFailure(() => noAccountsCard)
-		.onSuccess((accounts) => {
-			if (accounts.length === 0) {
-				return noAccountsCard;
-			}
-
-			return (
-				<Card className="w-full max-w-2xl">
-					<CardHeader>
-						<CardTitle>Create Temperature Check</CardTitle>
-					</CardHeader>
-
-					<form
-						onSubmit={(e) => {
-							e.preventDefault();
-							form.handleSubmit();
-						}}
-					>
-						<CardContent>
-							<FieldGroup>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					form.handleSubmit();
+				}}
+			>
+				<CardContent>
+					<FieldGroup>
 						{/* Title */}
 						<form.Field
 							name="title"
@@ -281,9 +281,7 @@ export function TemperatureCheckForm({
 							)}
 						</Button>
 					</CardFooter>
-				</form>
-			</Card>
-			);
-		})
-		.render();
+			</form>
+		</Card>
+	);
 }
