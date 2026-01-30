@@ -46,10 +46,10 @@ function VotingSkeleton() {
 			</CardHeader>
 			<CardContent>
 				<div className="flex gap-4">
-					<Button disabled className="flex-1">
+					<Button disabled className="flex-1 bg-emerald-600 font-bold">
 						For
 					</Button>
-					<Button disabled className="flex-1">
+					<Button disabled className="flex-1 bg-rose-600 font-bold">
 						Against
 					</Button>
 				</div>
@@ -66,10 +66,10 @@ function DisconnectedVoting() {
 			</CardHeader>
 			<CardContent className="space-y-3">
 				<div className="flex gap-4">
-					<Button disabled className="flex-1">
+					<Button disabled className="flex-1 bg-emerald-600 font-bold">
 						For
 					</Button>
-					<Button disabled className="flex-1">
+					<Button disabled className="flex-1 bg-rose-600 font-bold">
 						Against
 					</Button>
 				</div>
@@ -116,7 +116,7 @@ function ConnectedVoting({
 					<Button
 						onClick={() => handleVote("For")}
 						disabled={isLoading}
-						className="flex-1"
+						className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-bold"
 					>
 						{isLoading && selectedVote === "For" ? (
 							<LoaderIcon className="size-4 animate-spin" />
@@ -126,8 +126,7 @@ function ConnectedVoting({
 					<Button
 						onClick={() => handleVote("Against")}
 						disabled={isLoading}
-						variant="outline"
-						className="flex-1"
+						className="flex-1 bg-rose-600 hover:bg-rose-700 font-bold"
 					>
 						{isLoading && selectedVote === "Against" ? (
 							<LoaderIcon className="size-4 animate-spin" />
