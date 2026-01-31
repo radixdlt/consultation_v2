@@ -146,7 +146,8 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
                   Effect.flatMap(([key, value]) =>
                     Schema.decodeUnknownEither(TemperatureCheckVoteSchema)({
                       id: key,
-                      ...value
+                      voter: value.voter,
+                      vote: value.vote
                     })
                   )
                 )
