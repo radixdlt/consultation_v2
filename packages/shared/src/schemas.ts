@@ -84,7 +84,48 @@ export const TemperatureCheckVotersKeyValueStoreKey = s.address()
 
 export const TemperatureCheckVotersKeyValueStoreValue = s.number()
 
+export const ProposalKeyValueStoreKey = s.number()
+
+export const ProposalKeyValueStoreValue = s.struct({
+  title: s.string(),
+  short_description: s.string(),
+  description: s.string(),
+  vote_options: s.array(
+    s.struct({
+      id: s.tuple([s.number()]),
+      label: s.string()
+    })
+  ),
+  links: s.array(s.string()),
+  quorum: s.decimal(),
+  max_selections: s.enum([
+    {
+      variant: 'None',
+      schema: s.structNullable({})
+    }
+  ]),
+  voters: s.internalAddress(),
+  votes: s.internalAddress(),
+  vote_count: s.number(),
+  approval_threshold: s.decimal(),
+  start: s.number(),
+  deadline: s.number(),
+  temperature_check_id: s.number(),
+  author: s.address()
+})
+
 export const ProposalVoteOptionId = s.tuple([s.number()])
+
+export const ProposalVoteKeyValueStoreKey = s.number()
+
+export const ProposalVoteKeyValueStoreValue = s.struct({
+  voter: s.address(),
+  options: s.array(ProposalVoteOptionId)
+})
+
+export const ProposalVotersKeyValueStoreKey = s.address()
+
+export const ProposalVotersKeyValueStoreValue = s.number()
 
 export const TemperatureCheckVotedEvent = s.struct({
   temperature_check_id: s.number(),
