@@ -1,7 +1,8 @@
 use scrypto::prelude::*;
 use crate::{
     GovernanceParameters, Proposal, ProposalVoteOption, ProposalVoteOptionId,
-    TemperatureCheck, TemperatureCheckDraft, TemperatureCheckVote,
+    ProposalVoteRecord, TemperatureCheck, TemperatureCheckDraft,
+    TemperatureCheckVote, TemperatureCheckVoteRecord,
     TemperatureCheckCreatedEvent, TemperatureCheckVotedEvent,
     ProposalCreatedEvent, ProposalVotedEvent, GovernanceParametersUpdatedEvent,
     MAX_LINKS, MAX_VOTE_OPTIONS, MAX_SELECTIONS,
@@ -142,13 +143,14 @@ mod governance {
                 links: draft.links,
                 quorum: self.governance_parameters.temperature_check_quorum,
                 max_selections: draft.max_selections,
+                voters: KeyValueStore::new(),
                 votes: KeyValueStore::new(),
+                vote_count: 0,
                 approval_threshold: self.governance_parameters.temperature_check_approval_threshold,
                 start: now,
                 deadline,
                 elevated_proposal_id: None,
                 author,
-                last_vote_at: now,
             };
 
             let title = temperature_check.title.clone();
@@ -200,13 +202,14 @@ mod governance {
                 links: tc.links.clone(),
                 quorum: self.governance_parameters.proposal_quorum,
                 max_selections: tc.max_selections,
+                voters: KeyValueStore::new(),
                 votes: KeyValueStore::new(),
+                vote_count: 0,
                 approval_threshold: self.governance_parameters.proposal_approval_threshold,
                 start: now,
                 deadline,
                 temperature_check_id,
                 author: tc.author,
-                last_vote_at: now,
             };
 
             tc.elevated_proposal_id = Some(proposal_id);
@@ -259,16 +262,24 @@ mod governance {
 
             // Check the account has not already voted
             assert!(
-                tc.votes.get(&account).is_none(),
+                tc.voters.get(&account).is_none(),
                 "Account has already voted on this temperature check"
             );
 
-            // Record the vote and update last_vote_at
-            tc.votes.insert(account, vote);
-            tc.last_vote_at = now;
+            // Get the vote ID and increment the counter
+            let vote_id = tc.vote_count;
+            tc.vote_count += 1;
+
+            // Record the vote in both stores
+            tc.voters.insert(account, vote_id);
+            tc.votes.insert(vote_id, TemperatureCheckVoteRecord {
+                voter: account,
+                vote,
+            });
 
             Runtime::emit_event(TemperatureCheckVotedEvent {
                 temperature_check_id,
+                vote_id,
                 account,
                 vote,
             });
@@ -280,14 +291,14 @@ mod governance {
         /// # Arguments
         /// * `account` - The account casting the vote
         /// * `proposal_id` - The ID of the proposal to vote on
-        /// * `votes` - The selected option(s):
+        /// * `options` - The selected option(s):
         ///   - For single-choice proposals: provide exactly one option
         ///   - For multiple-choice proposals: provide up to max_selections options
         pub fn vote_on_proposal(
             &mut self,
             account: Global<Account>,
             proposal_id: u64,
-            votes: Vec<ProposalVoteOptionId>,
+            options: Vec<ProposalVoteOptionId>,
         ) {
             // Verify the account is present in the transaction
             Runtime::assert_access_rule(account.get_owner_role().rule);
@@ -309,21 +320,21 @@ mod governance {
                 "Voting has ended"
             );
 
-            // Validate vote count based on max_selections
-            assert!(!votes.is_empty(), "Must select at least one option");
+            // Validate option count based on max_selections
+            assert!(!options.is_empty(), "Must select at least one option");
 
             match proposal.max_selections {
                 None => {
-                    // Single choice: exactly one vote
+                    // Single choice: exactly one option
                     assert!(
-                        votes.len() == 1,
+                        options.len() == 1,
                         "This is a single-choice proposal, select exactly one option"
                     );
                 }
                 Some(max) => {
-                    // Multiple choice: up to max votes
+                    // Multiple choice: up to max options
                     assert!(
-                        votes.len() <= max as usize,
+                        options.len() <= max as usize,
                         "Cannot select more than {} options",
                         max
                     );
@@ -332,36 +343,44 @@ mod governance {
 
             // Check for duplicate selections
             let mut seen = Vec::new();
-            for vote in &votes {
+            for option in &options {
                 assert!(
-                    !seen.contains(vote),
+                    !seen.contains(option),
                     "Duplicate vote option selected"
                 );
-                seen.push(*vote);
+                seen.push(*option);
             }
 
-            // Validate all vote options exist
-            for vote in &votes {
+            // Validate all selected options exist
+            for option in &options {
                 assert!(
-                    proposal.vote_options.iter().any(|opt| opt.id == *vote),
+                    proposal.vote_options.iter().any(|opt| opt.id == *option),
                     "Invalid vote option"
                 );
             }
 
             // Check the account has not already voted
             assert!(
-                proposal.votes.get(&account).is_none(),
+                proposal.voters.get(&account).is_none(),
                 "Account has already voted on this proposal"
             );
 
-            // Record the votes and update last_vote_at
-            proposal.votes.insert(account, votes.clone());
-            proposal.last_vote_at = now;
+            // Get the vote ID and increment the counter
+            let vote_id = proposal.vote_count;
+            proposal.vote_count += 1;
+
+            // Record the vote in both stores
+            proposal.voters.insert(account, vote_id);
+            proposal.votes.insert(vote_id, ProposalVoteRecord {
+                voter: account,
+                options: options.clone(),
+            });
 
             Runtime::emit_event(ProposalVotedEvent {
                 proposal_id,
+                vote_id,
                 account,
-                votes,
+                options,
             });
         }
 

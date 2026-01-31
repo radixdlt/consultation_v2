@@ -25,7 +25,9 @@ export const TemperatureCheckSchema = Schema.asSchema(
       title: Schema.String,
       short_description: Schema.String,
       description: Schema.String,
+      voters: Schema.String,
       votes: Schema.String,
+      vote_count: Schema.Number,
       vote_options: Schema.Array(
         Schema.Struct({
           id: Schema.Tuple(Schema.Number),
@@ -40,7 +42,9 @@ export const TemperatureCheckSchema = Schema.asSchema(
       title: Schema.String,
       shortDescription: Schema.String,
       description: Schema.String,
+      voters: KeyValueStoreAddress,
       votes: KeyValueStoreAddress,
+      voteCount: Schema.Number,
       voteOptions: Schema.Array(
         Schema.Struct({
           id: Schema.Number,
@@ -56,7 +60,9 @@ export const TemperatureCheckSchema = Schema.asSchema(
         title: fromA.title,
         shortDescription: fromA.short_description,
         description: fromA.description,
+        voters: KeyValueStoreAddress.make(fromA.voters),
         votes: KeyValueStoreAddress.make(fromA.votes),
+        voteCount: fromA.vote_count,
         voteOptions: fromA.vote_options.map((option) => ({
           id: option.id[0],
           label: option.label
@@ -69,7 +75,9 @@ export const TemperatureCheckSchema = Schema.asSchema(
         title: values.title,
         short_description: values.shortDescription,
         description: values.description,
+        voters: values.voters,
         votes: values.votes,
+        vote_count: values.voteCount,
         vote_options: values.voteOptions.map((option) => ({
           id: [option.id] as const,
           label: option.label
@@ -84,24 +92,29 @@ export const TemperatureCheckSchema = Schema.asSchema(
 
 export const TemperatureCheckVoteSchema = Schema.transform(
   Schema.Struct({
-    id: Schema.String,
-    variant: Schema.String,
-    value: Schema.Struct({})
+    id: Schema.Number,
+    voter: Schema.String,
+    vote: Schema.Struct({
+      variant: Schema.String,
+      value: Schema.Tuple()
+    })
   }),
   Schema.Struct({
-    accountAddress: AccountAddress,
-    vote: Schema.Literal('For', 'Against')
+    id: Schema.Number,
+    voter: AccountAddress,
+    vote: Schema.Literal('For', 'Against', 'Abstain')
   }),
   {
     strict: true,
     decode: (fromA) => ({
-      accountAddress: AccountAddress.make(fromA.id),
-      vote: fromA.variant === 'For' ? ('For' as const) : ('Against' as const)
+      id: fromA.id,
+      voter: AccountAddress.make(fromA.voter),
+      vote: fromA.vote.variant as 'For' | 'Against' | 'Abstain'
     }),
     encode: (values) => ({
-      id: values.accountAddress,
-      variant: values.vote,
-      value: {}
+      id: values.id,
+      voter: values.voter,
+      vote: { variant: values.vote, value: [] as const }
     })
   }
 )

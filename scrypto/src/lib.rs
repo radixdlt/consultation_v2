@@ -7,11 +7,26 @@ pub mod vote_delegation;
 // Shared Types
 // =============================================================================
 
-/// Vote option for temperature checks (simple for/against)
+/// Vote option for temperature checks (for/against/abstain)
 #[derive(ScryptoSbor, ManifestSbor, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TemperatureCheckVote {
     For,
     Against,
+    Abstain,
+}
+
+/// A recorded vote on a temperature check
+#[derive(ScryptoSbor, Clone, Debug)]
+pub struct TemperatureCheckVoteRecord {
+    pub voter: Global<Account>,
+    pub vote: TemperatureCheckVote,
+}
+
+/// A recorded vote on a proposal
+#[derive(ScryptoSbor, Clone, Debug)]
+pub struct ProposalVoteRecord {
+    pub voter: Global<Account>,
+    pub options: Vec<ProposalVoteOptionId>,
 }
 
 /// Unique identifier for a proposal vote option
@@ -97,15 +112,18 @@ pub struct TemperatureCheck {
     /// If None, only one option can be selected (single choice).
     /// If Some(n), up to n options can be selected (multiple choice).
     pub max_selections: Option<u32>,
-    pub votes: KeyValueStore<Global<Account>, TemperatureCheckVote>,
+    /// Maps voter accounts to their vote ID (for deduplication and lookup)
+    pub voters: KeyValueStore<Global<Account>, u64>,
+    /// Maps sequential vote IDs to vote records (for enumeration)
+    pub votes: KeyValueStore<u64, TemperatureCheckVoteRecord>,
+    /// Counter for votes, incremented with each new vote
+    pub vote_count: u64,
     pub approval_threshold: Decimal,
     pub start: Instant,
     pub deadline: Instant,
     pub elevated_proposal_id: Option<u64>,
     /// The account that created this temperature check
     pub author: Global<Account>,
-    /// Timestamp of the last vote cast, initialized at creation (useful for cache invalidation)
-    pub last_vote_at: Instant,
 }
 
 /// Struct for a proposal (GP - Governance Proposal)
@@ -124,16 +142,18 @@ pub struct Proposal {
     /// If None, only one option can be selected (single choice).
     /// If Some(n), up to n options can be selected (multiple choice).
     pub max_selections: Option<u32>,
-    /// Stores selected option IDs for each voter
-    pub votes: KeyValueStore<Global<Account>, Vec<ProposalVoteOptionId>>,
+    /// Maps voter accounts to their vote ID (for deduplication and lookup)
+    pub voters: KeyValueStore<Global<Account>, u64>,
+    /// Maps sequential vote IDs to vote records (for enumeration)
+    pub votes: KeyValueStore<u64, ProposalVoteRecord>,
+    /// Counter for votes, incremented with each new vote
+    pub vote_count: u64,
     pub approval_threshold: Decimal,
     pub start: Instant,
     pub deadline: Instant,
     pub temperature_check_id: u64,
     /// The account that created the original temperature check
     pub author: Global<Account>,
-    /// Timestamp of the last vote cast, initialized at creation (useful for cache invalidation)
-    pub last_vote_at: Instant,
 }
 
 // =============================================================================
@@ -165,6 +185,7 @@ pub struct TemperatureCheckCreatedEvent {
 #[derive(ScryptoSbor, ScryptoEvent, Clone, Debug)]
 pub struct TemperatureCheckVotedEvent {
     pub temperature_check_id: u64,
+    pub vote_id: u64,
     pub account: Global<Account>,
     pub vote: TemperatureCheckVote,
 }
@@ -183,8 +204,9 @@ pub struct ProposalCreatedEvent {
 #[derive(ScryptoSbor, ScryptoEvent, Clone, Debug)]
 pub struct ProposalVotedEvent {
     pub proposal_id: u64,
+    pub vote_id: u64,
     pub account: Global<Account>,
-    pub votes: Vec<ProposalVoteOptionId>,
+    pub options: Vec<ProposalVoteOptionId>,
 }
 
 /// Emitted when governance parameters are updated

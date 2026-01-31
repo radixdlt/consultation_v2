@@ -107,24 +107,11 @@ export function TemperatureCheckForm({
 			.orNull();
 	}, [makeResult, onSuccess]);
 
-	const hasNoAccounts = Result.builder(accountsResult)
+	const hasAccounts = Result.builder(accountsResult)
 		.onInitial(() => false)
 		.onFailure(() => false)
-		.onSuccess((accounts) => accounts.length === 0)
+		.onSuccess((accounts) => accounts.length > 0)
 		.orNull() ?? false;
-
-	if (hasNoAccounts) {
-		return (
-			<Card className="w-full max-w-2xl">
-				<CardHeader>
-					<CardTitle>Create Temperature Check</CardTitle>
-				</CardHeader>
-				<CardContent className="py-8 text-center text-muted-foreground">
-					Please connect your wallet to create a temperature check.
-				</CardContent>
-			</Card>
-		);
-	}
 
 	return (
 		<Card className="w-full max-w-2xl">
@@ -268,7 +255,7 @@ export function TemperatureCheckForm({
 					<CardFooter>
 						<Button
 							type="submit"
-							disabled={!canSubmit || makeResult.waiting}
+							disabled={!canSubmit || makeResult.waiting || !hasAccounts}
 							className="w-full mt-4"
 						>
 							{makeResult.waiting ? (
@@ -276,6 +263,8 @@ export function TemperatureCheckForm({
 									<LoaderIcon className="size-4 animate-spin" />
 									Creating...
 								</>
+							) : !hasAccounts ? (
+								"Connect Wallet to Create"
 							) : (
 								"Create Temperature Check"
 							)}
