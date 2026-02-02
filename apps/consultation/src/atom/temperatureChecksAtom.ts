@@ -4,7 +4,7 @@ import {
 	GetLedgerStateService,
 } from "@radix-effects/gateway";
 import { AccountAddress, StateVersion } from "@radix-effects/shared";
-import type { TransactionStatus } from "@radixdlt/radix-dapp-toolkit";
+import type { WalletDataStateAccount } from "@radixdlt/radix-dapp-toolkit";
 import { Array as A, Data, Effect, Layer, Option, pipe, Ref } from "effect";
 import { StokenetGatewayApiClientLayer } from "shared/gateway";
 import {
@@ -143,17 +143,103 @@ export const makeTemperatureCheckAtom = runtime.fn(
 	),
 );
 
-export const voteOnTemperatureCheckAtom = runtime.fn(
-	Effect.fn(function* (input: MakeTemperatureCheckVoteInput) {
-		const governanceComponent = yield* GovernanceComponent;
+export class AccountAlreadyVotedError extends Data.TaggedError(
+	"AccountAlreadyVotedError",
+)<{
+	message: string;
+}> {}
 
+// Core vote logic without toast - reused by both single and batch atoms
+const voteOnTemperatureCheck = (input: MakeTemperatureCheckVoteInput) =>
+	Effect.gen(function* () {
+		const governanceComponent = yield* GovernanceComponent;
 		const sendTransaction = yield* SendTransaction;
 
 		const manifest =
 			yield* governanceComponent.makeTemperatureCheckVoteManifest(input);
 
-		return yield* sendTransaction(manifest);
-	}),
+		return yield* sendTransaction(manifest).pipe(
+			Effect.catchTag("WalletErrorResponse", (error) =>
+				Effect.gen(function* () {
+					if (
+						error.message.includes(
+							"Account has already voted on this temperature check",
+						)
+					) {
+						return yield* new AccountAlreadyVotedError({
+							message: "Account has already voted on this temperature check",
+						});
+					}
+					return yield* new WalletErrorResponse({
+						error: error.message,
+					});
+				}),
+			),
+		);
+	});
+
+export const voteOnTemperatureCheckAtom = runtime.fn(
+	Effect.fn(
+		(input: MakeTemperatureCheckVoteInput) => voteOnTemperatureCheck(input),
+		withToast({
+			whenLoading: "Submitting vote...",
+			whenSuccess: "Vote submitted",
+			whenFailure: ({ cause }) => {
+				if (cause._tag === "Fail" && cause.error.message) {
+					return Option.some(cause.error.message);
+				}
+				return Option.some("Failed to submit vote");
+			},
+		}),
+	),
+);
+
+type VoteResult = { account: string; success: boolean; error?: string };
+
+export const voteOnTemperatureCheckBatchAtom = runtime.fn(
+	Effect.fn(
+		function* (input: {
+			accounts: WalletDataStateAccount[];
+			temperatureCheckId: TemperatureCheckId;
+			vote: "For" | "Against";
+		}) {
+			const results: VoteResult[] = [];
+
+			for (const account of input.accounts) {
+				const result = yield* voteOnTemperatureCheck({
+					accountAddress: AccountAddress.make(account.address),
+					temperatureCheckId: input.temperatureCheckId,
+					vote: input.vote,
+				}).pipe(
+					Effect.map(
+						(): VoteResult => ({ account: account.address, success: true }),
+					),
+					Effect.catchAll((error) =>
+						Effect.succeed<VoteResult>({
+							account: account.address,
+							success: false,
+							error:
+								"message" in error ? (error.message as string) : "Vote failed",
+						}),
+					),
+				);
+				results.push(result);
+			}
+
+			return results;
+		},
+		withToast({
+			whenLoading: "Submitting votes...",
+			whenSuccess: ({ result }) => {
+				const successes = result.filter((r) => r.success).length;
+				const failures = result.filter((r) => !r.success).length;
+				if (failures === 0) return `${successes} vote(s) submitted`;
+				if (successes === 0) return "All votes failed";
+				return `${successes} submitted, ${failures} failed`;
+			},
+			whenFailure: () => Option.some("Failed to submit votes"),
+		}),
+	),
 );
 
 export const getTemperatureCheckByIdAtom = Atom.family(

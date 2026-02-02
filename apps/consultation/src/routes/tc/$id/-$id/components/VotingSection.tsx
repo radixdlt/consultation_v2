@@ -1,10 +1,10 @@
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
-import { AccountAddress } from "@radix-effects/shared";
+import type { WalletDataStateAccount } from "@radixdlt/radix-dapp-toolkit";
 import { LoaderIcon } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import { accountsAtom } from "@/atom/dappToolkitAtom";
-import { voteOnTemperatureCheckAtom } from "@/atom/temperatureChecksAtom";
+import { voteOnTemperatureCheckBatchAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -12,6 +12,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Vote = "For" | "Against";
 
@@ -45,6 +46,36 @@ type VoteButtonsProps = {
 	disabled?: boolean;
 	loadingVote?: Vote | null;
 };
+
+type VoteAllCheckboxProps = {
+	checked: boolean;
+	onCheckedChange: (checked: boolean) => void;
+	disabled?: boolean;
+	accountCount: number;
+};
+
+function VoteAllCheckbox({
+	checked,
+	onCheckedChange,
+	disabled,
+	accountCount,
+}: VoteAllCheckboxProps) {
+	if (accountCount < 2) return null;
+
+	return (
+		<div className="flex items-center space-x-2">
+			<Checkbox
+				id="vote-all"
+				checked={checked}
+				onCheckedChange={(checked) => onCheckedChange(checked === true)}
+				disabled={disabled}
+			/>
+			<label htmlFor="vote-all" className="text-sm">
+				Vote with all connected accounts ({accountCount})
+			</label>
+		</div>
+	);
+}
 
 function VoteButtons({ onVote, disabled, loadingVote }: VoteButtonsProps) {
 	return (
@@ -82,7 +113,7 @@ export function VotingSection({ temperatureCheckId }: VotingSectionProps) {
 			return (
 				<ConnectedVoting
 					temperatureCheckId={temperatureCheckId}
-					accountAddress={AccountAddress.make(firstAccount.address)}
+					accountList={accountList}
 				/>
 			);
 		})
@@ -118,35 +149,53 @@ function DisconnectedVoting() {
 
 type ConnectedVotingProps = {
 	temperatureCheckId: TemperatureCheckId;
-	accountAddress: AccountAddress;
+	accountList: WalletDataStateAccount[];
 };
 
 function ConnectedVoting({
 	temperatureCheckId,
-	accountAddress,
+	accountList,
 }: ConnectedVotingProps) {
-	const [voteResult, vote] = useAtom(voteOnTemperatureCheckAtom);
+	const [voteResult, voteBatch] = useAtom(voteOnTemperatureCheckBatchAtom);
 	const [selectedVote, setSelectedVote] = useState<Vote | null>(null);
+	const [voteAllAccounts, setVoteAllAccounts] = useState(
+		accountList.length >= 2,
+	);
 
-	const handleVote = (voteChoice: Vote) => {
-		setSelectedVote(voteChoice);
-		vote({
-			accountAddress,
-			temperatureCheckId,
-			vote: voteChoice,
-		});
-	};
+	const isSubmitting = voteResult.waiting;
+
+	const handleVote = useCallback(
+		(voteChoice: Vote) => {
+			setSelectedVote(voteChoice);
+
+			const accountsToVote = voteAllAccounts ? accountList : [accountList[0]];
+
+			voteBatch({
+				accounts: accountsToVote,
+				temperatureCheckId,
+				vote: voteChoice,
+			});
+		},
+		[accountList, temperatureCheckId, voteBatch, voteAllAccounts],
+	);
 
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle>Cast Your Vote</CardTitle>
 			</CardHeader>
-			<CardContent>
+			<CardContent className="space-y-4">
 				<VoteButtons
 					onVote={handleVote}
-					disabled={voteResult.waiting}
-					loadingVote={voteResult.waiting ? selectedVote : null}
+					disabled={isSubmitting}
+					loadingVote={isSubmitting ? selectedVote : null}
+				/>
+
+				<VoteAllCheckbox
+					checked={voteAllAccounts}
+					onCheckedChange={setVoteAllAccounts}
+					disabled={isSubmitting}
+					accountCount={accountList.length}
 				/>
 			</CardContent>
 		</Card>
