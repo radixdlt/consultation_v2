@@ -13,6 +13,58 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 
+type Vote = "For" | "Against";
+
+type VoteButtonProps = {
+	vote: Vote;
+	onClick?: () => void;
+	disabled?: boolean;
+	loading?: boolean;
+};
+
+function VoteButton({ vote, onClick, disabled, loading }: VoteButtonProps) {
+	const colorClasses =
+		vote === "For"
+			? "bg-emerald-600 hover:bg-emerald-700"
+			: "bg-rose-600 hover:bg-rose-700";
+
+	return (
+		<Button
+			onClick={onClick}
+			disabled={disabled}
+			className={`flex-1 ${colorClasses} font-bold`}
+		>
+			{loading && <LoaderIcon className="size-4 animate-spin" />}
+			{vote}
+		</Button>
+	);
+}
+
+type VoteButtonsProps = {
+	onVote?: (vote: Vote) => void;
+	disabled?: boolean;
+	loadingVote?: Vote | null;
+};
+
+function VoteButtons({ onVote, disabled, loadingVote }: VoteButtonsProps) {
+	return (
+		<div className="flex gap-4">
+			<VoteButton
+				vote="For"
+				onClick={() => onVote?.("For")}
+				disabled={disabled}
+				loading={loadingVote === "For"}
+			/>
+			<VoteButton
+				vote="Against"
+				onClick={() => onVote?.("Against")}
+				disabled={disabled}
+				loading={loadingVote === "Against"}
+			/>
+		</div>
+	);
+}
+
 type VotingSectionProps = {
 	temperatureCheckId: TemperatureCheckId;
 };
@@ -39,23 +91,7 @@ export function VotingSection({ temperatureCheckId }: VotingSectionProps) {
 }
 
 function VotingSkeleton() {
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Cast Your Vote</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<div className="flex gap-4">
-					<Button disabled className="flex-1 bg-emerald-600 font-bold">
-						For
-					</Button>
-					<Button disabled className="flex-1 bg-rose-600 font-bold">
-						Against
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
-	);
+	return <DisconnectedVoting />;
 }
 
 function DisconnectedVoting() {
@@ -64,18 +100,17 @@ function DisconnectedVoting() {
 			<CardHeader>
 				<CardTitle>Cast Your Vote</CardTitle>
 			</CardHeader>
-			<CardContent className="space-y-3">
-				<div className="flex gap-4">
-					<Button disabled className="flex-1 bg-emerald-600 font-bold">
-						For
-					</Button>
-					<Button disabled className="flex-1 bg-rose-600 font-bold">
-						Against
-					</Button>
+			<CardContent>
+				<div className="relative">
+					<div className="blur-sm pointer-events-none">
+						<VoteButtons disabled />
+					</div>
+					<div className="absolute inset-0 flex items-center justify-center">
+						<p className="text-sm font-medium bg-background/80 px-3 py-1.5 rounded">
+							Connect wallet to vote
+						</p>
+					</div>
 				</div>
-				<p className="text-sm text-muted-foreground text-center">
-					Connect wallet to vote
-				</p>
 			</CardContent>
 		</Card>
 	);
@@ -91,11 +126,9 @@ function ConnectedVoting({
 	accountAddress,
 }: ConnectedVotingProps) {
 	const [voteResult, vote] = useAtom(voteOnTemperatureCheckAtom);
-	const [selectedVote, setSelectedVote] = useState<"For" | "Against" | null>(
-		null,
-	);
+	const [selectedVote, setSelectedVote] = useState<Vote | null>(null);
 
-	const handleVote = (voteChoice: "For" | "Against") => {
+	const handleVote = (voteChoice: Vote) => {
 		setSelectedVote(voteChoice);
 		vote({
 			accountAddress,
@@ -104,36 +137,17 @@ function ConnectedVoting({
 		});
 	};
 
-	const isLoading = voteResult.waiting;
-
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle>Cast Your Vote</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div className="flex gap-4">
-					<Button
-						onClick={() => handleVote("For")}
-						disabled={isLoading}
-						className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-bold"
-					>
-						{isLoading && selectedVote === "For" ? (
-							<LoaderIcon className="size-4 animate-spin" />
-						) : null}
-						For
-					</Button>
-					<Button
-						onClick={() => handleVote("Against")}
-						disabled={isLoading}
-						className="flex-1 bg-rose-600 hover:bg-rose-700 font-bold"
-					>
-						{isLoading && selectedVote === "Against" ? (
-							<LoaderIcon className="size-4 animate-spin" />
-						) : null}
-						Against
-					</Button>
-				</div>
+				<VoteButtons
+					onVote={handleVote}
+					disabled={voteResult.waiting}
+					loadingVote={voteResult.waiting ? selectedVote : null}
+				/>
 			</CardContent>
 		</Card>
 	);
