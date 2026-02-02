@@ -7,12 +7,11 @@ pub mod vote_delegation;
 // Shared Types
 // =============================================================================
 
-/// Vote option for temperature checks (for/against/abstain)
+/// Vote option for temperature checks (for/against)
 #[derive(ScryptoSbor, ManifestSbor, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TemperatureCheckVote {
     For,
     Against,
-    Abstain,
 }
 
 /// A recorded vote on a temperature check
@@ -39,7 +38,7 @@ pub struct ProposalVoteOptionInput {
     pub label: String,
 }
 
-/// A vote option for proposals (e.g., "For", "Against", "Abstain")
+/// A vote option for proposals (e.g., "For", "Against")
 /// The ID is auto-generated based on the order of options (0, 1, 2, ...)
 #[derive(ScryptoSbor, ManifestSbor, Clone, Debug)]
 pub struct ProposalVoteOption {

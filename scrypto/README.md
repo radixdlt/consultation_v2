@@ -85,7 +85,7 @@ TemperatureCheckDraft {
 }
 
 ProposalVoteOptionInput {
-    label: String,  // e.g., "For", "Against", "Abstain"
+    label: String,  // e.g., "For", "Against"
 }
 ```
 

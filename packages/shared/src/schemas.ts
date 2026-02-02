@@ -71,8 +71,7 @@ export const TemperatureCheckVoteKeyValueStoreKey = s.number()
 
 export const TemperatureCheckVote = s.enum([
   { variant: 'For', schema: s.tuple([]) },
-  { variant: 'Against', schema: s.tuple([]) },
-  { variant: 'Abstain', schema: s.tuple([]) }
+  { variant: 'Against', schema: s.tuple([]) }
 ])
 
 export const TemperatureCheckVoteKeyValueStoreValue = s.struct({
