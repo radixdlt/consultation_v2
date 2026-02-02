@@ -103,14 +103,14 @@ export const TemperatureCheckVoteSchema = Schema.transform(
   Schema.Struct({
     id: Schema.Number,
     voter: AccountAddress,
-    vote: Schema.Literal('For', 'Against', 'Abstain')
+    vote: Schema.Literal('For', 'Against')
   }),
   {
     strict: true,
     decode: (fromA) => ({
       id: fromA.id,
       voter: AccountAddress.make(fromA.voter),
-      vote: fromA.vote.variant as 'For' | 'Against' | 'Abstain'
+      vote: fromA.vote.variant as 'For' | 'Against'
     }),
     encode: (values) => ({
       id: values.id,
