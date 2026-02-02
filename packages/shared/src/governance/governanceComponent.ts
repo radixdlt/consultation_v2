@@ -242,9 +242,7 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
             .map((option) => `Tuple("${option}")`)
             .join(', ')
 
-          const links = parsedInput.links
-            .map((url) => `"${url}"`)
-            .join(', ')
+          const links = parsedInput.links.map((url) => `"${url}"`).join(', ')
 
           const maxSelectionsManifest =
             parsedInput.maxSelections === 1
@@ -281,18 +279,12 @@ CALL_METHOD
             MakeTemperatureCheckVoteInputSchema
           )(input)
 
-          return TransactionManifestString.make(`
-            CALL_METHOD
-              Address("${parsedInput.accountAddress}")
-              "lock_fee"
-              Decimal("10")
-            ;
-    
+          return TransactionManifestString.make(`   
             CALL_METHOD
               Address("${config.componentAddress}")
               "vote_on_temperature_check"
               Address("${parsedInput.accountAddress}") # account to vote with
-              0u64
+              ${parsedInput.temperatureCheckId}u64 # temperature check id
               Enum<${parsedInput.vote === 'For' ? 0 : 1}u8>() # for or against temp check, this is "for", Enum<1u8>() would be "against"
             ;
     
