@@ -21,10 +21,26 @@ pub struct TemperatureCheckVoteRecord {
     pub vote: TemperatureCheckVote,
 }
 
+/// Voter entry for temperature checks - combines vote_id with vote data
+/// Stored in the voters KVS to minimize gateway calls when looking up a voter
+#[derive(ScryptoSbor, Clone, Debug)]
+pub struct TemperatureCheckVoterEntry {
+    pub vote_id: u64,
+    pub vote: TemperatureCheckVote,
+}
+
 /// A recorded vote on a proposal
 #[derive(ScryptoSbor, Clone, Debug)]
 pub struct ProposalVoteRecord {
     pub voter: Global<Account>,
+    pub options: Vec<ProposalVoteOptionId>,
+}
+
+/// Voter entry for proposals - combines vote_id with vote data
+/// Stored in the voters KVS to minimize gateway calls when looking up a voter
+#[derive(ScryptoSbor, Clone, Debug)]
+pub struct ProposalVoterEntry {
+    pub vote_id: u64,
     pub options: Vec<ProposalVoteOptionId>,
 }
 
@@ -111,8 +127,8 @@ pub struct TemperatureCheck {
     /// If None, only one option can be selected (single choice).
     /// If Some(n), up to n options can be selected (multiple choice).
     pub max_selections: Option<u32>,
-    /// Maps voter accounts to their vote ID (for deduplication and lookup)
-    pub voters: KeyValueStore<Global<Account>, u64>,
+    /// Maps voter accounts to their vote entry (for deduplication and single-call lookup)
+    pub voters: KeyValueStore<Global<Account>, TemperatureCheckVoterEntry>,
     /// Maps sequential vote IDs to vote records (for enumeration)
     pub votes: KeyValueStore<u64, TemperatureCheckVoteRecord>,
     /// Counter for votes, incremented with each new vote
@@ -141,8 +157,8 @@ pub struct Proposal {
     /// If None, only one option can be selected (single choice).
     /// If Some(n), up to n options can be selected (multiple choice).
     pub max_selections: Option<u32>,
-    /// Maps voter accounts to their vote ID (for deduplication and lookup)
-    pub voters: KeyValueStore<Global<Account>, u64>,
+    /// Maps voter accounts to their vote entry (for deduplication and single-call lookup)
+    pub voters: KeyValueStore<Global<Account>, ProposalVoterEntry>,
     /// Maps sequential vote IDs to vote records (for enumeration)
     pub votes: KeyValueStore<u64, ProposalVoteRecord>,
     /// Counter for votes, incremented with each new vote
