@@ -130,34 +130,22 @@ export type MakeTemperatureCheckVoteInput =
   typeof MakeTemperatureCheckVoteInputSchema.Encoded
 
 export const TemperatureCheckVoteValueSchema = Schema.asSchema(
-  Schema.transformOrFail(
-    Schema.Struct({
-      value: Schema.String,
-      kind: Schema.Literal('U64')
-    }),
-    Schema.Literal('For', 'Against'),
-    {
-      strict: true,
-      decode: (values, _options, ast) => {
-        if (values.value === '0') return ParseResult.succeed('For' as const)
-        if (values.value === '1') return ParseResult.succeed('Against' as const)
+  Schema.transformOrFail(Schema.Number, Schema.Literal('For', 'Against'), {
+    strict: true,
+    decode: (value, _options, ast) => {
+      if (value === 0) return ParseResult.succeed('For' as const)
+      else if (value === 1) return ParseResult.succeed('Against' as const)
+      else
         return ParseResult.fail(
-          new ParseResult.Type(
-            ast,
-            values,
-            `Invalid vote value: ${values.value}`
-          )
+          new ParseResult.Type(ast, value, `Invalid vote value: ${value}`)
         )
-      },
-      encode: (values, _options, ast) => {
-        if (values === 'For')
-          return ParseResult.succeed({ value: '0', kind: 'U64' } as const)
-        if (values === 'Against')
-          return ParseResult.succeed({ value: '1', kind: 'U64' } as const)
-        return ParseResult.fail(
-          new ParseResult.Type(ast, values, `Invalid vote value: ${values}`)
-        )
-      }
+    },
+    encode: (value, _options, ast) => {
+      if (value === 'For') return ParseResult.succeed(0)
+      if (value === 'Against') return ParseResult.succeed(1)
+      return ParseResult.fail(
+        new ParseResult.Type(ast, value, `Invalid vote value: ${value}`)
+      )
     }
-  )
+  })
 )

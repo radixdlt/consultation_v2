@@ -2,11 +2,26 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Attach",
+			"name": "Debug (Node)",
 			"port": 9229,
 			"request": "attach",
 			"skipFiles": ["<node_internals>/**"],
 			"type": "node"
+		},
+		{
+			"name": "Debug Consultation (Chrome)",
+			"type": "chrome",
+			"request": "launch",
+			"url": "http://localhost:3000",
+			"webRoot": "${workspaceFolder}",
+			"sourceMapPathOverrides": {
+				"/@fs/Users/alex/Projects/vote-collector/*": "${workspaceFolder}/*",
+				"/@fs/*": "/*",
+				"/src/*": "${workspaceFolder}/apps/consultation/src/*",
+				"webpack://consultation-dapp/*": "${workspaceFolder}/apps/consultation/*",
+				"webpack://?:*/*": "${workspaceFolder}/*"
+			},
+			"sourceMaps": true
 		}
 	]
 }

@@ -14,7 +14,7 @@ type SidebarContentProps = {
 
 export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
 	const accountsVotesResult = useAtomValue(
-		getTemperatureCheckVotesByAccountsAtom(temperatureCheck.votes),
+		getTemperatureCheckVotesByAccountsAtom(temperatureCheck.voters),
 	);
 
 	return (

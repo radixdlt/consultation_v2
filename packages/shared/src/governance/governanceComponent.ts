@@ -32,6 +32,7 @@ import {
   TemperatureCheckVoteSchema,
   TemperatureCheckVoteValueSchema
 } from './schemas'
+import s from 'sbor-ez-mode'
 
 export class KeyValueStoreNotFoundError extends Data.TaggedError(
   'KeyValueStoreNotFoundError'
@@ -168,8 +169,9 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
               pipe(
                 result,
                 A.head,
+                Option.flatMap((item) => A.head(item.entries)),
                 Option.flatMap((item) =>
-                  Option.fromNullable(item.entries[0].value.programmatic_json)
+                  Option.fromNullable(item.value.programmatic_json)
                 ),
                 Option.getOrThrowWith(
                   () =>
@@ -329,15 +331,28 @@ CALL_METHOD
             Effect.flatMap(
               Effect.forEach(
                 Effect.fnUntraced(function* (item) {
-                  debugger
                   const address = yield* Schema.decodeUnknown(
                     AccountAddressSchema
                   )(item.key.programmatic_json).pipe(
                     Effect.map((result) => result.value)
                   )
-                  const vote = yield* Schema.decodeUnknown(
-                    TemperatureCheckVoteValueSchema
-                  )(item.value.programmatic_json)
+
+                  const vote = yield* parseSbor(
+                    item.value.programmatic_json,
+                    s.tuple([
+                      s.number(),
+                      s.enum([
+                        { variant: 'For', schema: s.structNullable({}) },
+                        { variant: 'Against', schema: s.structNullable({}) }
+                      ])
+                    ])
+                  )
+                    .pipe(Effect.map((result) => result[0]))
+                    .pipe(
+                      Effect.flatMap(
+                        Schema.decodeUnknown(TemperatureCheckVoteValueSchema)
+                      )
+                    )
 
                   return {
                     address,
