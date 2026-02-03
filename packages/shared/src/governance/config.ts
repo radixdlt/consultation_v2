@@ -7,7 +7,7 @@ export class Config extends Context.Tag('Config')<
 >() {
   static StokenetLive = Layer.succeed(this, {
     componentAddress: ComponentAddress.make(
-      'component_tdx_2_1cz4jgejhc5z306tg26rkhkm90nssrcjqf0paps8kne6eqtn279mter'
+      'component_tdx_2_1czr790e327846tcfvl5298da9h2lu8ngm97qg3nn93shkyngjjlau8'
     )
   })
 }

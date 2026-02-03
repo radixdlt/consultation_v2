@@ -1,8 +1,8 @@
 use scrypto::prelude::*;
 use crate::{
     GovernanceParameters, Proposal, ProposalVoteOption, ProposalVoteOptionId,
-    ProposalVoteRecord, TemperatureCheck, TemperatureCheckDraft,
-    TemperatureCheckVote, TemperatureCheckVoteRecord,
+    ProposalVoteRecord, ProposalVoterEntry, TemperatureCheck, TemperatureCheckDraft,
+    TemperatureCheckVote, TemperatureCheckVoteRecord, TemperatureCheckVoterEntry,
     TemperatureCheckCreatedEvent, TemperatureCheckVotedEvent,
     ProposalCreatedEvent, ProposalVotedEvent, GovernanceParametersUpdatedEvent,
     MAX_LINKS, MAX_VOTE_OPTIONS, MAX_SELECTIONS,
@@ -271,7 +271,10 @@ mod governance {
             tc.vote_count += 1;
 
             // Record the vote in both stores
-            tc.voters.insert(account, vote_id);
+            tc.voters.insert(account, TemperatureCheckVoterEntry {
+                vote_id,
+                vote,
+            });
             tc.votes.insert(vote_id, TemperatureCheckVoteRecord {
                 voter: account,
                 vote,
@@ -370,7 +373,10 @@ mod governance {
             proposal.vote_count += 1;
 
             // Record the vote in both stores
-            proposal.voters.insert(account, vote_id);
+            proposal.voters.insert(account, ProposalVoterEntry {
+                vote_id,
+                options: options.clone(),
+            });
             proposal.votes.insert(vote_id, ProposalVoteRecord {
                 voter: account,
                 options: options.clone(),

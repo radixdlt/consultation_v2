@@ -81,7 +81,10 @@ export const TemperatureCheckVoteKeyValueStoreValue = s.struct({
 
 export const TemperatureCheckVotersKeyValueStoreKey = s.address()
 
-export const TemperatureCheckVotersKeyValueStoreValue = s.number()
+export const TemperatureCheckVotersKeyValueStoreValue = s.struct({
+  vote_id: s.number(),
+  vote: TemperatureCheckVote
+})
 
 export const ProposalKeyValueStoreKey = s.number()
 
@@ -124,7 +127,10 @@ export const ProposalVoteKeyValueStoreValue = s.struct({
 
 export const ProposalVotersKeyValueStoreKey = s.address()
 
-export const ProposalVotersKeyValueStoreValue = s.number()
+export const ProposalVotersKeyValueStoreValue = s.struct({
+  vote_id: s.number(),
+  options: s.array(ProposalVoteOptionId)
+})
 
 export const TemperatureCheckVotedEvent = s.struct({
   temperature_check_id: s.number(),
