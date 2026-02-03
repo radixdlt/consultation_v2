@@ -42,3 +42,5 @@ scrypto/target/
 
 .envrc
 .mcp.json
+
+.claude

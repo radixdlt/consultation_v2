@@ -29,10 +29,12 @@ export const walletDataAtom = runtime.atom(
 			}),
 		);
 
-		yield* Stream.runForEach(walletData, (value) =>
-			Effect.sync(() => {
-				get.setSelf(Effect.succeed(value));
-			}),
+		yield* Stream.runForEach(
+			Stream.changesWith(
+				walletData,
+				(prev, curr) => JSON.stringify(prev) === JSON.stringify(curr),
+			),
+			(value) => Effect.sync(() => get.setSelf(Effect.succeed(value))),
 		);
 
 		return rdt.walletApi.getWalletData();

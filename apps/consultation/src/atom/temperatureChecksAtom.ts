@@ -259,10 +259,11 @@ export const getTemperatureCheckByIdAtom = Atom.family(
 export const getTemperatureCheckVotesByAccountsAtom = Atom.family(
 	(keyValueStoreAddress: KeyValueStoreAddress) =>
 		runtime.atom(
-			Effect.fnUntraced(function* () {
-				const accounts = yield* Atom.getResult(accountsAtom);
+			Effect.fnUntraced(function* (get) {
+				const accounts = yield* get.result(accountsAtom);
 
 				const governanceComponent = yield* GovernanceComponent;
+
 				const votes =
 					yield* governanceComponent.getTemperatureCheckVotesByAccounts({
 						keyValueStoreAddress,
@@ -270,6 +271,7 @@ export const getTemperatureCheckVotesByAccountsAtom = Atom.family(
 							AccountAddress.make(account.address),
 						),
 					});
+
 				return votes.map((vote) => {
 					const account = accounts.find((a) => a.address === vote.address);
 					return {

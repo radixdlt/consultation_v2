@@ -3,6 +3,7 @@ import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import type { TemperatureCheckSchema } from "shared/governance/schemas";
 import { getTemperatureCheckVotesByAccountsAtom } from "@/atom/temperatureChecksAtom";
 import { VotingSection } from "./VotingSection";
+import { YourVotesSection } from "./YourVotesSection";
 
 type TemperatureCheck = typeof TemperatureCheckSchema.Type;
 
@@ -12,8 +13,8 @@ type SidebarContentProps = {
 };
 
 export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
-	const _accountsVotesResult = useAtomValue(
-		getTemperatureCheckVotesByAccountsAtom(temperatureCheck.voters),
+	const accountsVotesResult = useAtomValue(
+		getTemperatureCheckVotesByAccountsAtom(temperatureCheck.votes),
 	);
 
 	return (
@@ -26,6 +27,8 @@ export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
 			</div>
 
 			<VotingSection temperatureCheckId={id} />
+
+			<YourVotesSection accountsVotesResult={accountsVotesResult} />
 
 			<div className="space-y-3 text-sm">
 				<div>

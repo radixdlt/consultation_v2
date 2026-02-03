@@ -11,7 +11,7 @@ import {
   TransactionManifestString
 } from '@radix-effects/shared'
 import type { StateKeyValueStoreDataResponseItem } from '@radixdlt/babylon-gateway-api-sdk'
-import { Array as A, Data, Effect, Option, pipe, Schema } from 'effect'
+import { Array as A, Data, Effect, Exit, Option, pipe, Schema } from 'effect'
 import { parseSbor } from '../helpers/parseSbor'
 import {
   Governance,
@@ -329,6 +329,7 @@ CALL_METHOD
             Effect.flatMap(
               Effect.forEach(
                 Effect.fnUntraced(function* (item) {
+                  debugger
                   const address = yield* Schema.decodeUnknown(
                     AccountAddressSchema
                   )(item.key.programmatic_json).pipe(
