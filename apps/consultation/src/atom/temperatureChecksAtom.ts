@@ -208,11 +208,15 @@ type VoteResult = { account: string; success: boolean; error?: string };
 
 export const voteOnTemperatureCheckBatchAtom = runtime.fn(
 	Effect.fn(
-		function* (input: {
-			accounts: WalletDataStateAccount[];
-			temperatureCheckId: TemperatureCheckId;
-			vote: "For" | "Against";
-		}) {
+		function* (
+			input: {
+				accounts: WalletDataStateAccount[];
+				temperatureCheckId: TemperatureCheckId;
+				keyValueStoreAddress: KeyValueStoreAddress;
+				vote: "For" | "Against";
+			},
+			get,
+		) {
 			const results: VoteResult[] = [];
 
 			for (const account of input.accounts) {
