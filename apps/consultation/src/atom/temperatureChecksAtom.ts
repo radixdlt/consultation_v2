@@ -153,6 +153,12 @@ export class AccountAlreadyVotedError extends Data.TaggedError(
 	message: string;
 }> {}
 
+export class AllAccountsAlreadyVotedError extends Data.TaggedError(
+	"AllAccountsAlreadyVotedError",
+)<{
+	message: string;
+}> {}
+
 // Core vote logic without toast - reused by both single and batch atoms
 const voteOnTemperatureCheck = (input: MakeTemperatureCheckVoteInput) =>
 	Effect.gen(function* () {
