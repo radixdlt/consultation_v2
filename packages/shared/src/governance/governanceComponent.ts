@@ -346,13 +346,10 @@ CALL_METHOD
                         { variant: 'Against', schema: s.structNullable({}) }
                       ])
                     ])
+                  ).pipe(
+                    Effect.map((result) => result[1]),
+                    Effect.map((result) => result.variant)
                   )
-                    .pipe(Effect.map((result) => result[0]))
-                    .pipe(
-                      Effect.flatMap(
-                        Schema.decodeUnknown(TemperatureCheckVoteValueSchema)
-                      )
-                    )
 
                   return {
                     address,

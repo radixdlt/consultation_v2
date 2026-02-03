@@ -70,10 +70,12 @@ export class SendTransaction extends Effect.Service<SendTransaction>()(
 
 			return Effect.fn(function* (
 				transactionManifest: TransactionManifestString,
+				message?: string,
 			) {
 				const rdt = yield* Ref.get(rdtRef);
 				const result = yield* Effect.tryPromise({
-					try: () => rdt.walletApi.sendTransaction({ transactionManifest }),
+					try: () =>
+						rdt.walletApi.sendTransaction({ transactionManifest, message }),
 					catch: (error) => new UnexpectedWalletError({ error }),
 				});
 				if (result.isErr()) {

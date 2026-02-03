@@ -168,7 +168,7 @@ const voteOnTemperatureCheck = (input: MakeTemperatureCheckVoteInput) =>
 		const manifest =
 			yield* governanceComponent.makeTemperatureCheckVoteManifest(input);
 
-		return yield* sendTransaction(manifest).pipe(
+		return yield* sendTransaction(manifest, `Temperature check ID`).pipe(
 			Effect.catchTag("WalletErrorResponse", (error) =>
 				Effect.gen(function* () {
 					if (
@@ -217,9 +217,38 @@ export const voteOnTemperatureCheckBatchAtom = runtime.fn(
 			},
 			get,
 		) {
+			const governanceComponent = yield* GovernanceComponent;
+
+			// Get existing votes for the accounts
+			const existingVotes =
+				yield* governanceComponent.getTemperatureCheckVotesByAccounts({
+					keyValueStoreAddress: input.keyValueStoreAddress,
+					accounts: input.accounts.map((acc) =>
+						AccountAddress.make(acc.address),
+					),
+				});
+
+			const alreadyVotedAddresses = new Set<string>(
+				existingVotes.map((v) => v.address),
+			);
+
+			// Filter out accounts that have already voted
+			const accountsToVote = input.accounts.filter(
+				(acc) => !alreadyVotedAddresses.has(acc.address),
+			);
+
+			// If no accounts can vote, return error
+			if (accountsToVote.length === 0) {
+				const message =
+					input.accounts.length === 1
+						? "This account has already voted"
+						: "All selected accounts have already voted";
+				return yield* new AllAccountsAlreadyVotedError({ message });
+			}
+
 			const results: VoteResult[] = [];
 
-			for (const account of input.accounts) {
+			for (const account of accountsToVote) {
 				const result = yield* voteOnTemperatureCheck({
 					accountAddress: AccountAddress.make(account.address),
 					temperatureCheckId: input.temperatureCheckId,
@@ -240,6 +269,14 @@ export const voteOnTemperatureCheckBatchAtom = runtime.fn(
 				results.push(result);
 			}
 
+			// Refresh votes atom to update UI after successful votes
+			const hasSuccessfulVotes = results.some((r) => r.success);
+			if (hasSuccessfulVotes) {
+				get.refresh(
+					getTemperatureCheckVotesByAccountsAtom(input.keyValueStoreAddress),
+				);
+			}
+
 			return results;
 		},
 		withToast({
@@ -251,7 +288,14 @@ export const voteOnTemperatureCheckBatchAtom = runtime.fn(
 				if (successes === 0) return "All votes failed";
 				return `${successes} submitted, ${failures} failed`;
 			},
-			whenFailure: () => Option.some("Failed to submit votes"),
+			whenFailure: ({ cause }) => {
+				if (cause._tag === "Fail") {
+					if (cause.error instanceof AllAccountsAlreadyVotedError) {
+						return Option.some(cause.error.message);
+					}
+				}
+				return Option.some("Failed to submit votes");
+			},
 		}),
 	),
 );

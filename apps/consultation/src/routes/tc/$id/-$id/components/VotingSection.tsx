@@ -3,6 +3,7 @@ import type { WalletDataStateAccount } from "@radixdlt/radix-dapp-toolkit";
 import { LoaderIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
+import type { KeyValueStoreAddress } from "shared/schemas";
 import { accountsAtom } from "@/atom/dappToolkitAtom";
 import { voteOnTemperatureCheckBatchAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
@@ -91,24 +92,53 @@ function VoteButtons({ onVote, disabled, loadingVote }: VoteButtonsProps) {
 	);
 }
 
-type VotingSectionProps = {
-	temperatureCheckId: TemperatureCheckId;
+type VotedAccount = {
+	address: string;
+	label: string;
+	vote: "For" | "Against";
 };
 
-export function VotingSection({ temperatureCheckId }: VotingSectionProps) {
+type VotingSectionProps = {
+	temperatureCheckId: TemperatureCheckId;
+	keyValueStoreAddress: KeyValueStoreAddress;
+	accountsVotesResult: Result.Result<VotedAccount[], unknown>;
+};
+
+export function VotingSection({
+	temperatureCheckId,
+	keyValueStoreAddress,
+	accountsVotesResult,
+}: VotingSectionProps) {
 	const accounts = useAtomValue(accountsAtom);
 
 	return Result.builder(accounts)
 		.onInitial(() => <VotingSkeleton />)
 		.onSuccess((accountList) => {
-			const firstAccount = accountList?.[0];
-			if (!firstAccount) {
+			if (accountList.length === 0) {
 				return <DisconnectedVoting />;
 			}
+
+			// Check if all accounts have voted
+			const allAccountsVoted = Result.builder(accountsVotesResult)
+				.onSuccess(
+					(votes) =>
+						accountList.length > 0 &&
+						accountList.every((acc) =>
+							votes.some((v) => v.address === acc.address),
+						),
+				)
+				.onInitial(() => false)
+				.onFailure(() => false)
+				.render();
+
+			if (allAccountsVoted) return null;
+
 			return (
 				<ConnectedVoting
 					temperatureCheckId={temperatureCheckId}
+					keyValueStoreAddress={keyValueStoreAddress}
 					accountList={accountList}
+					accountsVotesResult={accountsVotesResult}
 				/>
 			);
 		})
@@ -144,11 +174,14 @@ function DisconnectedVoting() {
 
 type ConnectedVotingProps = {
 	temperatureCheckId: TemperatureCheckId;
+	keyValueStoreAddress: KeyValueStoreAddress;
 	accountList: WalletDataStateAccount[];
+	accountsVotesResult: Result.Result<VotedAccount[], unknown>;
 };
 
 function ConnectedVoting({
 	temperatureCheckId,
+	keyValueStoreAddress,
 	accountList,
 }: ConnectedVotingProps) {
 	const [voteResult, voteBatch] = useAtom(voteOnTemperatureCheckBatchAtom);
@@ -168,10 +201,17 @@ function ConnectedVoting({
 			voteBatch({
 				accounts: accountsToVote,
 				temperatureCheckId,
+				keyValueStoreAddress,
 				vote: voteChoice,
 			});
 		},
-		[accountList, temperatureCheckId, voteBatch, voteAllAccounts],
+		[
+			accountList,
+			temperatureCheckId,
+			keyValueStoreAddress,
+			voteBatch,
+			voteAllAccounts,
+		],
 	);
 
 	return (

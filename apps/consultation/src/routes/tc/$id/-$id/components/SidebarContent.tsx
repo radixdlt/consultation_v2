@@ -26,7 +26,11 @@ export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
 				</p>
 			</div>
 
-			<VotingSection temperatureCheckId={id} />
+			<VotingSection
+				temperatureCheckId={id}
+				keyValueStoreAddress={temperatureCheck.voters}
+				accountsVotesResult={accountsVotesResult}
+			/>
 
 			<YourVotesSection accountsVotesResult={accountsVotesResult} />
 

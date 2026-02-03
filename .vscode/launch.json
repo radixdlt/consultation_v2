@@ -15,9 +15,10 @@
 			"url": "http://localhost:3000",
 			"webRoot": "${workspaceFolder}",
 			"sourceMapPathOverrides": {
+				"http://localhost:3000/src/*": "${workspaceFolder}/apps/consultation/src/*",
+				"/src/*": "${workspaceFolder}/apps/consultation/src/*",
 				"/@fs/Users/alex/Projects/vote-collector/*": "${workspaceFolder}/*",
 				"/@fs/*": "/*",
-				"/src/*": "${workspaceFolder}/apps/consultation/src/*",
 				"webpack://consultation-dapp/*": "${workspaceFolder}/apps/consultation/*",
 				"webpack://?:*/*": "${workspaceFolder}/*"
 			},

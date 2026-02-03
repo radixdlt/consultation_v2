@@ -41,7 +41,7 @@ export const walletDataAtom = runtime.atom(
 	}),
 );
 
-export const accountsAtom = Atom.make(
+export const accountsAtom = runtime.atom(
 	Effect.fnUntraced(function* (get) {
 		const walletData = yield* get.result(walletDataAtom);
 		return walletData?.accounts ?? [];
