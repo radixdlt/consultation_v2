@@ -96,12 +96,7 @@ export const LinksField = withForm({
 					))}
 				</div>
 
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onClick={handleAdd}
-				>
+				<Button type="button" variant="outline" size="sm" onClick={handleAdd}>
 					<PlusIcon className="size-4" />
 					Add Link
 				</Button>

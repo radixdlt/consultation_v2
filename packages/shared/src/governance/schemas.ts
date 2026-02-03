@@ -1,5 +1,5 @@
 import { AccountAddress } from '@radix-effects/shared'
-import { Schema } from 'effect'
+import { ParseResult, Schema } from 'effect'
 import { KeyValueStoreAddress } from '../schemas'
 import { TemperatureCheckId } from './brandedTypes'
 
@@ -128,3 +128,36 @@ export const MakeTemperatureCheckVoteInputSchema = Schema.Struct({
 
 export type MakeTemperatureCheckVoteInput =
   typeof MakeTemperatureCheckVoteInputSchema.Encoded
+
+export const TemperatureCheckVoteValueSchema = Schema.asSchema(
+  Schema.transformOrFail(
+    Schema.Struct({
+      value: Schema.String,
+      kind: Schema.Literal('U64')
+    }),
+    Schema.Literal('For', 'Against'),
+    {
+      strict: true,
+      decode: (values, _options, ast) => {
+        if (values.value === '0') return ParseResult.succeed('For' as const)
+        if (values.value === '1') return ParseResult.succeed('Against' as const)
+        return ParseResult.fail(
+          new ParseResult.Type(
+            ast,
+            values,
+            `Invalid vote value: ${values.value}`
+          )
+        )
+      },
+      encode: (values, _options, ast) => {
+        if (values === 'For')
+          return ParseResult.succeed({ value: '0', kind: 'U64' } as const)
+        if (values === 'Against')
+          return ParseResult.succeed({ value: '1', kind: 'U64' } as const)
+        return ParseResult.fail(
+          new ParseResult.Type(ast, values, `Invalid vote value: ${values}`)
+        )
+      }
+    }
+  )
+)

@@ -56,6 +56,10 @@ export const TemperatureCheckKeyValueStoreValue = s.struct({
     {
       variant: 'None',
       schema: s.structNullable({})
+    },
+    {
+      variant: 'Some',
+      schema: s.tuple([s.number()])
     }
   ]),
   author: s.address()

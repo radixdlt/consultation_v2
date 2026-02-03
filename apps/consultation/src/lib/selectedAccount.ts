@@ -4,7 +4,9 @@ import { Effect, Option, Ref } from "effect";
 import { RadixDappToolkit } from "@/lib/dappToolkit";
 
 // Stores the selected address for use inside Effects (outside of React)
-const selectedAccountAddressRef = Ref.unsafeMake<Option.Option<string>>(Option.none());
+const selectedAccountAddressRef = Ref.unsafeMake<Option.Option<string>>(
+	Option.none(),
+);
 
 // Set the selected account address (called from React components)
 export const setSelectedAccountAddress = (address: string) => {

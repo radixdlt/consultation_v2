@@ -1,12 +1,12 @@
+import type { TransactionManifestString } from "@radix-effects/shared";
 import {
 	DataRequestBuilder,
 	Logger,
 	RadixDappToolkit as RadixDappToolkitFactory,
-	TransactionStatus,
+	type TransactionStatus,
 } from "@radixdlt/radix-dapp-toolkit";
 import { Context, Data, Effect, Layer, Ref } from "effect";
 import { envVars } from "./envVars";
-import { TransactionManifestString } from "@radix-effects/shared";
 
 class BrowserNotAvailableError extends Data.TaggedError(
 	"BrowserNotAvailableError",

@@ -5,7 +5,7 @@ import {
 } from "@radix-effects/gateway";
 import { AccountAddress, StateVersion } from "@radix-effects/shared";
 import type { WalletDataStateAccount } from "@radixdlt/radix-dapp-toolkit";
-import { Array as A, Data, Effect, Layer, Option, pipe, Ref } from "effect";
+import { Array as A, Data, Effect, Layer, Option, pipe } from "effect";
 import { StokenetGatewayApiClientLayer } from "shared/gateway";
 import {
 	Config,
@@ -17,14 +17,18 @@ import type {
 	MakeTemperatureCheckVoteInput,
 } from "shared/governance/schemas";
 import { parseSbor } from "shared/helpers/parseSbor";
-import { TemperatureCheckCreatedEvent } from "shared/schemas";
-import { getCurrentAccount } from "@/lib/selectedAccount";
+import {
+	type KeyValueStoreAddress,
+	TemperatureCheckCreatedEvent,
+} from "shared/schemas";
 import { makeAtomRuntime } from "@/atom/makeRuntimeAtom";
 import {
 	RadixDappToolkit,
 	SendTransaction,
 	WalletErrorResponse,
 } from "@/lib/dappToolkit";
+import { getCurrentAccount } from "@/lib/selectedAccount";
+import { accountsAtom } from "./dappToolkitAtom";
 import { withToast } from "./withToast";
 
 const runtime = makeAtomRuntime(
@@ -248,6 +252,31 @@ export const getTemperatureCheckByIdAtom = Atom.family(
 			Effect.gen(function* () {
 				const governanceComponent = yield* GovernanceComponent;
 				return yield* governanceComponent.getTemperatureCheckById(id);
+			}),
+		),
+);
+
+export const getTemperatureCheckVotesByAccountsAtom = Atom.family(
+	(keyValueStoreAddress: KeyValueStoreAddress) =>
+		runtime.atom(
+			Effect.fnUntraced(function* () {
+				const accounts = yield* Atom.getResult(accountsAtom);
+
+				const governanceComponent = yield* GovernanceComponent;
+				const votes =
+					yield* governanceComponent.getTemperatureCheckVotesByAccounts({
+						keyValueStoreAddress,
+						accounts: accounts.map((account) =>
+							AccountAddress.make(account.address),
+						),
+					});
+				return votes.map((vote) => {
+					const account = accounts.find((a) => a.address === vote.address);
+					return {
+						...vote,
+						label: account?.label ?? "Unknown Account",
+					};
+				});
 			}),
 		),
 );
