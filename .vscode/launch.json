@@ -17,7 +17,7 @@
 			"sourceMapPathOverrides": {
 				"http://localhost:3000/src/*": "${workspaceFolder}/apps/consultation/src/*",
 				"/src/*": "${workspaceFolder}/apps/consultation/src/*",
-				"/@fs/Users/alex/Projects/vote-collector/*": "${workspaceFolder}/*",
+				"/@fs/**/vote-collector/*": "${workspaceFolder}/*",
 				"/@fs/*": "/*",
 				"webpack://consultation-dapp/*": "${workspaceFolder}/apps/consultation/*",
 				"webpack://?:*/*": "${workspaceFolder}/*"

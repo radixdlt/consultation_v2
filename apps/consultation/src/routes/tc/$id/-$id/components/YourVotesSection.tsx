@@ -1,18 +1,15 @@
 import { Result } from "@effect-atom/atom-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, truncateAddress } from "@/lib/utils";
-
-type VotedAccount = {
-	address: string;
-	label: string;
-	vote: "For" | "Against";
-};
+import type { VotedAccount } from "../types";
 
 type YourVotesSectionProps = {
 	accountsVotesResult: Result.Result<VotedAccount[], unknown>;
 };
 
-export function YourVotesSection({ accountsVotesResult }: YourVotesSectionProps) {
+export function YourVotesSection({
+	accountsVotesResult,
+}: YourVotesSectionProps) {
 	return Result.builder(accountsVotesResult)
 		.onInitial(() => null)
 		.onSuccess((votes) => {
@@ -51,6 +48,5 @@ export function YourVotesSection({ accountsVotesResult }: YourVotesSectionProps)
 				</Card>
 			);
 		})
-		.onFailure(() => null)
 		.render();
 }

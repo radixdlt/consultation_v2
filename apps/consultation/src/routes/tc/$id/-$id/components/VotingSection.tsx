@@ -9,6 +9,7 @@ import { voteOnTemperatureCheckBatchAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { VotedAccount } from "../types";
 
 type Vote = "For" | "Against";
 
@@ -91,12 +92,6 @@ function VoteButtons({ onVote, disabled, loadingVote }: VoteButtonsProps) {
 		</div>
 	);
 }
-
-type VotedAccount = {
-	address: string;
-	label: string;
-	vote: "For" | "Against";
-};
 
 type VotingSectionProps = {
 	temperatureCheckId: TemperatureCheckId;

@@ -159,6 +159,10 @@ export class AllAccountsAlreadyVotedError extends Data.TaggedError(
 	message: string;
 }> {}
 
+const componentErrorMessage = {
+	accountAlreadyVoted: "accountAlreadyVoted",
+} as const;
+
 // Core vote logic without toast - reused by both single and batch atoms
 const voteOnTemperatureCheck = (input: MakeTemperatureCheckVoteInput) =>
 	Effect.gen(function* () {
@@ -172,9 +176,7 @@ const voteOnTemperatureCheck = (input: MakeTemperatureCheckVoteInput) =>
 			Effect.catchTag("WalletErrorResponse", (error) =>
 				Effect.gen(function* () {
 					if (
-						error.message.includes(
-							"Account has already voted on this temperature check",
-						)
+						error.message.includes(componentErrorMessage.accountAlreadyVoted)
 					) {
 						return yield* new AccountAlreadyVotedError({
 							message: "Account has already voted on this temperature check",

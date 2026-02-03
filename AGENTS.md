@@ -26,3 +26,7 @@ To add a new context file:
 1. Create a markdown file in `./context/`
 2. Add an entry to the table above with section-level links if applicable
 
+## Project Notes
+
+### apps/consultation
+- **State Management**: Uses `@effect-atom/atom-react` (NOT Jotai)
