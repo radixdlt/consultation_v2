@@ -11,7 +11,7 @@ import {
   TransactionManifestString
 } from '@radix-effects/shared'
 import type { StateKeyValueStoreDataResponseItem } from '@radixdlt/babylon-gateway-api-sdk'
-import { Array as A, Data, Effect, Exit, Option, pipe, Schema } from 'effect'
+import { Array as A, Data, Effect, Option, pipe, Schema } from 'effect'
 import { parseSbor } from '../helpers/parseSbor'
 import {
   Governance,
@@ -32,7 +32,6 @@ import {
   TemperatureCheckVoteSchema,
   TemperatureCheckVoteValueSchema
 } from './schemas'
-import s from 'sbor-ez-mode'
 
 export class KeyValueStoreNotFoundError extends Data.TaggedError(
   'KeyValueStoreNotFoundError'
@@ -337,19 +336,9 @@ CALL_METHOD
                     Effect.map((result) => result.value)
                   )
 
-                  const vote = yield* parseSbor(
-                    item.value.programmatic_json,
-                    s.tuple([
-                      s.number(),
-                      s.enum([
-                        { variant: 'For', schema: s.structNullable({}) },
-                        { variant: 'Against', schema: s.structNullable({}) }
-                      ])
-                    ])
-                  ).pipe(
-                    Effect.map((result) => result[1]),
-                    Effect.map((result) => result.variant)
-                  )
+                  const vote = yield* Schema.decodeUnknown(
+                    TemperatureCheckVoteValueSchema
+                  )(item.value.programmatic_json)
 
                   return {
                     address,

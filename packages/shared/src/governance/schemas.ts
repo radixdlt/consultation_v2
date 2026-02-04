@@ -1,5 +1,8 @@
 import { AccountAddress } from '@radix-effects/shared'
-import { ParseResult, Schema } from 'effect'
+import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk'
+import { Effect, ParseResult, Schema } from 'effect'
+import s from 'sbor-ez-mode'
+import { parseSbor } from '../helpers/parseSbor'
 import { KeyValueStoreAddress } from '../schemas'
 import { TemperatureCheckId } from './brandedTypes'
 
@@ -129,23 +132,40 @@ export const MakeTemperatureCheckVoteInputSchema = Schema.Struct({
 export type MakeTemperatureCheckVoteInput =
   typeof MakeTemperatureCheckVoteInputSchema.Encoded
 
+const ProgrammaticScryptoSborValueSchema = Schema.declare(
+  (input): input is ProgrammaticScryptoSborValue =>
+    typeof input === 'object' && input !== null && 'kind' in input,
+  {
+    identifier: 'ProgrammaticScryptoSborValue'
+  }
+)
+
 export const TemperatureCheckVoteValueSchema = Schema.asSchema(
-  Schema.transformOrFail(Schema.Number, Schema.Literal('For', 'Against'), {
-    strict: true,
-    decode: (value, _options, ast) => {
-      if (value === 0) return ParseResult.succeed('For' as const)
-      else if (value === 1) return ParseResult.succeed('Against' as const)
-      else
-        return ParseResult.fail(
-          new ParseResult.Type(ast, value, `Invalid vote value: ${value}`)
-        )
-    },
-    encode: (value, _options, ast) => {
-      if (value === 'For') return ParseResult.succeed(0)
-      if (value === 'Against') return ParseResult.succeed(1)
-      return ParseResult.fail(
-        new ParseResult.Type(ast, value, `Invalid vote value: ${value}`)
-      )
+  Schema.transformOrFail(
+    ProgrammaticScryptoSborValueSchema,
+    Schema.Literal('For', 'Against'),
+    {
+      strict: true,
+      decode: (value, _, ast) =>
+        parseSbor(
+          value,
+          s.tuple([
+            s.number(),
+            s.enum([
+              { variant: 'For', schema: s.structNullable({}) },
+              { variant: 'Against', schema: s.structNullable({}) }
+            ])
+          ])
+        ).pipe(
+          Effect.map((result) => result[1].variant),
+          Effect.catchAll(() =>
+            ParseResult.fail(
+              new ParseResult.Type(ast, value, `Invalid vote value: ${value}`)
+            )
+          )
+        ),
+      encode: (_, __, ast) =>
+        ParseResult.fail(new ParseResult.Type(ast, _, 'Encoding not supported'))
     }
-  })
+  )
 )
