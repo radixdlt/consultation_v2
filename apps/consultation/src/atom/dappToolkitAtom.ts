@@ -3,6 +3,7 @@ import type { WalletData } from "@radixdlt/radix-dapp-toolkit";
 import { Effect, Ref, Stream } from "effect";
 
 import { RadixDappToolkit } from "@/lib/dappToolkit";
+import { getCurrentAccount } from "@/lib/selectedAccount";
 
 const runtime = Atom.runtime(RadixDappToolkit.Live);
 
@@ -45,5 +46,12 @@ export const accountsAtom = runtime.atom(
 	Effect.fnUntraced(function* (get) {
 		const walletData = yield* get.result(walletDataAtom);
 		return walletData?.accounts ?? [];
+	}),
+);
+
+export const currentAccountAtom = runtime.atom(
+	Effect.fnUntraced(function* () {
+		const currentAccountOption = yield* getCurrentAccount;
+		return currentAccountOption;
 	}),
 );

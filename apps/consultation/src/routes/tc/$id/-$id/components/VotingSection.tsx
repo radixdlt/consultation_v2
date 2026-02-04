@@ -4,12 +4,13 @@ import { LoaderIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import type { KeyValueStoreAddress } from "shared/schemas";
-import { accountsAtom } from "@/atom/dappToolkitAtom";
+import { accountsAtom, currentAccountAtom } from "@/atom/dappToolkitAtom";
 import { voteOnTemperatureCheckBatchAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { VotedAccount } from "../types";
+import { Option } from "effect";
 
 type Vote = "For" | "Against";
 
@@ -184,6 +185,11 @@ function ConnectedVoting({
 	const [voteAllAccounts, setVoteAllAccounts] = useState(
 		accountList.length >= 2,
 	);
+	const currentAccountResult = useAtomValue(currentAccountAtom);
+	const currentAccount = Result.builder(currentAccountResult)
+		.onInitial(() => accountList[0])
+		.onSuccess((account) => Option.getOrElse(account, () => accountList[0]))
+		.render();
 
 	const isSubmitting = voteResult.waiting;
 
@@ -191,7 +197,7 @@ function ConnectedVoting({
 		(voteChoice: Vote) => {
 			setSelectedVote(voteChoice);
 
-			const accountsToVote = voteAllAccounts ? accountList : [accountList[0]];
+			const accountsToVote = voteAllAccounts ? accountList : [currentAccount];
 
 			voteBatch({
 				accounts: accountsToVote,
@@ -206,6 +212,7 @@ function ConnectedVoting({
 			keyValueStoreAddress,
 			voteBatch,
 			voteAllAccounts,
+			currentAccount,
 		],
 	);
 
