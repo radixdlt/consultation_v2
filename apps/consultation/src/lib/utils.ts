@@ -6,9 +6,14 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-export function truncateAddress(address: string): string {
-	if (address.length <= 16) return address;
-	return `${address.slice(0, 12)}...${address.slice(-4)}`;
+export function truncateAddress(
+	address: string,
+	prefixLength = 12,
+	suffixLength = 4,
+): string {
+	const minLength = prefixLength + suffixLength + 3; // +3 for "..."
+	if (address.length <= minLength) return address;
+	return `${address.slice(0, prefixLength)}...${address.slice(-suffixLength)}`;
 }
 
 /**

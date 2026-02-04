@@ -33,7 +33,7 @@ export function ItemCard({
 	const isActive = status === "active";
 
 	return (
-		<Link to={`${linkPrefix}/${id}`}>
+		<Link to={`${linkPrefix}/$id`} params={{ id: String(id) }}>
 			<Card className="group cursor-pointer transition-shadow hover:shadow-md">
 				<div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between">
 					{/* Left side - Main content */}
