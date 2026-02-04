@@ -4,8 +4,8 @@ import {
 	GetLedgerStateService,
 } from "@radix-effects/gateway";
 import { AccountAddress, StateVersion } from "@radix-effects/shared";
-import type { TransactionStatus } from "@radixdlt/radix-dapp-toolkit";
-import { Array as A, Data, Effect, Layer, Option, pipe, Ref } from "effect";
+import type { WalletDataStateAccount } from "@radixdlt/radix-dapp-toolkit";
+import { Array as A, Data, Effect, Layer, Option, pipe } from "effect";
 import { StokenetGatewayApiClientLayer } from "shared/gateway";
 import {
 	Config,
@@ -17,14 +17,18 @@ import type {
 	MakeTemperatureCheckVoteInput,
 } from "shared/governance/schemas";
 import { parseSbor } from "shared/helpers/parseSbor";
-import { TemperatureCheckCreatedEvent } from "shared/schemas";
-import { getCurrentAccount } from "@/lib/selectedAccount";
+import {
+	type KeyValueStoreAddress,
+	TemperatureCheckCreatedEvent,
+} from "shared/schemas";
 import { makeAtomRuntime } from "@/atom/makeRuntimeAtom";
 import {
 	RadixDappToolkit,
 	SendTransaction,
 	WalletErrorResponse,
 } from "@/lib/dappToolkit";
+import { getCurrentAccount } from "@/lib/selectedAccount";
+import { accountsAtom } from "./dappToolkitAtom";
 import { withToast } from "./withToast";
 
 const runtime = makeAtomRuntime(
@@ -143,17 +147,159 @@ export const makeTemperatureCheckAtom = runtime.fn(
 	),
 );
 
-export const voteOnTemperatureCheckAtom = runtime.fn(
-	Effect.fn(function* (input: MakeTemperatureCheckVoteInput) {
-		const governanceComponent = yield* GovernanceComponent;
+export class AccountAlreadyVotedError extends Data.TaggedError(
+	"AccountAlreadyVotedError",
+)<{
+	message: string;
+}> {}
 
+export class AllAccountsAlreadyVotedError extends Data.TaggedError(
+	"AllAccountsAlreadyVotedError",
+)<{
+	message: string;
+}> {}
+
+const componentErrorMessage = {
+	accountAlreadyVoted: "accountAlreadyVoted",
+} as const;
+
+// Core vote logic without toast - reused by both single and batch atoms
+const voteOnTemperatureCheck = (input: MakeTemperatureCheckVoteInput) =>
+	Effect.gen(function* () {
+		const governanceComponent = yield* GovernanceComponent;
 		const sendTransaction = yield* SendTransaction;
 
 		const manifest =
 			yield* governanceComponent.makeTemperatureCheckVoteManifest(input);
 
-		return yield* sendTransaction(manifest);
-	}),
+		return yield* sendTransaction(manifest, `Temperature check ID`).pipe(
+			Effect.catchTag("WalletErrorResponse", (error) =>
+				Effect.gen(function* () {
+					if (
+						error.message.includes(componentErrorMessage.accountAlreadyVoted)
+					) {
+						return yield* new AccountAlreadyVotedError({
+							message: "Account has already voted on this temperature check",
+						});
+					}
+					return yield* new WalletErrorResponse({
+						error: error.message,
+					});
+				}),
+			),
+		);
+	});
+
+export const voteOnTemperatureCheckAtom = runtime.fn(
+	Effect.fn(
+		(input: MakeTemperatureCheckVoteInput) => voteOnTemperatureCheck(input),
+		withToast({
+			whenLoading: "Submitting vote...",
+			whenSuccess: "Vote submitted",
+			whenFailure: ({ cause }) => {
+				if (cause._tag === "Fail" && cause.error.message) {
+					return Option.some(cause.error.message);
+				}
+				return Option.some("Failed to submit vote");
+			},
+		}),
+	),
+);
+
+type VoteResult = { account: string; success: boolean; error?: string };
+
+export const voteOnTemperatureCheckBatchAtom = runtime.fn(
+	Effect.fn(
+		function* (
+			input: {
+				accounts: WalletDataStateAccount[];
+				temperatureCheckId: TemperatureCheckId;
+				keyValueStoreAddress: KeyValueStoreAddress;
+				vote: "For" | "Against";
+			},
+			get,
+		) {
+			const governanceComponent = yield* GovernanceComponent;
+
+			// Get existing votes for the accounts
+			const existingVotes =
+				yield* governanceComponent.getTemperatureCheckVotesByAccounts({
+					keyValueStoreAddress: input.keyValueStoreAddress,
+					accounts: input.accounts.map((acc) =>
+						AccountAddress.make(acc.address),
+					),
+				});
+
+			const alreadyVotedAddresses = new Set<string>(
+				existingVotes.map((v) => v.address),
+			);
+
+			// Filter out accounts that have already voted
+			const accountsToVote = input.accounts.filter(
+				(acc) => !alreadyVotedAddresses.has(acc.address),
+			);
+
+			// If no accounts can vote, return error
+			if (accountsToVote.length === 0) {
+				const message =
+					input.accounts.length === 1
+						? "This account has already voted"
+						: "All selected accounts have already voted";
+				return yield* new AllAccountsAlreadyVotedError({ message });
+			}
+
+			const results: VoteResult[] = [];
+
+			for (const account of accountsToVote) {
+				const result = yield* voteOnTemperatureCheck({
+					accountAddress: AccountAddress.make(account.address),
+					temperatureCheckId: input.temperatureCheckId,
+					vote: input.vote,
+				}).pipe(
+					Effect.map(
+						(): VoteResult => ({ account: account.address, success: true }),
+					),
+					Effect.catchAll((error) =>
+						Effect.succeed<VoteResult>({
+							account: account.address,
+							success: false,
+							error:
+								"message" in error ? (error.message as string) : "Vote failed",
+						}),
+					),
+				);
+				results.push(result);
+			}
+
+			// Refresh votes atom to update UI after successful votes
+			const hasSuccessfulVotes = results.some((r) => r.success);
+			if (hasSuccessfulVotes) {
+				get.refresh(
+					getTemperatureCheckVotesByAccountsAtom(input.keyValueStoreAddress),
+				);
+			}
+
+			return results;
+		},
+		withToast({
+			whenLoading: "Submitting votes...",
+			whenSuccess: ({ result }) => {
+				const successes = result.filter((r) => r.success).length;
+				const failures = result.filter((r) => !r.success).length;
+				if (failures === 0) return `${successes} vote(s) submitted`;
+				if (successes === 0) return "All votes failed";
+				return `${successes} submitted, ${failures} failed`;
+			},
+			whenFailure: ({ cause }) => {
+				if (cause._tag === "Fail") {
+					if (cause.error instanceof AllAccountsAlreadyVotedError) {
+						return Option.some(cause.error.message);
+					}
+				}
+				return Option.some("Failed to submit votes");
+			},
+		}),
+	),
 );
 
 export const getTemperatureCheckByIdAtom = Atom.family(
@@ -162,6 +308,33 @@ export const getTemperatureCheckByIdAtom = Atom.family(
 			Effect.gen(function* () {
 				const governanceComponent = yield* GovernanceComponent;
 				return yield* governanceComponent.getTemperatureCheckById(id);
+			}),
+		),
+);
+
+export const getTemperatureCheckVotesByAccountsAtom = Atom.family(
+	(keyValueStoreAddress: KeyValueStoreAddress) =>
+		runtime.atom(
+			Effect.fnUntraced(function* (get) {
+				const accounts = yield* get.result(accountsAtom);
+
+				const governanceComponent = yield* GovernanceComponent;
+
+				const votes =
+					yield* governanceComponent.getTemperatureCheckVotesByAccounts({
+						keyValueStoreAddress,
+						accounts: accounts.map((account) =>
+							AccountAddress.make(account.address),
+						),
+					});
+
+				return votes.map((vote) => {
+					const account = accounts.find((a) => a.address === vote.address);
+					return {
+						...vote,
+						label: account?.label ?? "Unknown Account",
+					};
+				});
 			}),
 		),
 );

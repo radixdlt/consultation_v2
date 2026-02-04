@@ -1,6 +1,9 @@
+import { useAtomValue } from "@effect-atom/atom-react";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import type { TemperatureCheckSchema } from "shared/governance/schemas";
+import { getTemperatureCheckVotesByAccountsAtom } from "@/atom/temperatureChecksAtom";
 import { VotingSection } from "./VotingSection";
+import { YourVotesSection } from "./YourVotesSection";
 
 type TemperatureCheck = typeof TemperatureCheckSchema.Type;
 
@@ -10,6 +13,10 @@ type SidebarContentProps = {
 };
 
 export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
+	const accountsVotesResult = useAtomValue(
+		getTemperatureCheckVotesByAccountsAtom(temperatureCheck.voters),
+	);
+
 	return (
 		<div className="space-y-6">
 			<div>
@@ -19,7 +26,13 @@ export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
 				</p>
 			</div>
 
-			<VotingSection temperatureCheckId={id} />
+			<VotingSection
+				temperatureCheckId={id}
+				keyValueStoreAddress={temperatureCheck.voters}
+				accountsVotesResult={accountsVotesResult}
+			/>
+
+			<YourVotesSection accountsVotesResult={accountsVotesResult} />
 
 			<div className="space-y-3 text-sm">
 				<div>
@@ -32,7 +45,9 @@ export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
 				<div>
 					<span className="font-medium">Vote Options</span>
 					<p className="text-muted-foreground">
-						{temperatureCheck.voteOptions.map((option) => option.label).join(", ")}
+						{temperatureCheck.voteOptions
+							.map((option) => option.label)
+							.join(", ")}
 					</p>
 				</div>
 

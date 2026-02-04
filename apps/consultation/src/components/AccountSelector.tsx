@@ -2,7 +2,6 @@ import { Result, useAtomValue } from "@effect-atom/atom-react";
 import { ClientOnly } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { accountsAtom } from "@/atom/dappToolkitAtom";
-import { setSelectedAccountAddress } from "@/lib/selectedAccount";
 import {
 	Select,
 	SelectContent,
@@ -10,6 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { setSelectedAccountAddress } from "@/lib/selectedAccount";
 
 function truncateAddress(address: string): string {
 	if (address.length <= 20) return address;
@@ -19,7 +19,9 @@ function truncateAddress(address: string): string {
 function AccountSelectorContent() {
 	const accountsResult = useAtomValue(accountsAtom);
 	// Track selected address locally to keep Select controlled
-	const [selectedAddress, setSelectedAddress] = useState<string | undefined>(undefined);
+	const [selectedAddress, setSelectedAddress] = useState<string | undefined>(
+		undefined,
+	);
 
 	const handleValueChange = useCallback((address: string) => {
 		setSelectedAddress(address);
@@ -41,13 +43,12 @@ function AccountSelectorContent() {
 
 			// Use local state if set, otherwise default to first account
 			const currentAddress = selectedAddress ?? accounts[0]?.address;
-			const currentAccount = accounts.find((acc) => acc.address === currentAddress);
+			const currentAccount = accounts.find(
+				(acc) => acc.address === currentAddress,
+			);
 
 			return (
-				<Select
-					value={currentAddress}
-					onValueChange={handleValueChange}
-				>
+				<Select value={currentAddress} onValueChange={handleValueChange}>
 					<SelectTrigger size="sm" className="w-[180px]">
 						<SelectValue placeholder="Select account">
 							{currentAccount?.label ||

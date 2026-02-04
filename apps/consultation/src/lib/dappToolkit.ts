@@ -1,12 +1,12 @@
+import type { TransactionManifestString } from "@radix-effects/shared";
 import {
 	DataRequestBuilder,
 	Logger,
 	RadixDappToolkit as RadixDappToolkitFactory,
-	TransactionStatus,
+	type TransactionStatus,
 } from "@radixdlt/radix-dapp-toolkit";
 import { Context, Data, Effect, Layer, Ref } from "effect";
 import { envVars } from "./envVars";
-import { TransactionManifestString } from "@radix-effects/shared";
 
 class BrowserNotAvailableError extends Data.TaggedError(
 	"BrowserNotAvailableError",
@@ -70,10 +70,12 @@ export class SendTransaction extends Effect.Service<SendTransaction>()(
 
 			return Effect.fn(function* (
 				transactionManifest: TransactionManifestString,
+				message?: string,
 			) {
 				const rdt = yield* Ref.get(rdtRef);
 				const result = yield* Effect.tryPromise({
-					try: () => rdt.walletApi.sendTransaction({ transactionManifest }),
+					try: () =>
+						rdt.walletApi.sendTransaction({ transactionManifest, message }),
 					catch: (error) => new UnexpectedWalletError({ error }),
 				});
 				if (result.isErr()) {

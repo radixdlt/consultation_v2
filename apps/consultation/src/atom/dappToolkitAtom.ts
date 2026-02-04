@@ -3,6 +3,7 @@ import type { WalletData } from "@radixdlt/radix-dapp-toolkit";
 import { Effect, Ref, Stream } from "effect";
 
 import { RadixDappToolkit } from "@/lib/dappToolkit";
+import { getCurrentAccount } from "@/lib/selectedAccount";
 
 const runtime = Atom.runtime(RadixDappToolkit.Live);
 
@@ -29,19 +30,30 @@ export const walletDataAtom = runtime.atom(
 			}),
 		);
 
-		yield* Stream.runForEach(walletData, (value) =>
-			Effect.sync(() => {
-				get.setSelf(Effect.succeed(value));
-			}),
+		yield* Stream.runForEach(
+			Stream.changesWith(
+				walletData,
+				(prev, curr) =>
+					prev.accounts.length === curr.accounts.length &&
+					prev.accounts.every((a, i) => a.address === curr.accounts[i].address),
+			),
+			(value) => Effect.sync(() => get.setSelf(Effect.succeed(value))),
 		);
 
 		return rdt.walletApi.getWalletData();
 	}),
 );
 
-export const accountsAtom = Atom.make(
+export const accountsAtom = runtime.atom(
 	Effect.fnUntraced(function* (get) {
 		const walletData = yield* get.result(walletDataAtom);
 		return walletData?.accounts ?? [];
+	}),
+);
+
+export const currentAccountAtom = runtime.atom(
+	Effect.fnUntraced(function* () {
+		const currentAccountOption = yield* getCurrentAccount;
+		return currentAccountOption;
 	}),
 );

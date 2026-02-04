@@ -107,11 +107,12 @@ export function TemperatureCheckForm({
 			.orNull();
 	}, [makeResult, onSuccess]);
 
-	const hasAccounts = Result.builder(accountsResult)
-		.onInitial(() => false)
-		.onFailure(() => false)
-		.onSuccess((accounts) => accounts.length > 0)
-		.orNull() ?? false;
+	const hasAccounts =
+		Result.builder(accountsResult)
+			.onInitial(() => false)
+			.onFailure(() => false)
+			.onSuccess((accounts) => accounts.length > 0)
+			.orNull() ?? false;
 
 	return (
 		<Card className="w-full max-w-2xl">
@@ -252,24 +253,24 @@ export function TemperatureCheckForm({
 					</FieldGroup>
 				</CardContent>
 
-					<CardFooter>
-						<Button
-							type="submit"
-							disabled={!canSubmit || makeResult.waiting || !hasAccounts}
-							className="w-full mt-4"
-						>
-							{makeResult.waiting ? (
-								<>
-									<LoaderIcon className="size-4 animate-spin" />
-									Creating...
-								</>
-							) : !hasAccounts ? (
-								"Connect Wallet to Create"
-							) : (
-								"Create Temperature Check"
-							)}
-						</Button>
-					</CardFooter>
+				<CardFooter>
+					<Button
+						type="submit"
+						disabled={!canSubmit || makeResult.waiting || !hasAccounts}
+						className="w-full mt-4"
+					>
+						{makeResult.waiting ? (
+							<>
+								<LoaderIcon className="size-4 animate-spin" />
+								Creating...
+							</>
+						) : !hasAccounts ? (
+							"Connect Wallet to Create"
+						) : (
+							"Create Temperature Check"
+						)}
+					</Button>
+				</CardFooter>
 			</form>
 		</Card>
 	);

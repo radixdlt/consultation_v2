@@ -10,6 +10,7 @@ import {
   StateVersion,
   TransactionManifestString
 } from '@radix-effects/shared'
+import type { StateKeyValueStoreDataResponseItem } from '@radixdlt/babylon-gateway-api-sdk'
 import { Array as A, Data, Effect, Option, pipe, Schema } from 'effect'
 import { parseSbor } from '../helpers/parseSbor'
 import {
@@ -25,10 +26,11 @@ import { Config } from './config'
 import {
   type MakeTemperatureCheckInput,
   MakeTemperatureCheckInputSchema,
-  MakeTemperatureCheckVoteInput,
+  type MakeTemperatureCheckVoteInput,
   MakeTemperatureCheckVoteInputSchema,
   TemperatureCheckSchema,
-  TemperatureCheckVoteSchema
+  TemperatureCheckVoteSchema,
+  TemperatureCheckVoteValueSchema
 } from './schemas'
 
 export class KeyValueStoreNotFoundError extends Data.TaggedError(
@@ -166,8 +168,9 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
               pipe(
                 result,
                 A.head,
+                Option.flatMap((item) => A.head(item.entries)),
                 Option.flatMap((item) =>
-                  Option.fromNullable(item.entries[0].value.programmatic_json)
+                  Option.fromNullable(item.value.programmatic_json)
                 ),
                 Option.getOrThrowWith(
                   () =>
@@ -296,12 +299,64 @@ CALL_METHOD
           `)
         })
 
+      const getTemperatureCheckVotesByAccounts = (input: {
+        keyValueStoreAddress: KeyValueStoreAddress
+        accounts: AccountAddress[]
+      }) =>
+        Effect.gen(function* () {
+          const stateVersion = yield* getStateVersion()
+
+          const AccountAddressSchema = Schema.Struct({ value: AccountAddress })
+
+          return yield* keyValueStoreDataService({
+            at_ledger_state: {
+              state_version: stateVersion
+            },
+            key_value_store_address: input.keyValueStoreAddress,
+            keys: input.accounts.map((address) => ({
+              key_json: { kind: 'Reference' as const, value: address }
+            }))
+          }).pipe(
+            Effect.map((result) =>
+              pipe(
+                result,
+                A.head,
+                Option.map((item) => item.entries),
+                Option.getOrElse(() =>
+                  A.empty<StateKeyValueStoreDataResponseItem>()
+                )
+              )
+            ),
+            Effect.flatMap(
+              Effect.forEach(
+                Effect.fnUntraced(function* (item) {
+                  const address = yield* Schema.decodeUnknown(
+                    AccountAddressSchema
+                  )(item.key.programmatic_json).pipe(
+                    Effect.map((result) => result.value)
+                  )
+
+                  const vote = yield* Schema.decodeUnknown(
+                    TemperatureCheckVoteValueSchema
+                  )(item.value.programmatic_json)
+
+                  return {
+                    address,
+                    vote
+                  }
+                })
+              )
+            )
+          )
+        })
+
       return {
         getTemperatureChecks,
         getTemperatureChecksVotes,
         makeTemperatureCheckManifest,
         getTemperatureCheckById,
-        makeTemperatureCheckVoteManifest
+        makeTemperatureCheckVoteManifest,
+        getTemperatureCheckVotesByAccounts
       }
     })
   }
