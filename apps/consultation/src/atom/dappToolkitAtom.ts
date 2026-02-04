@@ -33,7 +33,9 @@ export const walletDataAtom = runtime.atom(
 		yield* Stream.runForEach(
 			Stream.changesWith(
 				walletData,
-				(prev, curr) => JSON.stringify(prev) === JSON.stringify(curr),
+				(prev, curr) =>
+					prev.accounts.length === curr.accounts.length &&
+					prev.accounts.every((a, i) => a.address === curr.accounts[i].address),
 			),
 			(value) => Effect.sync(() => get.setSelf(Effect.succeed(value))),
 		);
