@@ -364,6 +364,64 @@ const deduplicateSteps = (steps: Step[]): Step[] => {
 
 ---
 
+## Workflow-Level Idempotency (Not Supported)
+
+### The Gap
+
+QStash Workflow provides **step-level deduplication** (same step won't re-execute), but does **not** support **workflow invocation idempotency**—there's no `idempotencyKey` parameter in `client.trigger()`.
+
+```typescript
+// ❌ This parameter does NOT exist
+await client.trigger({
+  url: "https://example.com/api/workflow",
+  body: { orderId: "123" },
+  idempotencyKey: "order-123"  // NOT SUPPORTED
+});
+```
+
+### Why This Matters
+
+Step-level deduplication ≠ workflow invocation deduplication:
+
+| Scenario | Step Dedup | Workflow Invocation Dedup |
+|----------|-----------|---------------------------|
+| Network retry triggers workflow twice | ❌ Two runs | ✅ Would prevent |
+| User double-clicks submit | ❌ Two runs | ✅ Would prevent |
+| Same step re-executed in single run | ✅ Prevented | N/A |
+
+### Workarounds
+
+**Option 1: External check before trigger**
+```typescript
+const idempotencyKey = `vote-${oderId}-${accountId}`;
+const exists = await redis.get(idempotencyKey);
+if (exists) return { status: "duplicate" };
+
+await redis.set(idempotencyKey, "pending", { ex: 3600 });
+await client.trigger({ url, body });
+```
+
+**Option 2: Early check inside workflow**
+```typescript
+export const voteWorkflow = workflow("vote", async (ctx) => {
+  const { orderId, accountId } = ctx.requestPayload;
+
+  const isDuplicate = await ctx.run("check-duplicate", async () => {
+    const key = `vote-${orderId}-${accountId}`;
+    const wasSet = await redis.setnx(key, ctx.workflowRunId);
+    return !wasSet;
+  });
+
+  if (isDuplicate) return { status: "duplicate" };
+
+  // Continue with workflow...
+});
+```
+
+Option 1 prevents workflow creation entirely. Option 2 still creates a workflow run but exits early—visible in QStash dashboard as short-lived runs.
+
+---
+
 ## Middleware System
 
 ### Event Types
