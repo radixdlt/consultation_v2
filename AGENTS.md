@@ -8,7 +8,9 @@ Central index of context files for AI agents and coding assistants working with 
 |--------------|--------|--------------|
 | [effect-Context](./context/effect-Context.md) | Dependency Injection | Context.Tag, Effect.Service, Layers |
 | [effect-Schema](./context/effect-Schema.md) | Validation | Schema types, transforms, refinements |
+| [effect-Queue](./context/effect-Queue.md) | Concurrency | Fiber-safe queues, backpressure, producer/consumer |
 | [effect-atom](./context/effect-atom.md) | State Management | Reactive atoms, Result type, React hooks |
+| [sql-drizzle](./context/sql-drizzle.md) | Database ORM | Drizzle + Effect, remote proxy, transactions |
 | [workflow](./context/workflow.md) | Durable Execution | QStash, steps, parallel execution |
 | [workflow-TanstackStart](./context/workflow-TanstackStart.md) | Framework Integration | serve, serveMany, createWorkflow |
 
@@ -110,6 +112,80 @@ Central index of context files for AI agents and coding assistants working with 
 
 ---
 
+## Effect Queue
+
+> Fiber-safe, bounded queues for concurrent producer/consumer patterns
+
+**File:** [effect-Queue.md](./context/effect-Queue.md)
+
+| Section | Description |
+|---------|-------------|
+| [Core Types](./context/effect-Queue.md#core-types) | Queue, Enqueue, Dequeue type hierarchy, BaseQueue interface |
+| [Queue Variants](./context/effect-Queue.md#queue-variants) | bounded, unbounded, dropping, sliding constructors |
+| [Strategy System](./context/effect-Queue.md#strategy-system) | BackPressure, Dropping, Sliding overflow strategies |
+| [Core Operations](./context/effect-Queue.md#core-operations) | offer/offerAll (write), take/takeAll/takeBetween (read) |
+| [Backpressure & Suspension](./context/effect-Queue.md#backpressure--suspension) | Deferred-based fiber suspension, taker-putter matching |
+| [Shutdown Semantics](./context/effect-Queue.md#shutdown-semantics) | Clean teardown, post-shutdown behavior |
+| [Size Semantics](./context/effect-Queue.md#size-semantics) | Negative size = suspended takers, unsafeSize |
+| [Patterns](./context/effect-Queue.md#patterns) | Producer/consumer, rate limiting, sliding window, fan-out |
+| [Common Mistakes](./context/effect-Queue.md#common-mistakes) | Shutdown interrupts, unbounded memory, offer return values |
+| [Quick Reference](./context/effect-Queue.md#quick-reference) | Constructor, operation, state, refinement cheatsheets |
+
+### Queue Subsections
+
+| Topic | Section |
+|-------|---------|
+| Type hierarchy diagram | [Type Hierarchy](./context/effect-Queue.md#type-hierarchy) |
+| Write-side API | [Enqueue — Write Side](./context/effect-Queue.md#enqueue--write-side) |
+| Read-side API (is an Effect!) | [Dequeue — Read Side](./context/effect-Queue.md#dequeue--read-side) |
+| Shared queue state API | [BaseQueue — Shared Interface](./context/effect-Queue.md#basequeue--shared-interface) |
+| BackPressure internals | [BackPressureStrategy](./context/effect-Queue.md#backpressurestrategy) |
+| Dropping internals | [DroppingStrategy](./context/effect-Queue.md#droppingstrategy) |
+| Sliding internals | [SlidingStrategy](./context/effect-Queue.md#slidingstrategy) |
+| Offer flow (internal) | [Offering (Write)](./context/effect-Queue.md#offering-write) |
+| Take flow (internal) | [Taking (Read)](./context/effect-Queue.md#taking-read) |
+| Deferred suspension model | [How Fibers Suspend](./context/effect-Queue.md#how-fibers-suspend) |
+| Zero-copy optimization | [Taker-Putter Direct Matching](./context/effect-Queue.md#taker-putter-direct-matching) |
+| Shutdown flow | [Shutdown Flow](./context/effect-Queue.md#shutdown-flow) |
+| Post-shutdown table | [Post-Shutdown Behavior](./context/effect-Queue.md#post-shutdown-behavior) |
+| Producer/consumer pattern | [Producer / Consumer](./context/effect-Queue.md#producer--consumer) |
+| Rate limiting pattern | [Bounded Work Queue (Rate Limiting)](./context/effect-Queue.md#bounded-work-queue-rate-limiting) |
+| Sliding window pattern | [Sliding Window (Latest N)](./context/effect-Queue.md#sliding-window-latest-n) |
+| Fan-out pattern | [Fan-Out (Multiple Consumers)](./context/effect-Queue.md#fan-out-multiple-consumers) |
+
+---
+
+## SQL Drizzle
+
+> Type-safe ORM integration for Effect via remote proxy adapters
+
+**File:** [sql-drizzle.md](./context/sql-drizzle.md)
+
+| Section | Description |
+|---------|-------------|
+| [Architecture](./context/sql-drizzle.md#architecture) | Remote proxy pattern, callback bridge, prototype patching |
+| [Core Concepts](./context/sql-drizzle.md#core-concepts) | Prototype patching, Context Tags, constructors, layers |
+| [Setup & Layer Composition](./context/sql-drizzle.md#setup--layer-composition) | Basic setup, schema config, Service pattern |
+| [Query Patterns](./context/sql-drizzle.md#query-patterns) | SELECT, INSERT, UPDATE, DELETE examples |
+| [Transactions](./context/sql-drizzle.md#transactions) | sql.withTransaction() pattern |
+| [Error Handling](./context/sql-drizzle.md#error-handling) | SqlError, constraint violations |
+| [Database-Specific Notes](./context/sql-drizzle.md#database-specific-notes) | PostgreSQL vs MySQL vs SQLite differences |
+
+### SQL Drizzle Subsections
+
+| Topic | Section |
+|-------|---------|
+| Remote proxy pattern | [Architecture](./context/sql-drizzle.md#architecture) |
+| QueryPromise → Effectable | [Prototype Patching](./context/sql-drizzle.md#prototype-patching---the-magic) |
+| PgDrizzle, MysqlDrizzle, SqliteDrizzle | [Context Tags](./context/sql-drizzle.md#context-tags) |
+| make(), makeWithConfig() | [Constructors](./context/sql-drizzle.md#constructors) |
+| layer, layerWithConfig() | [Layers](./context/sql-drizzle.md#layers) |
+| Effect.Service ORM wrapper | [Service Pattern](./context/sql-drizzle.md#service-pattern-recommended) |
+| .returning() vs .$returningId() | [Database-Specific Notes](./context/sql-drizzle.md#database-specific-notes) |
+| db.query.users.findMany() | [Relational Queries](./context/sql-drizzle.md#relational-queries-with-schema) |
+
+---
+
 ## Upstash Workflow (Deep Analysis)
 
 > Durable serverless workflow engine built on QStash
@@ -183,6 +259,11 @@ Central index of context files for AI agents and coding assistants working with 
 | Validate API data | [effect-Schema](./context/effect-Schema.md#decoding--encoding) | [Common Patterns](./context/effect-Schema.md#common-patterns) |
 | Fetch data in React | [effect-atom](./context/effect-atom.md#creating-service-backed-atoms) | [React Hooks](./context/effect-atom.md#react-hooks) |
 | Handle loading states | [effect-atom](./context/effect-atom.md#common-patterns) | [Result type](./context/effect-atom.md#resulta-e--not-promises) |
+| Query database with Drizzle | [sql-drizzle](./context/sql-drizzle.md#query-patterns) | [Service Pattern](./context/sql-drizzle.md#service-pattern-recommended) |
+| Database transactions | [sql-drizzle](./context/sql-drizzle.md#transactions) | [Error Handling](./context/sql-drizzle.md#error-handling) |
+| Inter-fiber communication | [effect-Queue](./context/effect-Queue.md#patterns) | [Backpressure](./context/effect-Queue.md#backpressure--suspension) |
+| Rate limit / work queue | [effect-Queue](./context/effect-Queue.md#bounded-work-queue-rate-limiting) | [Queue Variants](./context/effect-Queue.md#queue-variants) |
+| Fan-out work distribution | [effect-Queue](./context/effect-Queue.md#fan-out-multiple-consumers) | [Core Operations](./context/effect-Queue.md#core-operations) |
 | Create durable workflow | [workflow-TanstackStart](./context/workflow-TanstackStart.md#pattern-1-serve-single-workflow) | [Deep dive](./context/workflow.md#execution-flow-critical-path) |
 | Compose workflows | [workflow-TanstackStart](./context/workflow-TanstackStart.md#contextinvoke--workflow-composition) | [serveMany](./context/workflow-TanstackStart.md#pattern-2-servemany--createworkflow) |
 | Handle workflow errors | [workflow](./context/workflow.md#error-handling) | [WorkflowAbort](./context/workflow.md#workflowabort-as-control-flow) |
@@ -201,6 +282,6 @@ Central index of context files for AI agents and coding assistants working with 
 ### Adding Context
 
 To add a new context file:
-1. Create markdown file in `./context/context/`
+1. Create markdown file in `./context/`
 2. Add entry to this index with section-level links
 3. Include in cross-reference table if applicable
