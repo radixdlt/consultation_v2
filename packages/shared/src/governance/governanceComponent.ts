@@ -424,27 +424,53 @@ const getTemperatureCheckVotesByAccounts = (input: {
       const getPaginatedTemperatureChecks = (input: {
         page: number
         pageSize: number
+        sortOrder?: 'asc' | 'desc'
       }) =>
         Effect.gen(function* () {
           const { stateVersion, temperatureCheckCount, temperatureChecksKvs } =
             yield* getGovernanceState()
 
-          // Calculate which IDs to fetch (newest first)
+          const sortOrder = input.sortOrder ?? 'desc'
+
+          // Calculate which IDs to fetch based on sort order
           // IDs are 0-indexed: if count is 10, IDs are 0-9
-          const startId = temperatureCheckCount - 1 - (input.page - 1) * input.pageSize
-          const endId = Math.max(startId - input.pageSize + 1, 0)
+          let startId: number
+          let endId: number
+          let ids: number[]
 
-          if (startId < 0) {
-            return {
-              items: [],
-              totalCount: temperatureCheckCount,
-              page: input.page,
-              pageSize: input.pageSize,
-              totalPages: Math.ceil(temperatureCheckCount / input.pageSize)
+          if (sortOrder === 'desc') {
+            // Newest first (highest ID first)
+            startId = temperatureCheckCount - 1 - (input.page - 1) * input.pageSize
+            endId = Math.max(startId - input.pageSize + 1, 0)
+
+            if (startId < 0) {
+              return {
+                items: [],
+                totalCount: temperatureCheckCount,
+                page: input.page,
+                pageSize: input.pageSize,
+                totalPages: Math.ceil(temperatureCheckCount / input.pageSize)
+              }
             }
-          }
 
-          const ids = A.makeBy(startId - endId + 1, (i) => startId - i)
+            ids = A.makeBy(startId - endId + 1, (i) => startId - i)
+          } else {
+            // Oldest first (lowest ID first)
+            startId = (input.page - 1) * input.pageSize
+            endId = Math.min(startId + input.pageSize - 1, temperatureCheckCount - 1)
+
+            if (startId >= temperatureCheckCount) {
+              return {
+                items: [],
+                totalCount: temperatureCheckCount,
+                page: input.page,
+                pageSize: input.pageSize,
+                totalPages: Math.ceil(temperatureCheckCount / input.pageSize)
+              }
+            }
+
+            ids = A.makeBy(endId - startId + 1, (i) => startId + i)
+          }
 
           const keys = ids.map((id) => ({
             key_json: { kind: 'U64' as const, value: id.toString() }
@@ -500,26 +526,55 @@ const getTemperatureCheckVotesByAccounts = (input: {
           }
         })
 
-      const getPaginatedProposals = (input: { page: number; pageSize: number }) =>
+      const getPaginatedProposals = (input: {
+        page: number
+        pageSize: number
+        sortOrder?: 'asc' | 'desc'
+      }) =>
         Effect.gen(function* () {
           const { stateVersion, proposalCount, proposalsKvs } =
             yield* getGovernanceState()
 
-          // Calculate which IDs to fetch (newest first)
-          const startId = proposalCount - 1 - (input.page - 1) * input.pageSize
-          const endId = Math.max(startId - input.pageSize + 1, 0)
+          const sortOrder = input.sortOrder ?? 'desc'
 
-          if (startId < 0) {
-            return {
-              items: [],
-              totalCount: proposalCount,
-              page: input.page,
-              pageSize: input.pageSize,
-              totalPages: Math.ceil(proposalCount / input.pageSize)
+          // Calculate which IDs to fetch based on sort order
+          let startId: number
+          let endId: number
+          let ids: number[]
+
+          if (sortOrder === 'desc') {
+            // Newest first (highest ID first)
+            startId = proposalCount - 1 - (input.page - 1) * input.pageSize
+            endId = Math.max(startId - input.pageSize + 1, 0)
+
+            if (startId < 0) {
+              return {
+                items: [],
+                totalCount: proposalCount,
+                page: input.page,
+                pageSize: input.pageSize,
+                totalPages: Math.ceil(proposalCount / input.pageSize)
+              }
             }
-          }
 
-          const ids = A.makeBy(startId - endId + 1, (i) => startId - i)
+            ids = A.makeBy(startId - endId + 1, (i) => startId - i)
+          } else {
+            // Oldest first (lowest ID first)
+            startId = (input.page - 1) * input.pageSize
+            endId = Math.min(startId + input.pageSize - 1, proposalCount - 1)
+
+            if (startId >= proposalCount) {
+              return {
+                items: [],
+                totalCount: proposalCount,
+                page: input.page,
+                pageSize: input.pageSize,
+                totalPages: Math.ceil(proposalCount / input.pageSize)
+              }
+            }
+
+            ids = A.makeBy(endId - startId + 1, (i) => startId + i)
+          }
 
           const keys = ids.map((id) => ({
             key_json: { kind: 'U64' as const, value: id.toString() }

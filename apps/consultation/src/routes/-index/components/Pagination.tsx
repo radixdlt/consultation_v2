@@ -1,5 +1,12 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+	Pagination as PaginationRoot,
+	PaginationContent,
+	PaginationEllipsis,
+	PaginationItem,
+	PaginationLink,
+	PaginationNext,
+	PaginationPrevious,
+} from "@/components/ui/pagination";
 
 type PaginationProps = {
 	currentPage: number;
@@ -16,58 +23,44 @@ export function Pagination({
 		return null;
 	}
 
+	const pages = getPageNumbers(currentPage, totalPages);
+
 	return (
-		<div className="flex items-center justify-center gap-2">
-			<Button
-				type="button"
-				variant="outline"
-				size="sm"
-				onClick={() => onPageChange(currentPage - 1)}
-				disabled={currentPage <= 1}
-			>
-				<ChevronLeft className="size-4" />
-				<span className="sr-only">Previous page</span>
-			</Button>
+		<PaginationRoot>
+			<PaginationContent>
+				<PaginationItem>
+					<PaginationPrevious
+						onClick={() => onPageChange(currentPage - 1)}
+						aria-disabled={currentPage <= 1}
+						className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+					/>
+				</PaginationItem>
 
-			<div className="flex items-center gap-1">
-				{getPageNumbers(currentPage, totalPages).map((page, index) => {
-					if (page === "...") {
-						return (
-							<span
-								key={`ellipsis-${index}`}
-								className="px-2 text-muted-foreground"
+				{pages.map((page, index) => (
+					<PaginationItem key={page === "..." ? `ellipsis-${index}` : page}>
+						{page === "..." ? (
+							<PaginationEllipsis />
+						) : (
+							<PaginationLink
+								onClick={() => onPageChange(page)}
+								isActive={page === currentPage}
+								className="cursor-pointer"
 							>
-								...
-							</span>
-						);
-					}
+								{page}
+							</PaginationLink>
+						)}
+					</PaginationItem>
+				))}
 
-					return (
-						<Button
-							key={page}
-							type="button"
-							variant={page === currentPage ? "default" : "outline"}
-							size="sm"
-							onClick={() => onPageChange(page)}
-							className="min-w-9"
-						>
-							{page}
-						</Button>
-					);
-				})}
-			</div>
-
-			<Button
-				type="button"
-				variant="outline"
-				size="sm"
-				onClick={() => onPageChange(currentPage + 1)}
-				disabled={currentPage >= totalPages}
-			>
-				<ChevronRight className="size-4" />
-				<span className="sr-only">Next page</span>
-			</Button>
-		</div>
+				<PaginationItem>
+					<PaginationNext
+						onClick={() => onPageChange(currentPage + 1)}
+						aria-disabled={currentPage >= totalPages}
+						className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+					/>
+				</PaginationItem>
+			</PaginationContent>
+		</PaginationRoot>
 	);
 }
 

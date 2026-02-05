@@ -5,5 +5,6 @@ export { ItemCard } from "./ItemCard";
 export { Pagination } from "./Pagination";
 export { ProposalsList } from "./ProposalsList";
 export { QuorumProgress } from "./QuorumProgress";
+export { SortToggle } from "./SortToggle";
 export { StatusBadge, getItemStatus, type ItemStatus } from "./StatusBadge";
 export { TemperatureChecksList } from "./TemperatureChecksList";

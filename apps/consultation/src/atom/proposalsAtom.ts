@@ -17,14 +17,19 @@ const runtime = makeAtomRuntime(
 
 const PAGE_SIZE = 5;
 
+export type SortOrder = "asc" | "desc";
+
 export const paginatedProposalsAtom = Atom.family((page: number) =>
-	runtime.atom(
-		Effect.gen(function* () {
-			const governanceComponent = yield* GovernanceComponent;
-			return yield* governanceComponent.getPaginatedProposals({
-				page,
-				pageSize: PAGE_SIZE,
-			});
-		}),
+	Atom.family((sortOrder: SortOrder) =>
+		runtime.atom(
+			Effect.gen(function* () {
+				const governanceComponent = yield* GovernanceComponent;
+				return yield* governanceComponent.getPaginatedProposals({
+					page,
+					pageSize: PAGE_SIZE,
+					sortOrder,
+				});
+			}),
+		),
 	),
 );

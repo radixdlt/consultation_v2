@@ -341,14 +341,19 @@ export const getTemperatureCheckVotesByAccountsAtom = Atom.family(
 
 const PAGE_SIZE = 5;
 
+export type SortOrder = "asc" | "desc";
+
 export const paginatedTemperatureChecksAtom = Atom.family((page: number) =>
-	runtime.atom(
-		Effect.gen(function* () {
-			const governanceComponent = yield* GovernanceComponent;
-			return yield* governanceComponent.getPaginatedTemperatureChecks({
-				page,
-				pageSize: PAGE_SIZE,
-			});
-		}),
+	Atom.family((sortOrder: SortOrder) =>
+		runtime.atom(
+			Effect.gen(function* () {
+				const governanceComponent = yield* GovernanceComponent;
+				return yield* governanceComponent.getPaginatedTemperatureChecks({
+					page,
+					pageSize: PAGE_SIZE,
+					sortOrder,
+				});
+			}),
+		),
 	),
 );
