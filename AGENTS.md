@@ -13,6 +13,7 @@ Central index of context files for AI agents and coding assistants working with 
 | [sql-drizzle](./context/sql-drizzle.md) | Database ORM | Drizzle + Effect, remote proxy, transactions |
 | [effect-Workflow](./context/effect-Workflow.md) | Durable Workflows | @effect/workflow, Activities, DurableClock, DurableDeferred |
 | [effect-Cluster](./context/effect-Cluster.md) | Distributed Systems | Entity, Sharding, Runners, MessageStorage |
+| [effect-Pipe](./context/effect-Pipe.md) | Composition | Standalone pipe, .pipe() method, flow, Pipeable |
 
 
 ---
@@ -73,6 +74,39 @@ Central index of context files for AI agents and coding assistants working with 
 | API to use | [API Variants](./context/effect-Schema.md#api-variants) |
 | Error handling | [ParseError Structure](./context/effect-Schema.md#parseerror-structure) |
 | Parse options | [ParseOptions](./context/effect-Schema.md#parseoptions) |
+
+---
+
+## Effect Pipe
+
+> Standalone `pipe` function and `.pipe()` method for composing transformations left-to-right
+
+**File:** [effect-Pipe.md](./context/effect-Pipe.md)
+
+| Section | Description |
+|---------|-------------|
+| [Why Pipe Exists](./context/effect-Pipe.md#why-pipe-exists) | Nested calls vs pipe, reading order |
+| [Standalone vs Method .pipe()](./context/effect-Pipe.md#standalone-vs-method-pipe) | Two forms, when-to-use table, nested combo pattern |
+| [Pipeable Interface](./context/effect-Pipe.md#pipeable-interface) | Which types implement `.pipe()` |
+| [Pipe Patterns by Domain](./context/effect-Pipe.md#pipe-patterns-by-domain) | Effect chaining, Schema branding, Layer composition, Option, Config, Array+flow, Either |
+| [pipe vs Effect.gen vs Effect.fn](./context/effect-Pipe.md#pipe-vs-effectgen-vs-effectfn) | Decision table, mixing gen + pipe |
+| [flow vs pipe](./context/effect-Pipe.md#flow-vs-pipe) | Create function vs apply immediately |
+| [Common Mistakes](./context/effect-Pipe.md#common-mistakes) | Import errors, double-calling, split chains, wrong form |
+| [Quick Reference](./context/effect-Pipe.md#quick-reference) | Forms table, codebase patterns summary |
+
+### Pipe Subsections
+
+| Topic | Section |
+|-------|---------|
+| Nested combo (method wrapping standalone) | [Nested Combo Pattern](./context/effect-Pipe.md#nested-combo-pattern) |
+| Effect chaining (map/flatMap/catchTag) | [Effect Chaining](./context/effect-Pipe.md#effect-chaining-map--flatmap--catchtag) |
+| Schema.brand with pipe | [Schema Branding & Validation](./context/effect-Pipe.md#schema-branding--validation) |
+| Layer.provide / Layer.provideMerge | [Layer Composition](./context/effect-Pipe.md#layer-composition) |
+| Option.flatMap / Option.match | [Option Chaining](./context/effect-Pipe.md#option-chaining-standalone-pipe) |
+| Config.withDefault | [Config Defaults](./context/effect-Pipe.md#config-defaults) |
+| Pure Either pipelines | [Pure Value Pipelines](./context/effect-Pipe.md#pure-value-pipelines-either-chain) |
+| When to use gen vs pipe | [Decision Table](./context/effect-Pipe.md#decision-table) |
+| flow() for reusable transforms | [flow vs pipe](./context/effect-Pipe.md#flow-vs-pipe) |
 
 ---
 
@@ -294,6 +328,9 @@ Central index of context files for AI agents and coding assistants working with 
 | Distributed cron | [effect-Cluster](./context/effect-Cluster.md#clustercron) | [Singleton](./context/effect-Cluster.md#singleton) |
 | Cluster workflows | [effect-Cluster](./context/effect-Cluster.md#clusterworkflowengine) | [effect-Workflow](./context/effect-Workflow.md#workflow) |
 | Test cluster services | [effect-Cluster](./context/effect-Cluster.md#testing) | [Entity.makeTestClient](./context/effect-Cluster.md#entitymaketestclient) |
+| Compose Effect operations | [effect-Pipe](./context/effect-Pipe.md#standalone-vs-method-pipe) | [Patterns by Domain](./context/effect-Pipe.md#pipe-patterns-by-domain) |
+| Choose pipe vs gen vs fn | [effect-Pipe](./context/effect-Pipe.md#pipe-vs-effectgen-vs-effectfn) | [Decision Table](./context/effect-Pipe.md#decision-table) |
+| Transform plain values | [effect-Pipe](./context/effect-Pipe.md#pure-value-pipelines-either-chain) | [flow vs pipe](./context/effect-Pipe.md#flow-vs-pipe) |
 
 
 ---
