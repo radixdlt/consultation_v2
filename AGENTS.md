@@ -11,8 +11,9 @@ Central index of context files for AI agents and coding assistants working with 
 | [effect-Queue](./context/effect-Queue.md) | Concurrency | Fiber-safe queues, backpressure, producer/consumer |
 | [effect-atom](./context/effect-atom.md) | State Management | Reactive atoms, Result type, React hooks |
 | [sql-drizzle](./context/sql-drizzle.md) | Database ORM | Drizzle + Effect, remote proxy, transactions |
-| [workflow](./context/workflow.md) | Durable Execution | QStash, steps, parallel execution |
-| [workflow-TanstackStart](./context/workflow-TanstackStart.md) | Framework Integration | serve, serveMany, createWorkflow |
+| [effect-Workflow](./context/effect-Workflow.md) | Durable Workflows | @effect/workflow, Activities, DurableClock, DurableDeferred |
+| [effect-Cluster](./context/effect-Cluster.md) | Distributed Systems | Entity, Sharding, Runners, MessageStorage |
+
 
 ---
 
@@ -186,68 +187,86 @@ Central index of context files for AI agents and coding assistants working with 
 
 ---
 
-## Upstash Workflow (Deep Analysis)
+## Effect Workflow (@effect/workflow)
 
-> Durable serverless workflow engine built on QStash
+> Durable, resumable, fault-tolerant workflows for Effect
 
-**File:** [workflow.md](./context/workflow.md)
+**File:** [effect-Workflow.md](./context/effect-Workflow.md)
 
 | Section | Description |
 |---------|-------------|
-| [Architecture](./context/workflow.md#architecture) | Request flow diagram, QStash as persistence layer |
-| [Core Components](./context/workflow.md#core-components) | serveBase, WorkflowContext, AutoExecutor, BaseLazyStep |
-| [Step Types](./context/workflow.md#step-types) | Run, Sleep, Call, Wait, Notify, Invoke, Webhook types |
-| [Lazy Execution Pattern](./context/workflow.md#lazy-execution-pattern) | Plan steps vs result steps, deferred execution |
-| [Execution Flow](./context/workflow.md#execution-flow-critical-path) | Request validation, step parsing, context creation |
-| [Parallel Execution](./context/workflow.md#parallel-execution) | Promise.all detection, parallel call states, flow diagram |
-| [State Management](./context/workflow.md#state-management) | No local state, step serialization, deduplication |
-| [Workflow-Level Idempotency](./context/workflow.md#workflow-level-idempotency-not-supported) | Gap analysis and workarounds |
-| [Middleware System](./context/workflow.md#middleware-system) | Lifecycle events, debug events, registration |
-| [Error Handling](./context/workflow.md#error-handling) | Error hierarchy, WorkflowAbort as control flow |
-| [Platform Adapters](./context/workflow.md#platform-adapters) | Next.js, Express, Hono, Cloudflare, TanStack adapters |
-| [External Client API](./context/workflow.md#external-client-api) | Trigger, cancel, notify, getWaiters, logs |
-| [Key Implementation Details](./context/workflow.md#key-implementation-details) | Step validation, nested prevention, Call step |
-| [Best Practices](./context/workflow.md#best-practices) | Always await, don't catch WorkflowAbort, determinism |
+| [Architecture Overview](./context/effect-Workflow.md#architecture-overview) | Module dependency graph, engine abstraction layer |
+| [Workflow](./context/effect-Workflow.md#workflow) | make, fromTaggedRequest, Result types, annotations, compensation, scope |
+| [Activity](./context/effect-Workflow.md#activity) | At-most-once execution, retry, idempotencyKey, raceAll |
+| [DurableClock](./context/effect-Workflow.md#durableclock) | sleep with in-memory threshold, engine-scheduled wake-up |
+| [DurableDeferred](./context/effect-Workflow.md#durabledeferred) | External signal/latch, Token system, await/done/succeed/fail |
+| [DurableQueue](./context/effect-Workflow.md#durablequeue) | PersistedQueue wrapper, process, worker, trace propagation |
+| [DurableRateLimiter](./context/effect-Workflow.md#durableratelimiter) | Rate-limited Activity with durable delay |
+| [WorkflowEngine](./context/effect-Workflow.md#workflowengine) | Service definition, WorkflowInstance, Encoded interface, layerMemory |
+| [WorkflowProxy & Server](./context/effect-Workflow.md#workflowproxy--workflowproxyserver) | Auto-generated RPC/HTTP endpoints from workflow definitions |
+| [Execution Lifecycle](./context/effect-Workflow.md#execution-lifecycle) | Suspend/resume cycle, activity caching, nested workflow propagation |
+| [Patterns](./context/effect-Workflow.md#patterns) | Activity + sleep + deferred, nested workflows, SuspendOnFailure, DurableQueue |
+| [Testing](./context/effect-Workflow.md#testing) | TestClock, layerMemory, layer composition |
+| [Common Mistakes](./context/effect-Workflow.md#common-mistakes) | Non-deterministic keys, compensation scope, side effects outside activities |
+| [Quick Reference](./context/effect-Workflow.md#quick-reference) | Module exports, requirement tags, defaults table |
 
-### Workflow Subsections
+### Effect Workflow Subsections
 
 | Topic | Section |
 |-------|---------|
-| Request flow diagram | [Request Flow](./context/workflow.md#request-flow) |
-| QStash roles | [QStash as Persistence Layer](./context/workflow.md#qstash-as-persistence-layer) |
-| Step type table | [Step Types](./context/workflow.md#step-types) |
-| Plan vs result steps | [Plan Steps vs Result Steps](./context/workflow.md#plan-steps-vs-result-steps) |
-| Parallel detection | [Detection via Promise.all](./context/workflow.md#detection-via-promiseall) |
-| Parallel states | [Parallel Call States](./context/workflow.md#parallel-call-states) |
-| Step serialization | [Step Serialization](./context/workflow.md#step-serialization) |
-| Deduplication logic | [Deduplication Logic](./context/workflow.md#deduplication-logic) |
-| Idempotency workarounds | [Workarounds](./context/workflow.md#workarounds) |
-| Middleware events | [Event Types](./context/workflow.md#event-types) |
-| Middleware registration | [Middleware Registration](./context/workflow.md#middleware-registration) |
-| Error hierarchy | [Error Hierarchy](./context/workflow.md#error-hierarchy) |
-| WorkflowAbort | [WorkflowAbort as Control Flow](./context/workflow.md#workflowabort-as-control-flow) |
-| Failure callbacks | [Failure Callbacks](./context/workflow.md#failure-callbacks) |
-| Adapter pattern | [Adapter Pattern](./context/workflow.md#adapter-pattern) |
+| Execution ID derivation | [Constructor: Workflow.make](./context/effect-Workflow.md#constructor-workflowmake) |
+| Result = Complete \| Suspended | [Result Types](./context/effect-Workflow.md#result-types) |
+| CaptureDefects, SuspendOnFailure | [Annotations](./context/effect-Workflow.md#annotations) |
+| Activity caching by activityId | [Activity Execution Flow](./context/effect-Workflow.md#activity-execution-flow-internal) |
+| DurableClock threshold logic | [DurableClock.sleep](./context/effect-Workflow.md#durableclocksleep) |
+| Token encode/decode (Base64URL) | [Token System](./context/effect-Workflow.md#token-system) |
+| Full suspend/resume state machine | [Suspend / Resume Cycle](./context/effect-Workflow.md#suspend--resume-cycle) |
+| Building custom engine backends | [Encoded Interface](./context/effect-Workflow.md#encoded-interface--building-custom-engines) |
+| Parent-child interrupt propagation | [Nested Workflow Support](./context/effect-Workflow.md#nested-workflow-support) |
 
 ---
 
-## Upstash Workflow (TanStack Start)
+## Effect Cluster (@effect/cluster)
 
-> Integration guide for TanStack Start framework
+> Distributed virtual actor system with persistent messaging, sharding, and RPC-based entities
 
-**File:** [workflow-TanstackStart.md](./context/workflow-TanstackStart.md)
+**File:** [effect-Cluster.md](./context/effect-Cluster.md)
 
 | Section | Description |
 |---------|-------------|
-| [Core Concepts](./context/workflow-TanstackStart.md#core-concepts) | context.run() durable steps, context.requestPayload |
-| [Pattern 1: serve](./context/workflow-TanstackStart.md#pattern-1-serve-single-workflow) | Single workflow per endpoint |
-| [Pattern 2: serveMany](./context/workflow-TanstackStart.md#pattern-2-servemany--createworkflow) | Multiple workflows, dynamic routing |
-| [context.invoke()](./context/workflow-TanstackStart.md#contextinvoke--workflow-composition) | Workflow-to-workflow composition |
-| [WorkflowContext Type](./context/workflow-TanstackStart.md#workflowcontextt-type) | Full typing for workflow context |
-| [Configuration Options](./context/workflow-TanstackStart.md#configuration-options) | retries, createWorkflow options |
-| [Development Setup](./context/workflow-TanstackStart.md#development-setup) | QStash CLI, env vars, local dev |
-| [Testing](./context/workflow-TanstackStart.md#testing) | curl examples for single and multi-workflow |
-| [Adapter Note](./context/workflow-TanstackStart.md#adapter-note) | Framework import paths table |
+| [Architecture Overview](./context/effect-Cluster.md#architecture-overview) | Module dependency graph, core → envelope → entity → storage → runner → sharding |
+| [Core Types](./context/effect-Cluster.md#core-types) | EntityId, EntityType, ShardId, EntityAddress, RunnerAddress, Snowflake |
+| [Entity](./context/effect-Cluster.md#entity) | make, toLayer, toLayerMailbox, client, makeTestClient, keepAlive, RPC integration |
+| [Envelope & Message](./context/effect-Cluster.md#envelope--message) | Request/AckChunk/Interrupt wire protocol, Message.Incoming/Outgoing |
+| [Reply](./context/effect-Cluster.md#reply) | WithExit (final), Chunk (streaming), ReplyWithContext |
+| [Sharding](./context/effect-Cluster.md#sharding) | Core coordination: getShardId, makeClient, registerEntity, send, notify |
+| [ShardingConfig](./context/effect-Cluster.md#shardingconfig) | 19 config fields, defaults, layerFromEnv() |
+| [MessageStorage](./context/effect-Cluster.md#messagestorage) | Persistence layer, SaveResult idempotency, memory/SQL drivers |
+| [Runner & RunnerStorage](./context/effect-Cluster.md#runner--runnerstorage) | Node registration, shard locking, RunnerHealth (noop/ping/k8s) |
+| [Transport](./context/effect-Cluster.md#transport) | HttpRunner, SocketRunner, SingleRunner (all-in-one SQL) |
+| [Singleton](./context/effect-Cluster.md#singleton) | Per-shard singleton tasks via Sharding.registerSingleton |
+| [ClusterCron](./context/effect-Cluster.md#clustercron) | Distributed cron using Entity + Singleton + DeliverAt |
+| [EntityResource](./context/effect-Cluster.md#entityresource) | Long-lived resources via RcRef with keepAlive |
+| [EntityProxy](./context/effect-Cluster.md#entityproxy) | toRpcGroup, toHttpApiGroup — RPC/HTTP gateway generation |
+| [ClusterWorkflowEngine](./context/effect-Cluster.md#clusterworkflowengine) | Bridge @effect/workflow with @effect/cluster |
+| [Error Types](./context/effect-Cluster.md#error-types) | EntityNotAssignedToRunner, MailboxFull, PersistenceError, etc. |
+| [Testing](./context/effect-Cluster.md#testing) | TestRunner layer, Entity.makeTestClient, layer composition |
+| [Common Mistakes](./context/effect-Cluster.md#common-mistakes) | Missing Persisted annotation, entity idle timeout, runner health |
+| [Quick Reference](./context/effect-Cluster.md#quick-reference) | Export table, Context.Tag table, config defaults |
+
+### Effect Cluster Subsections
+
+| Topic | Section |
+|-------|---------|
+| Snowflake ID generation | [Snowflake & MachineId](./context/effect-Cluster.md#snowflake--machineid) |
+| ClusterSchema annotations | [ClusterSchema Annotations](./context/effect-Cluster.md#clusterschema-annotations) |
+| Entity handler patterns | [Entity.toLayer](./context/effect-Cluster.md#entitytolayer) |
+| Mailbox-based handlers | [Entity.toLayerMailbox](./context/effect-Cluster.md#entitytolayermailbox) |
+| Shard assignment logic | [Shard Assignment](./context/effect-Cluster.md#shard-assignment) |
+| MessageStorage idempotency | [SaveResult & Idempotency](./context/effect-Cluster.md#saveresult--idempotency) |
+| SQL storage backends | [SqlMessageStorage](./context/effect-Cluster.md#sqlmessagestorage) |
+| HTTP/WebSocket transport | [HttpRunner](./context/effect-Cluster.md#httprunner) |
+| Cluster metrics gauges | [ClusterMetrics](./context/effect-Cluster.md#clustermetrics) |
 
 ---
 
@@ -264,11 +283,18 @@ Central index of context files for AI agents and coding assistants working with 
 | Inter-fiber communication | [effect-Queue](./context/effect-Queue.md#patterns) | [Backpressure](./context/effect-Queue.md#backpressure--suspension) |
 | Rate limit / work queue | [effect-Queue](./context/effect-Queue.md#bounded-work-queue-rate-limiting) | [Queue Variants](./context/effect-Queue.md#queue-variants) |
 | Fan-out work distribution | [effect-Queue](./context/effect-Queue.md#fan-out-multiple-consumers) | [Core Operations](./context/effect-Queue.md#core-operations) |
-| Create durable workflow | [workflow-TanstackStart](./context/workflow-TanstackStart.md#pattern-1-serve-single-workflow) | [Deep dive](./context/workflow.md#execution-flow-critical-path) |
-| Compose workflows | [workflow-TanstackStart](./context/workflow-TanstackStart.md#contextinvoke--workflow-composition) | [serveMany](./context/workflow-TanstackStart.md#pattern-2-servemany--createworkflow) |
-| Handle workflow errors | [workflow](./context/workflow.md#error-handling) | [WorkflowAbort](./context/workflow.md#workflowabort-as-control-flow) |
-| Prevent duplicate workflows | [workflow](./context/workflow.md#workflow-level-idempotency-not-supported) | [Workarounds](./context/workflow.md#workarounds) |
-| Test workflows locally | [workflow-TanstackStart](./context/workflow-TanstackStart.md#development-setup) | [Testing](./context/workflow-TanstackStart.md#testing) |
+| Create Effect durable workflow | [effect-Workflow](./context/effect-Workflow.md#workflow) | [Patterns](./context/effect-Workflow.md#patterns) |
+| Activities (at-most-once) | [effect-Workflow](./context/effect-Workflow.md#activity) | [Execution Flow](./context/effect-Workflow.md#activity-execution-flow-internal) |
+| Workflow external signals | [effect-Workflow](./context/effect-Workflow.md#durabledeferred) | [Token System](./context/effect-Workflow.md#token-system) |
+| Workflow suspend/resume | [effect-Workflow](./context/effect-Workflow.md#execution-lifecycle) | [DurableClock](./context/effect-Workflow.md#durableclock) |
+| Test workflows (Effect) | [effect-Workflow](./context/effect-Workflow.md#testing) | [layerMemory](./context/effect-Workflow.md#layermemory--in-memory-engine) |
+| Define cluster entity | [effect-Cluster](./context/effect-Cluster.md#entity) | [Entity.toLayer](./context/effect-Cluster.md#entitytolayer) |
+| Shard messages | [effect-Cluster](./context/effect-Cluster.md#sharding) | [Shard Assignment](./context/effect-Cluster.md#shard-assignment) |
+| Persist cluster messages | [effect-Cluster](./context/effect-Cluster.md#messagestorage) | [SqlMessageStorage](./context/effect-Cluster.md#sqlmessagestorage) |
+| Distributed cron | [effect-Cluster](./context/effect-Cluster.md#clustercron) | [Singleton](./context/effect-Cluster.md#singleton) |
+| Cluster workflows | [effect-Cluster](./context/effect-Cluster.md#clusterworkflowengine) | [effect-Workflow](./context/effect-Workflow.md#workflow) |
+| Test cluster services | [effect-Cluster](./context/effect-Cluster.md#testing) | [Entity.makeTestClient](./context/effect-Cluster.md#entitymaketestclient) |
+
 
 ---
 
@@ -277,7 +303,6 @@ Central index of context files for AI agents and coding assistants working with 
 ### apps/consultation
 - **State Management**: Uses `@effect-atom/atom-react` (NOT Jotai)
 - **Framework**: TanStack Start
-- **Workflows**: Upstash Workflow with QStash
 
 ### Adding Context
 
