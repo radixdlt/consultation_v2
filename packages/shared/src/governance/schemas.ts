@@ -1,10 +1,10 @@
 import { AccountAddress } from '@radix-effects/shared'
 import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk'
-import { Effect, ParseResult, Schema } from 'effect'
+import { Effect, Option, ParseResult, Schema } from 'effect'
 import s from 'sbor-ez-mode'
 import { parseSbor } from '../helpers/parseSbor'
 import { KeyValueStoreAddress } from '../schemas'
-import { TemperatureCheckId } from './brandedTypes'
+import { ProposalId, TemperatureCheckId } from './brandedTypes'
 
 export const MakeTemperatureCheckInputSchema = Schema.Struct({
   title: Schema.String,
@@ -39,6 +39,13 @@ export const TemperatureCheckSchema = Schema.asSchema(
         })
       ),
       links: Schema.Array(Schema.String),
+      quorum: Schema.String,
+      start: Schema.Number,
+      deadline: Schema.Number,
+      elevated_proposal_id: Schema.Struct({
+        variant: Schema.String,
+        value: Schema.Unknown
+      }),
       author: Schema.String
     }),
     Schema.Struct({
@@ -55,7 +62,11 @@ export const TemperatureCheckSchema = Schema.asSchema(
           label: Schema.String
         })
       ),
-      links: Schema.Array(Schema.URL),
+      links: Schema.Array(Schema.String),
+      quorum: Schema.String,
+      start: Schema.DateFromSelf,
+      deadline: Schema.DateFromSelf,
+      elevatedProposalId: Schema.OptionFromSelf(ProposalId),
       author: AccountAddress
     }),
     {
@@ -72,6 +83,15 @@ export const TemperatureCheckSchema = Schema.asSchema(
           label: option.label
         })),
         links: fromA.links,
+        quorum: fromA.quorum,
+        start: new Date(fromA.start * 1000),
+        deadline: new Date(fromA.deadline * 1000),
+        elevatedProposalId:
+          fromA.elevated_proposal_id.variant === 'Some'
+            ? Option.some(
+                (fromA.elevated_proposal_id.value as [number])[0] as ProposalId
+              )
+            : Option.none(),
         author: AccountAddress.make(fromA.author)
       }),
       encode: (values) => ({
@@ -87,12 +107,111 @@ export const TemperatureCheckSchema = Schema.asSchema(
           label: option.label
         })),
         links: values.links.map((url) => url.toString()),
+        quorum: values.quorum,
+        start: Math.floor(values.start.getTime() / 1000),
+        deadline: Math.floor(values.deadline.getTime() / 1000),
+        elevated_proposal_id: Option.match(values.elevatedProposalId, {
+          onNone: () => ({ variant: 'None' as const, value: {} }),
+          onSome: (id) => ({ variant: 'Some' as const, value: [id] })
+        }),
         author: values.author
       }),
       strict: true
     }
   )
 )
+
+export type TemperatureCheck = typeof TemperatureCheckSchema.Type
+
+export const ProposalSchema = Schema.asSchema(
+  Schema.transform(
+    Schema.Struct({
+      id: Schema.Number,
+      title: Schema.String,
+      short_description: Schema.String,
+      description: Schema.String,
+      voters: Schema.String,
+      votes: Schema.String,
+      vote_count: Schema.Number,
+      vote_options: Schema.Array(
+        Schema.Struct({
+          id: Schema.Tuple(Schema.Number),
+          label: Schema.String
+        })
+      ),
+      links: Schema.Array(Schema.String),
+      quorum: Schema.String,
+      start: Schema.Number,
+      deadline: Schema.Number,
+      temperature_check_id: Schema.Number,
+      author: Schema.String
+    }),
+    Schema.Struct({
+      id: Schema.Number,
+      title: Schema.String,
+      shortDescription: Schema.String,
+      description: Schema.String,
+      voters: KeyValueStoreAddress,
+      votes: KeyValueStoreAddress,
+      voteCount: Schema.Number,
+      voteOptions: Schema.Array(
+        Schema.Struct({
+          id: Schema.Number,
+          label: Schema.String
+        })
+      ),
+      links: Schema.Array(Schema.String),
+      quorum: Schema.String,
+      start: Schema.DateFromSelf,
+      deadline: Schema.DateFromSelf,
+      temperatureCheckId: TemperatureCheckId,
+      author: AccountAddress
+    }),
+    {
+      decode: (fromA) => ({
+        id: fromA.id,
+        title: fromA.title,
+        shortDescription: fromA.short_description,
+        description: fromA.description,
+        voters: KeyValueStoreAddress.make(fromA.voters),
+        votes: KeyValueStoreAddress.make(fromA.votes),
+        voteCount: fromA.vote_count,
+        voteOptions: fromA.vote_options.map((option) => ({
+          id: option.id[0],
+          label: option.label
+        })),
+        links: fromA.links,
+        quorum: fromA.quorum,
+        start: new Date(fromA.start * 1000),
+        deadline: new Date(fromA.deadline * 1000),
+        temperatureCheckId: fromA.temperature_check_id as TemperatureCheckId,
+        author: AccountAddress.make(fromA.author)
+      }),
+      encode: (values) => ({
+        id: values.id,
+        title: values.title,
+        short_description: values.shortDescription,
+        description: values.description,
+        voters: values.voters,
+        votes: values.votes,
+        vote_count: values.voteCount,
+        vote_options: values.voteOptions.map((option) => ({
+          id: [option.id] as const,
+          label: option.label
+        })),
+        links: values.links,
+        quorum: values.quorum,
+        start: Math.floor(values.start.getTime() / 1000),
+        deadline: Math.floor(values.deadline.getTime() / 1000),
+        temperature_check_id: values.temperatureCheckId,
+        author: values.author
+      }),
+      strict: true
+    }
+  )
+)
+
+export type Proposal = typeof ProposalSchema.Type
 
 export const TemperatureCheckVoteSchema = Schema.transform(
   Schema.Struct({
