@@ -29,6 +29,7 @@ function VoteButton({ vote, onClick, disabled, loading }: VoteButtonProps) {
 
   return (
     <Button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       className={`flex-1 ${colorClasses} font-bold`}
