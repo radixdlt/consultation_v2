@@ -288,3 +288,39 @@ export const TemperatureCheckVoteValueSchema = Schema.asSchema(
     }
   )
 )
+
+export const TemperatureCheckVoteRecord = Schema.asSchema(
+  Schema.transformOrFail(
+    ProgrammaticScryptoSborValueSchema,
+    Schema.Struct({
+      accountAddress: AccountAddress,
+      vote: Schema.Literal('For', 'Against')
+    }),
+    {
+      strict: true,
+      decode: (value, _, ast) =>
+        parseSbor(
+          value,
+          s.tuple([
+            s.address(),
+            s.enum([
+              { variant: 'For', schema: s.structNullable({}) },
+              { variant: 'Against', schema: s.structNullable({}) }
+            ])
+          ])
+        ).pipe(
+          Effect.map(([address, vote]) => ({
+            accountAddress: AccountAddress.make(address),
+            vote: vote.variant as 'For' | 'Against'
+          })),
+          Effect.catchAll(() =>
+            ParseResult.fail(
+              new ParseResult.Type(ast, value, `Invalid vote value: ${value}`)
+            )
+          )
+        ),
+      encode: (_, __, ast) =>
+        ParseResult.fail(new ParseResult.Type(ast, _, 'Encoding not supported'))
+    }
+  )
+)

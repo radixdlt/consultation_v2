@@ -1,52 +1,82 @@
 import { NodeRuntime } from '@effect/platform-node'
 import { GetLedgerStateService } from '@radix-effects/gateway'
-import { StateVersion } from '@radix-effects/shared'
-import { Effect, Layer } from 'effect'
+import { Duration, Effect, Fiber, Layer, Option, Ref } from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import { Config, GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
+import { ORM } from './db/orm'
+import { PgClientLive } from './db/pgClient'
+import {
+  TransactionDetailsOptInsSchema,
+  TransactionStreamConfig,
+  type TransactionStreamConfigSchema,
+  TransactionStreamService
+} from './streamer'
+import { GovernanceEventProcessor } from './streamer/governanceEvents'
+import { TransactionListener } from './streamer/transactionListener'
+import { VoteCalculation } from './vote-calculation/voteCalculation'
+import { VoteCalculationQueue } from './vote-calculation/voteCalculationQueue'
+import { VoteCalculationWorker } from './vote-calculation/voteCalculationWorker'
+import { VoteReconciliation } from './vote-calculation/voteReconciliation'
 
-const EnvLayer = Layer.mergeAll(
+// Domain services — provideMerge so Config is available to both internal services and the main program
+const BaseServicesLayer = Layer.mergeAll(
   GovernanceComponent.Default,
+  GovernanceEventProcessor.Default,
   Snapshot.Default,
-  GetLedgerStateService.Default
+  GetLedgerStateService.Default,
+  VoteCalculation.Default,
+  VoteReconciliation.Default,
+  VoteCalculationWorker.Default,
+  TransactionListener.Default
 ).pipe(
+  Layer.provide(VoteCalculationQueue.Default),
+  Layer.provide(ORM.Default),
   Layer.provide(StokenetGatewayApiClientLayer),
-  Layer.provide(Config.StokenetLive)
+  Layer.provideMerge(Config.StokenetLive)
+)
+
+// Transaction stream config: affected_global_entities opt-in, 10s poll interval
+const TransactionStreamConfigLayer = Layer.effect(
+  TransactionStreamConfig,
+  Ref.make<typeof TransactionStreamConfigSchema.Type>({
+    stateVersion: Option.none(),
+    limitPerPage: 100,
+    waitTime: Duration.seconds(10),
+    optIns: {
+      ...TransactionDetailsOptInsSchema.make(),
+      affected_global_entities: true,
+      detailed_events: true
+    }
+  })
+)
+
+// provideMerge so TransactionStreamConfig ref is accessible to transactionListener for cursor mutation
+const TransactionStreamLayer = TransactionStreamService.Default.pipe(
+  Layer.provideMerge(TransactionStreamConfigLayer),
+  Layer.provide(StokenetGatewayApiClientLayer)
+)
+
+// Compose: services + transaction stream + PgClient
+const AppLayer = BaseServicesLayer.pipe(
+  Layer.provideMerge(TransactionStreamLayer),
+  Layer.provideMerge(PgClientLive)
 )
 
 NodeRuntime.runMain(
   Effect.gen(function* () {
-    const governanceComponent = yield* GovernanceComponent
-    const snapshotService = yield* Snapshot
-    const ledgerState = yield* GetLedgerStateService
+    yield* Effect.log('Vote collector starting')
+    // Phase 1: Startup reconciliation (returns stateVersion for gap-free stream start)
+    const reconcile = yield* VoteReconciliation
+    const startingStateVersion = yield* reconcile()
 
-    const stateVersion = yield* ledgerState({
-      at_ledger_state: {
-        timestamp: new Date()
-      }
-    }).pipe(Effect.map((result) => StateVersion.make(result.state_version)))
+    // Phase 2: Fork consumer loop
+    const runConsumer = yield* VoteCalculationWorker
+    const consumerFiber = yield* Effect.fork(runConsumer())
 
-    const temperatureChecks =
-      yield* governanceComponent.getTemperatureChecks(stateVersion)
-
-    yield* Effect.log(JSON.stringify(temperatureChecks, null, 2))
-
-    const temperatureChecksVotes =
-      yield* governanceComponent.getTemperatureChecksVotes({
-        stateVersion,
-        keyValueStoreAddress: temperatureChecks[0].votes
-      })
-
-    // yield* Effect.log(JSON.stringify(temperatureChecksVotes, null, 2))
-
-    const addresses = temperatureChecksVotes.map((vote) => vote.accountAddress)
-
-    const snapshot = yield* snapshotService({
-      addresses,
-      stateVersion
-    })
-
-    yield* Effect.log(snapshot)
-  }).pipe(Effect.provide(EnvLayer))
+    // Phase 3: Transaction stream listener (blocks main fiber)
+    const listen = yield* TransactionListener
+    yield* listen(startingStateVersion)
+    return yield* Fiber.join(consumerFiber)
+  }).pipe(Effect.provide(AppLayer))
 )

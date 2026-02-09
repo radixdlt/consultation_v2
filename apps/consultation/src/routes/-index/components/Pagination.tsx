@@ -1,11 +1,11 @@
 import {
-	Pagination as PaginationRoot,
 	PaginationContent,
 	PaginationEllipsis,
 	PaginationItem,
 	PaginationLink,
 	PaginationNext,
 	PaginationPrevious,
+	Pagination as PaginationRoot,
 } from "@/components/ui/pagination";
 
 type PaginationProps = {
@@ -32,7 +32,11 @@ export function Pagination({
 					<PaginationPrevious
 						onClick={() => onPageChange(currentPage - 1)}
 						aria-disabled={currentPage <= 1}
-						className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+						className={
+							currentPage <= 1
+								? "pointer-events-none opacity-50"
+								: "cursor-pointer"
+						}
 					/>
 				</PaginationItem>
 
@@ -56,7 +60,11 @@ export function Pagination({
 					<PaginationNext
 						onClick={() => onPageChange(currentPage + 1)}
 						aria-disabled={currentPage >= totalPages}
-						className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+						className={
+							currentPage >= totalPages
+								? "pointer-events-none opacity-50"
+								: "cursor-pointer"
+						}
 					/>
 				</PaginationItem>
 			</PaginationContent>

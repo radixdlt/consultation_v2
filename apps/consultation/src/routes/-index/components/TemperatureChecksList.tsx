@@ -3,8 +3,8 @@ import { Cause } from "effect";
 import { useState } from "react";
 import type { TemperatureCheck } from "shared/governance/schemas";
 import {
-	type SortOrder,
 	paginatedTemperatureChecksAtom,
+	type SortOrder,
 } from "@/atom/temperatureChecksAtom";
 import { InlineCode } from "@/components/ui/typography";
 import { CardSkeletonList } from "./CardSkeleton";
@@ -16,9 +16,7 @@ import { SortToggle } from "./SortToggle";
 export function TemperatureChecksList() {
 	const [page, setPage] = useState(1);
 	const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-	const result = useAtomValue(
-		paginatedTemperatureChecksAtom(page)(sortOrder),
-	);
+	const result = useAtomValue(paginatedTemperatureChecksAtom(page)(sortOrder));
 
 	const handleSortOrderChange = (newSortOrder: SortOrder) => {
 		setSortOrder(newSortOrder);

@@ -6,5 +6,5 @@ export { Pagination } from "./Pagination";
 export { ProposalsList } from "./ProposalsList";
 export { QuorumProgress } from "./QuorumProgress";
 export { SortToggle } from "./SortToggle";
-export { StatusBadge, getItemStatus, type ItemStatus } from "./StatusBadge";
+export { getItemStatus, type ItemStatus, StatusBadge } from "./StatusBadge";
 export { TemperatureChecksList } from "./TemperatureChecksList";

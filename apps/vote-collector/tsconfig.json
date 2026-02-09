@@ -10,11 +10,10 @@
 		"resolveJsonModule": true,
 		"esModuleInterop": false,
 		"declaration": false,
-		"declarationMap": true,
 		"sourceMap": true,
 		"skipLibCheck": true,
 		"moduleResolution": "bundler",
-		"module": "preserve",
+		"module": "ESNext",
 		"target": "ES2022",
 		"lib": ["ES2022"],
 		"incremental": true,
@@ -24,5 +23,11 @@
 				"name": "@effect/language-service"
 			}
 		]
-	}
+	},
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"src/**/*.d.ts",
+		"../../packages/shared/src/governance/makeVoteIndexKeys.test.ts"
+	]
 }

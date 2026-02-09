@@ -1,5 +1,6 @@
 import { Result, useAtom, useAtomValue } from "@effect-atom/atom-react";
 import type { WalletDataStateAccount } from "@radixdlt/radix-dapp-toolkit";
+import { Option } from "effect";
 import { LoaderIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";

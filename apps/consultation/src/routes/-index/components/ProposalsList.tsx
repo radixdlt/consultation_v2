@@ -2,7 +2,7 @@ import { Result, useAtomValue } from "@effect-atom/atom-react";
 import { Cause } from "effect";
 import { useState } from "react";
 import type { Proposal } from "shared/governance/schemas";
-import { type SortOrder, paginatedProposalsAtom } from "@/atom/proposalsAtom";
+import { paginatedProposalsAtom, type SortOrder } from "@/atom/proposalsAtom";
 import { InlineCode } from "@/components/ui/typography";
 import { CardSkeletonList } from "./CardSkeleton";
 import { EmptyState } from "./EmptyState";

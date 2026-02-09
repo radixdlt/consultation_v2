@@ -4,7 +4,7 @@ import { AddressLink } from "@/components/AddressLink";
 import { Card } from "@/components/ui/card";
 import { EndingSoonBadge } from "./EndingSoonBadge";
 import { QuorumProgress } from "./QuorumProgress";
-import { type ItemStatus, StatusBadge, getItemStatus } from "./StatusBadge";
+import { getItemStatus, type ItemStatus, StatusBadge } from "./StatusBadge";
 
 type ItemCardProps = {
 	id: number;
@@ -65,9 +65,7 @@ export function ItemCard({
 							</div>
 							<div className="flex items-center gap-1">
 								<Calendar className="size-3" />
-								<span>
-									{formatDateRange(start, deadline)}
-								</span>
+								<span>{formatDateRange(start, deadline)}</span>
 							</div>
 						</div>
 					</div>
