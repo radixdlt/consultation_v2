@@ -630,6 +630,27 @@ const getTemperatureCheckVotesByAccounts = (input: {
           }
         })
 
+      const makeProposalManifest = (input: {
+        accountAddress: AccountAddress
+        temperatureCheckId: TemperatureCheckId
+      }) =>
+        Effect.succeed(
+          TransactionManifestString.make(`
+CALL_METHOD
+  Address("${input.accountAddress}")
+  "create_proof_of_amount"
+  Address("${config.adminBadgeAddress}")
+  Decimal("1")
+;
+
+CALL_METHOD
+  Address("${config.componentAddress}")
+  "make_proposal"
+  ${input.temperatureCheckId}u64
+;
+          `)
+        )
+
       return {
         getTemperatureChecks,
         getTemperatureChecksVotes,
@@ -640,7 +661,8 @@ const getTemperatureCheckVotesByAccounts = (input: {
         getGovernanceState,
         getProposalById,
         getPaginatedTemperatureChecks,
-        getPaginatedProposals
+        getPaginatedProposals,
+        makeProposalManifest
       }
     })
   }

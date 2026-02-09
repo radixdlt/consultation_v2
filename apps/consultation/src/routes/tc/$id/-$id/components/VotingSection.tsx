@@ -4,13 +4,13 @@ import { LoaderIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import type { KeyValueStoreAddress } from "shared/schemas";
-import { accountsAtom, currentAccountAtom } from "@/atom/dappToolkitAtom";
+import { accountsAtom } from "@/atom/dappToolkitAtom";
 import { voteOnTemperatureCheckBatchAtom } from "@/atom/temperatureChecksAtom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useCurrentAccount } from "@/hooks/useCurrentAccount";
 import type { VotedAccount } from "../types";
-import { Option } from "effect";
 
 type Vote = "For" | "Against";
 
@@ -185,11 +185,7 @@ function ConnectedVoting({
 	const [voteAllAccounts, setVoteAllAccounts] = useState(
 		accountList.length >= 2,
 	);
-	const currentAccountResult = useAtomValue(currentAccountAtom);
-	const currentAccount = Result.builder(currentAccountResult)
-		.onInitial(() => accountList[0])
-		.onSuccess((account) => Option.getOrElse(account, () => accountList[0]))
-		.render();
+	const currentAccount = useCurrentAccount();
 
 	const isSubmitting = voteResult.waiting;
 

@@ -8,9 +8,25 @@ const selectedAccountAddressRef = Ref.unsafeMake<Option.Option<string>>(
 	Option.none(),
 );
 
+// Simple pub/sub for reactive account selection tracking
+const listeners = new Set<() => void>();
+
+/** Subscribe to selected account changes (for useSyncExternalStore) */
+export const subscribeSelectedAccount = (listener: () => void) => {
+	listeners.add(listener);
+	return () => {
+		listeners.delete(listener);
+	};
+};
+
+/** Get the current selected address snapshot (for useSyncExternalStore) */
+export const getSelectedAccountSnapshot = () =>
+	Effect.runSync(Ref.get(selectedAccountAddressRef));
+
 // Set the selected account address (called from React components)
 export const setSelectedAccountAddress = (address: string) => {
 	Effect.runSync(Ref.set(selectedAccountAddressRef, Option.some(address)));
+	for (const listener of listeners) listener();
 };
 
 /**

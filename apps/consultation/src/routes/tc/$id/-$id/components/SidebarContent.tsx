@@ -2,6 +2,7 @@ import { useAtomValue } from "@effect-atom/atom-react";
 import type { TemperatureCheckId } from "shared/governance/brandedTypes";
 import type { TemperatureCheckSchema } from "shared/governance/schemas";
 import { getTemperatureCheckVotesByAccountsAtom } from "@/atom/temperatureChecksAtom";
+import { PromoteToProposal } from "./PromoteToProposal";
 import { VotingSection } from "./VotingSection";
 import { YourVotesSection } from "./YourVotesSection";
 
@@ -33,6 +34,11 @@ export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
 			/>
 
 			<YourVotesSection accountsVotesResult={accountsVotesResult} />
+
+			<PromoteToProposal
+				temperatureCheckId={id}
+				elevatedProposalId={temperatureCheck.elevatedProposalId}
+			/>
 
 			<div className="space-y-3 text-sm">
 				<div>
