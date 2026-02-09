@@ -7,14 +7,12 @@ Central index of context files for AI agents and coding assistants working with 
 | Context File | Domain | Key Concepts |
 |--------------|--------|--------------|
 | [effect-Context](./context/effect-Context.md) | Dependency Injection | Context.Tag, Effect.Service, Layers |
+| [effect-Layer](./context/effect-Layer.md) | Layer Composition | Constructors, provide/provideMerge/merge, MemoMap, Scope |
 | [effect-Schema](./context/effect-Schema.md) | Validation | Schema types, transforms, refinements |
 | [effect-Queue](./context/effect-Queue.md) | Concurrency | Fiber-safe queues, backpressure, producer/consumer |
+| [effect-Pipe](./context/effect-Pipe.md) | Composition | Standalone pipe, .pipe() method, flow, Pipeable |
 | [effect-atom](./context/effect-atom.md) | State Management | Reactive atoms, Result type, React hooks |
 | [sql-drizzle](./context/sql-drizzle.md) | Database ORM | Drizzle + Effect, remote proxy, transactions |
-| [effect-Workflow](./context/effect-Workflow.md) | Durable Workflows | @effect/workflow, Activities, DurableClock, DurableDeferred |
-| [effect-Cluster](./context/effect-Cluster.md) | Distributed Systems | Entity, Sharding, Runners, MessageStorage |
-| [effect-Pipe](./context/effect-Pipe.md) | Composition | Standalone pipe, .pipe() method, flow, Pipeable |
-| [radix-TransactionStream](./context/radix-TransactionStream.md) | Radix Ledger | Gateway pagination stream, cursor via Ref, fatal errors |
 | [radix-Gateway](./context/radix-Gateway.md) | Radix Ledger | Gateway API client, tagged errors, pagination, SBOR schema, ROLA |
 
 
@@ -37,6 +35,38 @@ Central index of context files for AI agents and coding assistants working with 
 | [Context Operations](./context/effect-Context.md#context-operations) | Low-level Context module operations |
 | [Real-World Patterns](./context/effect-Context.md#real-world-patterns) | Ref state, factory services, scoped resources |
 | [Common Mistakes](./context/effect-Context.md#common-mistakes) | Yield errors, layer order, async init |
+
+---
+
+## Effect Layer
+
+> Composable, memoized blueprints for building service dependency graphs
+
+**File:** [effect-Layer.md](./context/effect-Layer.md)
+
+| Section | Description |
+|---------|-------------|
+| [Type Signature & Variance](./context/effect-Layer.md#type-signature--variance) | `Layer<ROut, E, RIn>` — contravariant output, covariant error/input |
+| [Constructors](./context/effect-Layer.md#constructors) | succeed, effect, scoped, function, suspend, context, empty, fail |
+| [Composition: The Four Key Operations](./context/effect-Layer.md#composition-the-four-key-operations) | provide, provideMerge, merge, mergeAll |
+| [Internal Architecture](./context/effect-Layer.md#internal-architecture) | How layers build context at runtime |
+| [MemoMap: Automatic Sharing](./context/effect-Layer.md#memomap-automatic-sharing) | Single-initialization guarantee per program |
+| [Scope Hierarchy & Parallel Execution](./context/effect-Layer.md#scope-hierarchy--parallel-execution) | Parent/child scopes, parallel layer construction |
+| [Error Handling](./context/effect-Layer.md#error-handling) | Layer errors, catchAll, tapError, orElse, retry |
+| [fresh() — Bypassing Memoization](./context/effect-Layer.md#fresh--bypassing-memoization) | When to skip memo sharing |
+| [Codebase Patterns](./context/effect-Layer.md#codebase-patterns) | Real patterns from this project |
+| [Common Mistakes & Gotchas](./context/effect-Layer.md#common-mistakes--gotchas) | provide vs provideMerge, layer order, circular deps |
+| [Quick Reference](./context/effect-Layer.md#quick-reference) | Constructor, composition, error handling cheatsheets |
+
+### Layer Subsections
+
+| Topic | Section |
+|-------|---------|
+| Variance rules (why wider output = subtype) | [Variance explained](./context/effect-Layer.md#variance-explained) |
+| provide vs provideMerge vs merge | [Composition: The Four Key Operations](./context/effect-Layer.md#composition-the-four-key-operations) |
+| MemoMap single-init guarantee | [MemoMap: Automatic Sharing](./context/effect-Layer.md#memomap-automatic-sharing) |
+| Scope lifecycle & finalizers | [Scope Hierarchy & Parallel Execution](./context/effect-Layer.md#scope-hierarchy--parallel-execution) |
+| fresh() for test isolation | [fresh() — Bypassing Memoization](./context/effect-Layer.md#fresh--bypassing-memoization) |
 
 ---
 
@@ -223,121 +253,6 @@ Central index of context files for AI agents and coding assistants working with 
 
 ---
 
-## Effect Workflow (@effect/workflow)
-
-> Durable, resumable, fault-tolerant workflows for Effect
-
-**File:** [effect-Workflow.md](./context/effect-Workflow.md)
-
-| Section | Description |
-|---------|-------------|
-| [Architecture Overview](./context/effect-Workflow.md#architecture-overview) | Module dependency graph, engine abstraction layer |
-| [Workflow](./context/effect-Workflow.md#workflow) | make, fromTaggedRequest, Result types, annotations, compensation, scope |
-| [Activity](./context/effect-Workflow.md#activity) | At-most-once execution, retry, idempotencyKey, raceAll |
-| [DurableClock](./context/effect-Workflow.md#durableclock) | sleep with in-memory threshold, engine-scheduled wake-up |
-| [DurableDeferred](./context/effect-Workflow.md#durabledeferred) | External signal/latch, Token system, await/done/succeed/fail |
-| [DurableQueue](./context/effect-Workflow.md#durablequeue) | PersistedQueue wrapper, process, worker, trace propagation |
-| [DurableRateLimiter](./context/effect-Workflow.md#durableratelimiter) | Rate-limited Activity with durable delay |
-| [WorkflowEngine](./context/effect-Workflow.md#workflowengine) | Service definition, WorkflowInstance, Encoded interface, layerMemory |
-| [WorkflowProxy & Server](./context/effect-Workflow.md#workflowproxy--workflowproxyserver) | Auto-generated RPC/HTTP endpoints from workflow definitions |
-| [Execution Lifecycle](./context/effect-Workflow.md#execution-lifecycle) | Suspend/resume cycle, activity caching, nested workflow propagation |
-| [Patterns](./context/effect-Workflow.md#patterns) | Activity + sleep + deferred, nested workflows, SuspendOnFailure, DurableQueue |
-| [Testing](./context/effect-Workflow.md#testing) | TestClock, layerMemory, layer composition |
-| [Common Mistakes](./context/effect-Workflow.md#common-mistakes) | Non-deterministic keys, compensation scope, side effects outside activities |
-| [Quick Reference](./context/effect-Workflow.md#quick-reference) | Module exports, requirement tags, defaults table |
-
-### Effect Workflow Subsections
-
-| Topic | Section |
-|-------|---------|
-| Execution ID derivation | [Constructor: Workflow.make](./context/effect-Workflow.md#constructor-workflowmake) |
-| Result = Complete \| Suspended | [Result Types](./context/effect-Workflow.md#result-types) |
-| CaptureDefects, SuspendOnFailure | [Annotations](./context/effect-Workflow.md#annotations) |
-| Activity caching by activityId | [Activity Execution Flow](./context/effect-Workflow.md#activity-execution-flow-internal) |
-| DurableClock threshold logic | [DurableClock.sleep](./context/effect-Workflow.md#durableclocksleep) |
-| Token encode/decode (Base64URL) | [Token System](./context/effect-Workflow.md#token-system) |
-| Full suspend/resume state machine | [Suspend / Resume Cycle](./context/effect-Workflow.md#suspend--resume-cycle) |
-| Building custom engine backends | [Encoded Interface](./context/effect-Workflow.md#encoded-interface--building-custom-engines) |
-| Parent-child interrupt propagation | [Nested Workflow Support](./context/effect-Workflow.md#nested-workflow-support) |
-
----
-
-## Effect Cluster (@effect/cluster)
-
-> Distributed virtual actor system with persistent messaging, sharding, and RPC-based entities
-
-**File:** [effect-Cluster.md](./context/effect-Cluster.md)
-
-| Section | Description |
-|---------|-------------|
-| [Architecture Overview](./context/effect-Cluster.md#architecture-overview) | Module dependency graph, core → envelope → entity → storage → runner → sharding |
-| [Core Types](./context/effect-Cluster.md#core-types) | EntityId, EntityType, ShardId, EntityAddress, RunnerAddress, Snowflake |
-| [Entity](./context/effect-Cluster.md#entity) | make, toLayer, toLayerMailbox, client, makeTestClient, keepAlive, RPC integration |
-| [Envelope & Message](./context/effect-Cluster.md#envelope--message) | Request/AckChunk/Interrupt wire protocol, Message.Incoming/Outgoing |
-| [Reply](./context/effect-Cluster.md#reply) | WithExit (final), Chunk (streaming), ReplyWithContext |
-| [Sharding](./context/effect-Cluster.md#sharding) | Core coordination: getShardId, makeClient, registerEntity, send, notify |
-| [ShardingConfig](./context/effect-Cluster.md#shardingconfig) | 19 config fields, defaults, layerFromEnv() |
-| [MessageStorage](./context/effect-Cluster.md#messagestorage) | Persistence layer, SaveResult idempotency, memory/SQL drivers |
-| [Runner & RunnerStorage](./context/effect-Cluster.md#runner--runnerstorage) | Node registration, shard locking, RunnerHealth (noop/ping/k8s) |
-| [Transport](./context/effect-Cluster.md#transport) | HttpRunner, SocketRunner, SingleRunner (all-in-one SQL) |
-| [Singleton](./context/effect-Cluster.md#singleton) | Per-shard singleton tasks via Sharding.registerSingleton |
-| [ClusterCron](./context/effect-Cluster.md#clustercron) | Distributed cron using Entity + Singleton + DeliverAt |
-| [EntityResource](./context/effect-Cluster.md#entityresource) | Long-lived resources via RcRef with keepAlive |
-| [EntityProxy](./context/effect-Cluster.md#entityproxy) | toRpcGroup, toHttpApiGroup — RPC/HTTP gateway generation |
-| [ClusterWorkflowEngine](./context/effect-Cluster.md#clusterworkflowengine) | Bridge @effect/workflow with @effect/cluster |
-| [Error Types](./context/effect-Cluster.md#error-types) | EntityNotAssignedToRunner, MailboxFull, PersistenceError, etc. |
-| [Testing](./context/effect-Cluster.md#testing) | TestRunner layer, Entity.makeTestClient, layer composition |
-| [Common Mistakes](./context/effect-Cluster.md#common-mistakes) | Missing Persisted annotation, entity idle timeout, runner health |
-| [Quick Reference](./context/effect-Cluster.md#quick-reference) | Export table, Context.Tag table, config defaults |
-
-### Effect Cluster Subsections
-
-| Topic | Section |
-|-------|---------|
-| Snowflake ID generation | [Snowflake & MachineId](./context/effect-Cluster.md#snowflake--machineid) |
-| ClusterSchema annotations | [ClusterSchema Annotations](./context/effect-Cluster.md#clusterschema-annotations) |
-| Entity handler patterns | [Entity.toLayer](./context/effect-Cluster.md#entitytolayer) |
-| Mailbox-based handlers | [Entity.toLayerMailbox](./context/effect-Cluster.md#entitytolayermailbox) |
-| Shard assignment logic | [Shard Assignment](./context/effect-Cluster.md#shard-assignment) |
-| MessageStorage idempotency | [SaveResult & Idempotency](./context/effect-Cluster.md#saveresult--idempotency) |
-| SQL storage backends | [SqlMessageStorage](./context/effect-Cluster.md#sqlmessagestorage) |
-| HTTP/WebSocket transport | [HttpRunner](./context/effect-Cluster.md#httprunner) |
-| Cluster metrics gauges | [ClusterMetrics](./context/effect-Cluster.md#clustermetrics) |
-
----
-
-## Radix Transaction Stream (@radix-effects/transaction-stream)
-
-> Infinite polling stream of Radix ledger transactions via Gateway API pagination
-
-**File:** [radix-TransactionStream.md](./context/radix-TransactionStream.md)
-
-| Section | Description |
-|---------|-------------|
-| [Architecture](./context/radix-TransactionStream.md#architecture) | Stream.paginateEffect + Ref cursor pattern, service diagram |
-| [Core Types](./context/radix-TransactionStream.md#core-types) | TransactionStreamService, ConfigService, Config, OptIns schema |
-| [Streaming Mechanics](./context/radix-TransactionStream.md#streaming-mechanics) | Pagination loop, cursor advancement, polling, empty-page filtering |
-| [Error Handling](./context/radix-TransactionStream.md#error-handling) | 7 gateway errors → Effect.die, rate-limit retry in gateway layer |
-| [Configuration](./context/radix-TransactionStream.md#configuration) | ConfigService as Ref, defaults table, runtime mutation |
-| [Usage Patterns](./context/radix-TransactionStream.md#usage-patterns) | Providing the service, multi-network concurrency, flattening batches |
-| [Gotchas](./context/radix-TransactionStream.md#gotchas) | Ref confusion, fatal errors, batch vs individual, deprecated fields |
-
-### Transaction Stream Subsections
-
-| Topic | Section |
-|-------|---------|
-| Stream.paginateEffect loop | [Pagination Loop](./context/radix-TransactionStream.md#pagination-loop) |
-| Cursor stored in Ref | [Cursor Advancement](./context/radix-TransactionStream.md#cursor-advancement) |
-| Sleep when caught up | [Polling When Caught Up](./context/radix-TransactionStream.md#polling-when-caught-up) |
-| Stream emits batches not singles | [Empty-Page Filtering](./context/radix-TransactionStream.md#empty-page-filtering) |
-| All 7 fatal error tags | [Gateway Errors — All Fatal](./context/radix-TransactionStream.md#gateway-errors--all-fatal) |
-| ConfigService is Ref not value | [ConfigService as Ref](./context/radix-TransactionStream.md#configservice-as-ref) |
-| Default config values | [Defaults](./context/radix-TransactionStream.md#defaults) |
-| Multi-network forking | [Multi-Network Concurrency](./context/radix-TransactionStream.md#multi-network-concurrency) |
-| Flattening with Stream.mapConcat | [Flattening to Individual Transactions](./context/radix-TransactionStream.md#flattening-to-individual-transactions) |
-
----
-
 ## Radix Gateway (@radix-effects/gateway)
 
 > Effect wrapper for the Radix Gateway API — tagged errors, pagination, SBOR schema, ROLA verification
@@ -377,6 +292,9 @@ Central index of context files for AI agents and coding assistants working with 
 | Task | Primary Context | Related Sections |
 |------|-----------------|------------------|
 | Create a service | [effect-Context](./context/effect-Context.md#core-concepts) | [Effect.Service pattern](./context/effect-Context.md#pattern-2-effectservice-higher-level) |
+| Build a dependency graph | [effect-Layer](./context/effect-Layer.md#constructors) | [Composition](./context/effect-Layer.md#composition-the-four-key-operations) |
+| provide vs provideMerge | [effect-Layer](./context/effect-Layer.md#composition-the-four-key-operations) | [Common Mistakes](./context/effect-Layer.md#common-mistakes--gotchas) |
+| Layer memoization / sharing | [effect-Layer](./context/effect-Layer.md#memomap-automatic-sharing) | [fresh()](./context/effect-Layer.md#fresh--bypassing-memoization) |
 | Validate API data | [effect-Schema](./context/effect-Schema.md#decoding--encoding) | [Common Patterns](./context/effect-Schema.md#common-patterns) |
 | Fetch data in React | [effect-atom](./context/effect-atom.md#creating-service-backed-atoms) | [React Hooks](./context/effect-atom.md#react-hooks) |
 | Handle loading states | [effect-atom](./context/effect-atom.md#common-patterns) | [Result type](./context/effect-atom.md#resulta-e--not-promises) |
@@ -385,21 +303,6 @@ Central index of context files for AI agents and coding assistants working with 
 | Inter-fiber communication | [effect-Queue](./context/effect-Queue.md#patterns) | [Backpressure](./context/effect-Queue.md#backpressure--suspension) |
 | Rate limit / work queue | [effect-Queue](./context/effect-Queue.md#bounded-work-queue-rate-limiting) | [Queue Variants](./context/effect-Queue.md#queue-variants) |
 | Fan-out work distribution | [effect-Queue](./context/effect-Queue.md#fan-out-multiple-consumers) | [Core Operations](./context/effect-Queue.md#core-operations) |
-| Create Effect durable workflow | [effect-Workflow](./context/effect-Workflow.md#workflow) | [Patterns](./context/effect-Workflow.md#patterns) |
-| Activities (at-most-once) | [effect-Workflow](./context/effect-Workflow.md#activity) | [Execution Flow](./context/effect-Workflow.md#activity-execution-flow-internal) |
-| Workflow external signals | [effect-Workflow](./context/effect-Workflow.md#durabledeferred) | [Token System](./context/effect-Workflow.md#token-system) |
-| Workflow suspend/resume | [effect-Workflow](./context/effect-Workflow.md#execution-lifecycle) | [DurableClock](./context/effect-Workflow.md#durableclock) |
-| Test workflows (Effect) | [effect-Workflow](./context/effect-Workflow.md#testing) | [layerMemory](./context/effect-Workflow.md#layermemory--in-memory-engine) |
-| Define cluster entity | [effect-Cluster](./context/effect-Cluster.md#entity) | [Entity.toLayer](./context/effect-Cluster.md#entitytolayer) |
-| Shard messages | [effect-Cluster](./context/effect-Cluster.md#sharding) | [Shard Assignment](./context/effect-Cluster.md#shard-assignment) |
-| Persist cluster messages | [effect-Cluster](./context/effect-Cluster.md#messagestorage) | [SqlMessageStorage](./context/effect-Cluster.md#sqlmessagestorage) |
-| Distributed cron | [effect-Cluster](./context/effect-Cluster.md#clustercron) | [Singleton](./context/effect-Cluster.md#singleton) |
-| Cluster workflows | [effect-Cluster](./context/effect-Cluster.md#clusterworkflowengine) | [effect-Workflow](./context/effect-Workflow.md#workflow) |
-| Test cluster services | [effect-Cluster](./context/effect-Cluster.md#testing) | [Entity.makeTestClient](./context/effect-Cluster.md#entitymaketestclient) |
-| Stream Radix transactions | [radix-TransactionStream](./context/radix-TransactionStream.md#streaming-mechanics) | [Usage Patterns](./context/radix-TransactionStream.md#usage-patterns) |
-| Configure transaction stream | [radix-TransactionStream](./context/radix-TransactionStream.md#configuration) | [Defaults](./context/radix-TransactionStream.md#defaults) |
-| Handle gateway errors | [radix-TransactionStream](./context/radix-TransactionStream.md#error-handling) | [Gotchas](./context/radix-TransactionStream.md#gotchas) |
-| Multi-network streaming | [radix-TransactionStream](./context/radix-TransactionStream.md#multi-network-concurrency) | [ConfigService as Ref](./context/radix-TransactionStream.md#configservice-as-ref) |
 | Query Radix entity state | [radix-Gateway](./context/radix-Gateway.md#service-catalog) | [Usage Patterns](./context/radix-Gateway.md#usage-patterns) |
 | Read Radix KV store | [radix-Gateway](./context/radix-Gateway.md#usage-patterns) | [Pagination](./context/radix-Gateway.md#pagination--batching) |
 | Parse Radix component state | [radix-Gateway](./context/radix-Gateway.md#usage-patterns) | [SBOR Schema](./context/radix-Gateway.md#sbor-schema) |
