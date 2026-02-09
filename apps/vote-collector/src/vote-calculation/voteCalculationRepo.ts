@@ -1,3 +1,4 @@
+import { SqlClient } from '@effect/sql/SqlClient'
 import { voteCalculationResults, voteCalculationState } from 'db/src/schema'
 import { and, eq, sql } from 'drizzle-orm'
 import { Array as A, Effect, Option, pipe } from 'effect'
@@ -8,8 +9,12 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
   {
     effect: Effect.gen(function* () {
       const db = yield* ORM
+      const sqlClient = yield* SqlClient
 
-      const getOrCreateStateId = (type: string, entityId: number) =>
+      const getOrCreateStateId = (
+        type: 'temperature_check',
+        entityId: number
+      ) =>
         db
           .insert(voteCalculationState)
           .values({ type, entityId })
@@ -118,11 +123,32 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           )
           .pipe(Effect.orDie)
 
+      const commitVoteResults = (params: {
+        stateId: number
+        type: string
+        entityId: number
+        lastVoteCount: number
+        results: ReadonlyArray<{ vote: string; votePower: string }>
+      }) =>
+        sqlClient.withTransaction(
+          Effect.forEach(params.results, ({ vote, votePower }) =>
+            upsertVotePower({ stateId: params.stateId, vote, votePower })
+          ).pipe(
+            Effect.andThen(
+              updateLastVoteCount(
+                params.type,
+                params.entityId,
+                params.lastVoteCount
+              )
+            ),
+            Effect.asVoid
+          )
+        )
+
       return {
         getOrCreateStateId,
         getLastVoteCount,
-        upsertVotePower,
-        updateLastVoteCount,
+        commitVoteResults,
         getResultsByEntity
       } as const
     })

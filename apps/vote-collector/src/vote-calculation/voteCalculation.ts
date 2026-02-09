@@ -123,21 +123,17 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           )
         )
 
-        // Upsert: add new power to existing totals
-        yield* Effect.forEach(R.toEntries(newPower), ([vote, votePower]) =>
-          repo.upsertVotePower({
-            stateId,
+        // Atomically upsert vote power + advance lastVoteCount
+        yield* repo.commitVoteResults({
+          stateId,
+          type: payload.type,
+          entityId: payload.entityId,
+          lastVoteCount: payload.voteCount,
+          results: R.toEntries(newPower).map(([vote, votePower]) => ({
             vote,
             votePower: votePower.toFixed()
-          })
-        )
-
-        // Update lastVoteCount on all rows for this entity
-        yield* repo.updateLastVoteCount(
-          payload.type,
-          payload.entityId,
-          payload.voteCount
-        )
+          }))
+        })
 
         // Return current totals
         const totals = yield* repo.getResultsByEntity(

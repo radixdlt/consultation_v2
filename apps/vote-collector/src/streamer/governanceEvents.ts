@@ -33,7 +33,7 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
           yield* upsert({
             type: 'temperature_check',
             entityId: id,
-            keyValueStoreAddress: String(tc.votes),
+            keyValueStoreAddress: tc.votes,
             voteCount: tc.voteCount,
             start: tc.start.getTime()
           })

@@ -365,11 +365,9 @@ CALL_METHOD
         toIndexInclusive: number
       }) =>
         Effect.gen(function* () {
-          const stateVersion = yield* getStateVersion()
-
           return yield* keyValueStoreDataService({
             at_ledger_state: {
-              state_version: stateVersion
+              state_version: input.stateVersion
             },
             key_value_store_address: input.keyValueStoreAddress,
             keys: makeVoteIndexKeys(
