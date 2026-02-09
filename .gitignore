@@ -26,6 +26,7 @@ coverage
 out/
 build
 dist
+*.tsbuildinfo
 
 
 # Debug
@@ -46,3 +47,4 @@ scrypto/target/
 .claude
 
 .repos
+.notes

@@ -6,6 +6,7 @@
 		"dev": "turbo run dev",
 		"format": "biome format --write",
 		"format:fix": "biome check --write --unsafe",
+		"check-types": "turbo run check-types",
 		"db:migrate": "turbo run db:migrate",
 		"db:generate": "turbo run db:generate",
 		"db:studio": "turbo run db:studio",

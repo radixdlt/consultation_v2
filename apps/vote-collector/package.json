@@ -5,7 +5,8 @@
 		"dev": "tsx watch src/index.ts",
 		"dev:inspect": "tsx --inspect-brk src/index.ts",
 		"build": "tsdown",
-		"test": "vitest"
+		"test": "vitest",
+		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@effect/opentelemetry": "catalog:",
@@ -21,9 +22,10 @@
 		"@types/node": "catalog:",
 		"bignumber.js": "catalog:",
 		"db": "workspace:*",
-		"shared": "workspace:*",
+		"drizzle-orm": "catalog:",
 		"effect": "catalog:",
-		"sbor-ez-mode": "catalog:"
+		"sbor-ez-mode": "catalog:",
+		"shared": "workspace:*"
 	},
 	"devDependencies": {
 		"@effect/language-service": "catalog:",

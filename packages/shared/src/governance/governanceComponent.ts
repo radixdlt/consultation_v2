@@ -24,6 +24,7 @@ import {
 } from '../schemas'
 import type { ProposalId, TemperatureCheckId } from './brandedTypes'
 import { Config } from './config'
+import { makeVoteIndexKeys } from './makeVoteIndexKeys'
 import {
   type MakeTemperatureCheckInput,
   MakeTemperatureCheckInputSchema,
@@ -31,6 +32,7 @@ import {
   MakeTemperatureCheckVoteInputSchema,
   ProposalSchema,
   TemperatureCheckSchema,
+  TemperatureCheckVoteRecord,
   TemperatureCheckVoteSchema,
   TemperatureCheckVoteValueSchema
 } from './schemas'
@@ -200,7 +202,7 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
           return temperatureCheck
         })
 
-      const getTemperatureChecksVotes = (input: {
+      const getAllTemperatureChecksVotes = (input: {
         stateVersion: StateVersion
         keyValueStoreAddress: KeyValueStoreAddress
       }) =>
@@ -305,7 +307,7 @@ CALL_METHOD
           `)
         })
 
-const getTemperatureCheckVotesByAccounts = (input: {
+      const getTemperatureCheckVotesByAccounts = (input: {
         keyValueStoreAddress: KeyValueStoreAddress
         accounts: AccountAddress[]
       }) =>
@@ -351,6 +353,51 @@ const getTemperatureCheckVotesByAccounts = (input: {
                     vote
                   }
                 })
+              )
+            )
+          )
+        })
+
+      const getTemperatureCheckVotesByIndex = (input: {
+        keyValueStoreAddress: KeyValueStoreAddress
+        stateVersion: StateVersion
+        fromIndexInclusive: number
+        toIndexInclusive: number
+      }) =>
+        Effect.gen(function* () {
+          return yield* keyValueStoreDataService({
+            at_ledger_state: {
+              state_version: input.stateVersion
+            },
+            key_value_store_address: input.keyValueStoreAddress,
+            keys: makeVoteIndexKeys(
+              input.fromIndexInclusive,
+              input.toIndexInclusive
+            )
+          }).pipe(
+            Effect.map((result) =>
+              pipe(
+                result,
+                A.head,
+                Option.map((item) => item.entries),
+                Option.getOrElse(() =>
+                  A.empty<StateKeyValueStoreDataResponseItem>()
+                )
+              )
+            ),
+            Effect.flatMap(
+              Effect.forEach(
+                Effect.fnUntraced(function* (item) {
+                  const { accountAddress, vote } = yield* Schema.decodeUnknown(
+                    TemperatureCheckVoteRecord
+                  )(item.value.programmatic_json)
+
+                  return {
+                    accountAddress,
+                    vote
+                  }
+                }),
+                { concurrency: 10 }
               )
             )
           )
@@ -440,7 +487,8 @@ const getTemperatureCheckVotesByAccounts = (input: {
 
           if (sortOrder === 'desc') {
             // Newest first (highest ID first)
-            startId = temperatureCheckCount - 1 - (input.page - 1) * input.pageSize
+            startId =
+              temperatureCheckCount - 1 - (input.page - 1) * input.pageSize
             endId = Math.max(startId - input.pageSize + 1, 0)
 
             if (startId < 0) {
@@ -457,7 +505,10 @@ const getTemperatureCheckVotesByAccounts = (input: {
           } else {
             // Oldest first (lowest ID first)
             startId = (input.page - 1) * input.pageSize
-            endId = Math.min(startId + input.pageSize - 1, temperatureCheckCount - 1)
+            endId = Math.min(
+              startId + input.pageSize - 1,
+              temperatureCheckCount - 1
+            )
 
             if (startId >= temperatureCheckCount) {
               return {
@@ -499,7 +550,10 @@ const getTemperatureCheckVotesByAccounts = (input: {
                     Option.match({
                       onNone: () => Effect.succeed(Option.none()),
                       onSome: (sbor) =>
-                        parseSbor(sbor, TemperatureCheckKeyValueStoreValue).pipe(
+                        parseSbor(
+                          sbor,
+                          TemperatureCheckKeyValueStoreValue
+                        ).pipe(
                           Effect.flatMap((parsed) =>
                             Schema.decodeUnknown(TemperatureCheckSchema)({
                               ...parsed,
@@ -653,7 +707,7 @@ CALL_METHOD
 
       return {
         getTemperatureChecks,
-        getTemperatureChecksVotes,
+        getAllTemperatureChecksVotes,
         makeTemperatureCheckManifest,
         getTemperatureCheckById,
         makeTemperatureCheckVoteManifest,
@@ -662,7 +716,8 @@ CALL_METHOD
         getProposalById,
         getPaginatedTemperatureChecks,
         getPaginatedProposals,
-        makeProposalManifest
+        makeProposalManifest,
+        getTemperatureCheckVotesByIndex
       }
     })
   }

@@ -1,4 +1,7 @@
-import { ComponentAddress, FungibleResourceAddress } from '@radix-effects/shared'
+import {
+  ComponentAddress,
+  FungibleResourceAddress
+} from '@radix-effects/shared'
 import { Context, Layer } from 'effect'
 
 export class Config extends Context.Tag('Config')<
