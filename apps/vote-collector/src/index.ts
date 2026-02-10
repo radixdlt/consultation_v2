@@ -7,6 +7,7 @@ import {
   Effect,
   Fiber,
   Layer,
+  Logger,
   Option,
   Ref,
   Config as ConfigEffect
@@ -14,6 +15,7 @@ import {
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import { Config, GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
+import { DatabaseMigrations } from './db/migrate'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
 import { RpcServerLive } from './rpc/server'
@@ -95,27 +97,45 @@ const HttpServerLive = HttpLayerRouter.serve(RoutesWithCors).pipe(
   )
 )
 
+// JSON in production, pretty in development
+const LoggerLive = Layer.unwrapEffect(
+  ConfigEffect.string('NODE_ENV').pipe(
+    ConfigEffect.withDefault('development'),
+    Effect.map((env) => (env === 'production' ? Logger.json : Logger.pretty))
+  )
+)
+
 // Compose: services + transaction stream + HTTP server + PgClient
 const AppLayer = BaseServicesLayer.pipe(
   Layer.provideMerge(TransactionStreamLayer),
   Layer.provideMerge(HttpServerLive),
-  Layer.provideMerge(PgClientLive)
+  Layer.provideMerge(PgClientLive),
+  Layer.provideMerge(LoggerLive)
 )
 
 NodeRuntime.runMain(
+  // Phase 0: Run DB migrations (outside AppLayer so default env ConfigProvider is used)
   Effect.gen(function* () {
-    yield* Effect.log('Vote collector starting')
-    // Phase 1: Startup reconciliation (returns stateVersion for gap-free stream start)
-    const reconcile = yield* VoteReconciliation
-    const startingStateVersion = yield* reconcile()
+    const migrate = yield* DatabaseMigrations
+    yield* migrate()
+  }).pipe(
+    Effect.provide(DatabaseMigrations.Default),
+    Effect.andThen(
+      Effect.gen(function* () {
+        yield* Effect.log('Vote collector starting')
+        // Phase 1: Startup reconciliation (returns stateVersion for gap-free stream start)
+        const reconcile = yield* VoteReconciliation
+        const startingStateVersion = yield* reconcile()
 
-    // Phase 2: Fork consumer loop
-    const runConsumer = yield* VoteCalculationWorker
-    const consumerFiber = yield* Effect.fork(runConsumer())
+        // Phase 2: Fork consumer loop
+        const runConsumer = yield* VoteCalculationWorker
+        const consumerFiber = yield* Effect.fork(runConsumer())
 
-    // Phase 3: Transaction stream listener (blocks main fiber)
-    const listen = yield* TransactionListener
-    yield* listen(startingStateVersion)
-    return yield* Fiber.join(consumerFiber)
-  }).pipe(Effect.provide(AppLayer))
+        // Phase 3: Transaction stream listener (blocks main fiber)
+        const listen = yield* TransactionListener
+        yield* listen(startingStateVersion)
+        return yield* Fiber.join(consumerFiber)
+      }).pipe(Effect.provide(AppLayer))
+    )
+  )
 )
