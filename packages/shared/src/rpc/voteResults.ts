@@ -7,6 +7,12 @@ export const VoteResultSchema = Schema.Struct({
   votePower: Schema.String
 })
 
+export const AccountVoteSchema = Schema.Struct({
+  accountAddress: Schema.String,
+  vote: Schema.String,
+  votePower: Schema.String
+})
+
 export const GetVoteResults = Rpc.make('GetVoteResults', {
   payload: {
     type: EntityType,
@@ -15,4 +21,12 @@ export const GetVoteResults = Rpc.make('GetVoteResults', {
   success: Schema.Array(VoteResultSchema)
 })
 
-export const VoteResultsRpcGroup = RpcGroup.make(GetVoteResults)
+export const GetAccountVotes = Rpc.make('GetAccountVotes', {
+  payload: {
+    type: EntityType,
+    entityId: EntityId
+  },
+  success: Schema.Array(AccountVoteSchema)
+})
+
+export const VoteResultsRpcGroup = RpcGroup.make(GetVoteResults, GetAccountVotes)
