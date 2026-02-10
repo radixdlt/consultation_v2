@@ -3,6 +3,7 @@ import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
 import type { TemperatureCheckSchema } from 'shared/governance/schemas'
 import { getTemperatureCheckVotesByAccountsAtom } from '@/atom/temperatureChecksAtom'
 import { PromoteToProposal } from './PromoteToProposal'
+import { VoteResultsSection } from './VoteResultsSection'
 import { VotingSection } from './VotingSection'
 import { YourVotesSection } from './YourVotesSection'
 
@@ -34,6 +35,8 @@ export function SidebarContent({ temperatureCheck, id }: SidebarContentProps) {
       />
 
       <YourVotesSection accountsVotesResult={accountsVotesResult} />
+
+      <VoteResultsSection id={id} />
 
       <PromoteToProposal
         temperatureCheckId={id}

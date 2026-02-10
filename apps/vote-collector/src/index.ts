@@ -2,7 +2,15 @@ import { HttpLayerRouter } from '@effect/platform'
 import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { GetLedgerStateService } from '@radix-effects/gateway'
 import { createServer } from 'node:http'
-import { Duration, Effect, Fiber, Layer, Option, Ref } from 'effect'
+import {
+  Duration,
+  Effect,
+  Fiber,
+  Layer,
+  Option,
+  Ref,
+  Config as ConfigEffect
+} from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import { Config, GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
@@ -60,12 +68,26 @@ const TransactionStreamLayer = TransactionStreamService.Default.pipe(
   Layer.provide(StokenetGatewayApiClientLayer)
 )
 
-// HTTP server for RPC endpoints — starts via layer lifecycle alongside the worker
-const HttpServerLive = RpcServerLive.pipe(
-  Layer.provide(HttpLayerRouter.layer),
+// CORS must be composed into the route layer *before* serve(), because serve() consumes
+// the HttpRouter internally — Layer.provide after serve() can't reach it.
+const RoutesWithCors = RpcServerLive.pipe(
   Layer.provide(
-    NodeHttpServer.layer(() => createServer(), { port: 3001 })
+    Layer.unwrapEffect(
+      Effect.gen(function* () {
+        const allowedOrigins = yield* ConfigEffect.array(
+          ConfigEffect.string('ALLOWED_ORIGINS')
+        ).pipe(ConfigEffect.withDefault(['*']), Effect.orDie)
+
+        return RpcServerLive.pipe(
+          Layer.provide(HttpLayerRouter.cors({ allowedOrigins }))
+        )
+      })
+    )
   )
+)
+
+const HttpServerLive = HttpLayerRouter.serve(RoutesWithCors).pipe(
+  Layer.provide(NodeHttpServer.layer(() => createServer(), { port: 3001 }))
 )
 
 // Compose: services + transaction stream + HTTP server + PgClient
