@@ -70,20 +70,16 @@ const TransactionStreamLayer = TransactionStreamService.Default.pipe(
 
 // CORS must be composed into the route layer *before* serve(), because serve() consumes
 // the HttpRouter internally — Layer.provide after serve() can't reach it.
-const RoutesWithCors = RpcServerLive.pipe(
-  Layer.provide(
-    Layer.unwrapEffect(
-      Effect.gen(function* () {
-        const allowedOrigins = yield* ConfigEffect.array(
-          ConfigEffect.string('ALLOWED_ORIGINS')
-        ).pipe(ConfigEffect.withDefault(['*']), Effect.orDie)
+const RoutesWithCors = Layer.unwrapEffect(
+  Effect.gen(function* () {
+    const allowedOrigins = yield* ConfigEffect.array(
+      ConfigEffect.string('ALLOWED_ORIGINS')
+    ).pipe(ConfigEffect.withDefault(['*']), Effect.orDie)
 
-        return RpcServerLive.pipe(
-          Layer.provide(HttpLayerRouter.cors({ allowedOrigins }))
-        )
-      })
+    return RpcServerLive.pipe(
+      Layer.provide(HttpLayerRouter.cors({ allowedOrigins }))
     )
-  )
+  })
 )
 
 const HttpServerLive = HttpLayerRouter.serve(RoutesWithCors).pipe(

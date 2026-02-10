@@ -21,7 +21,13 @@ export function VoteResultsSection({
 
   return Result.builder(voteResultsResult)
     .onInitial(() => null)
-    .onFailure(() => null)
+    .onFailure(() => (
+      <Card>
+        <CardContent className="py-4 text-sm text-muted-foreground">
+          Failed to load vote results.
+        </CardContent>
+      </Card>
+    ))
     .onSuccess((results) => {
       if (results.length === 0) return null
 

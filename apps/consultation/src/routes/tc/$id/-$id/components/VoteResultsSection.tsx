@@ -12,7 +12,13 @@ export function VoteResultsSection({ id }: VoteResultsSectionProps) {
 
   return Result.builder(voteResultsResult)
     .onInitial(() => null)
-    .onFailure(() => null)
+    .onFailure(() => (
+      <Card>
+        <CardContent className="py-4 text-sm text-muted-foreground">
+          Failed to load vote results.
+        </CardContent>
+      </Card>
+    ))
     .onSuccess((results) => {
       if (results.length === 0) return null
 
@@ -29,7 +35,7 @@ export function VoteResultsSection({ id }: VoteResultsSectionProps) {
               >
                 <span className="font-medium">{result.vote}</span>
                 <span className="text-muted-foreground text-sm tabular-nums">
-                  {result.votePower}
+                  {Number(result.votePower).toLocaleString()}
                 </span>
               </div>
             ))}
