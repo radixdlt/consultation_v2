@@ -14,6 +14,7 @@ import {
   ValidatorsState
 } from './accountBalanceState'
 import { LsuPosition } from './lsu'
+import { XrdPosition } from './xrd'
 
 const SnapshotInputSchema = Schema.Struct({
   addresses: Schema.mutable(Schema.Array(AccountAddress)),
@@ -27,13 +28,15 @@ export class Snapshot extends Effect.Service<Snapshot>()('Snapshot', {
     GetFungibleBalance.Default,
     AccountBalanceState.Default,
     GetLedgerStateService.Default,
-    LsuPosition.Default
+    LsuPosition.Default,
+    XrdPosition.Default
   ],
   effect: Effect.gen(function* () {
     const accountBalanceState = yield* AccountBalanceState
     const getLedgerStateService = yield* GetLedgerStateService
 
     const stakedPosition = yield* LsuPosition
+    const xrdPosition = yield* XrdPosition
 
     const concurrency = yield* Config.number(
       'GET_ACCOUNT_BALANCES_CONCURRENCY'
@@ -61,6 +64,10 @@ export class Snapshot extends Effect.Service<Snapshot>()('Snapshot', {
       return yield* Effect.all(
         [
           stakedPosition.fromState({
+            addresses,
+            stateVersion
+          }),
+          xrdPosition.fromState({
             addresses,
             stateVersion
           })
