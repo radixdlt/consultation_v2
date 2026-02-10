@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TcIndexRouteImport } from './routes/tc/index'
 import { Route as TcNewIndexRouteImport } from './routes/tc/new/index'
 import { Route as TcIdIndexRouteImport } from './routes/tc/$id/index'
+import { Route as ProposalIdIndexRouteImport } from './routes/proposal/$id/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,16 +35,23 @@ const TcIdIndexRoute = TcIdIndexRouteImport.update({
   path: '/tc/$id/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProposalIdIndexRoute = ProposalIdIndexRouteImport.update({
+  id: '/proposal/$id/',
+  path: '/proposal/$id/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/tc': typeof TcIndexRoute
+  '/proposal/$id': typeof ProposalIdIndexRoute
   '/tc/$id': typeof TcIdIndexRoute
   '/tc/new': typeof TcNewIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/tc': typeof TcIndexRoute
+  '/proposal/$id': typeof ProposalIdIndexRoute
   '/tc/$id': typeof TcIdIndexRoute
   '/tc/new': typeof TcNewIndexRoute
 }
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/tc/': typeof TcIndexRoute
+  '/proposal/$id/': typeof ProposalIdIndexRoute
   '/tc/$id/': typeof TcIdIndexRoute
   '/tc/new/': typeof TcNewIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/tc' | '/tc/$id' | '/tc/new'
+  fullPaths: '/' | '/tc' | '/proposal/$id' | '/tc/$id' | '/tc/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/tc' | '/tc/$id' | '/tc/new'
-  id: '__root__' | '/' | '/tc/' | '/tc/$id/' | '/tc/new/'
+  to: '/' | '/tc' | '/proposal/$id' | '/tc/$id' | '/tc/new'
+  id: '__root__' | '/' | '/tc/' | '/proposal/$id/' | '/tc/$id/' | '/tc/new/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TcIndexRoute: typeof TcIndexRoute
+  ProposalIdIndexRoute: typeof ProposalIdIndexRoute
   TcIdIndexRoute: typeof TcIdIndexRoute
   TcNewIndexRoute: typeof TcNewIndexRoute
 }
@@ -99,12 +109,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TcIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/proposal/$id/': {
+      id: '/proposal/$id/'
+      path: '/proposal/$id'
+      fullPath: '/proposal/$id'
+      preLoaderRoute: typeof ProposalIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TcIndexRoute: TcIndexRoute,
+  ProposalIdIndexRoute: ProposalIdIndexRoute,
   TcIdIndexRoute: TcIdIndexRoute,
   TcNewIndexRoute: TcNewIndexRoute,
 }

@@ -141,6 +141,16 @@ export const ProposalSchema = Schema.asSchema(
       ),
       links: Schema.Array(Schema.String),
       quorum: Schema.String,
+      max_selections: Schema.Union(
+        Schema.Struct({
+          variant: Schema.Literal('None'),
+          value: Schema.Struct({})
+        }),
+        Schema.Struct({
+          variant: Schema.Literal('Some'),
+          value: Schema.Tuple(Schema.Number)
+        })
+      ),
       start: Schema.Number,
       deadline: Schema.Number,
       temperature_check_id: Schema.Number,
@@ -162,6 +172,7 @@ export const ProposalSchema = Schema.asSchema(
       ),
       links: Schema.Array(Schema.String),
       quorum: Schema.String,
+      maxSelections: Schema.Number,
       start: Schema.DateFromSelf,
       deadline: Schema.DateFromSelf,
       temperatureCheckId: TemperatureCheckId,
@@ -182,6 +193,10 @@ export const ProposalSchema = Schema.asSchema(
         })),
         links: fromA.links,
         quorum: fromA.quorum,
+        maxSelections:
+          fromA.max_selections.variant === 'Some'
+            ? fromA.max_selections.value[0]
+            : 1,
         start: new Date(fromA.start * 1000),
         deadline: new Date(fromA.deadline * 1000),
         temperatureCheckId: fromA.temperature_check_id as TemperatureCheckId,
@@ -201,6 +216,13 @@ export const ProposalSchema = Schema.asSchema(
         })),
         links: values.links,
         quorum: values.quorum,
+        max_selections:
+          values.maxSelections === 1
+            ? { variant: 'None' as const, value: {} }
+            : {
+                variant: 'Some' as const,
+                value: [values.maxSelections] as const
+              },
         start: Math.floor(values.start.getTime() / 1000),
         deadline: Math.floor(values.deadline.getTime() / 1000),
         temperature_check_id: values.temperatureCheckId,
@@ -250,6 +272,14 @@ export const MakeTemperatureCheckVoteInputSchema = Schema.Struct({
 
 export type MakeTemperatureCheckVoteInput =
   typeof MakeTemperatureCheckVoteInputSchema.Encoded
+
+export const MakeProposalVoteInputSchema = Schema.Struct({
+  accountAddress: AccountAddress,
+  proposalId: ProposalId,
+  optionIds: Schema.Array(Schema.Number)
+})
+
+export type MakeProposalVoteInput = typeof MakeProposalVoteInputSchema.Encoded
 
 const ProgrammaticScryptoSborValueSchema = Schema.declare(
   (input): input is ProgrammaticScryptoSborValue =>
@@ -316,6 +346,34 @@ export const TemperatureCheckVoteRecord = Schema.asSchema(
           Effect.catchAll(() =>
             ParseResult.fail(
               new ParseResult.Type(ast, value, `Invalid vote value: ${value}`)
+            )
+          )
+        ),
+      encode: (_, __, ast) =>
+        ParseResult.fail(new ParseResult.Type(ast, _, 'Encoding not supported'))
+    }
+  )
+)
+
+export const ProposalVoteValueSchema = Schema.asSchema(
+  Schema.transformOrFail(
+    ProgrammaticScryptoSborValueSchema,
+    Schema.Array(Schema.Number),
+    {
+      strict: true,
+      decode: (value, _, ast) =>
+        parseSbor(
+          value,
+          s.tuple([s.number(), s.array(s.tuple([s.number()]))])
+        ).pipe(
+          Effect.map((result) => result[1].map((option) => option[0])),
+          Effect.catchAll(() =>
+            ParseResult.fail(
+              new ParseResult.Type(
+                ast,
+                value,
+                `Invalid proposal vote value: ${value}`
+              )
             )
           )
         ),

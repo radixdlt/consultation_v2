@@ -30,7 +30,10 @@ import {
   MakeTemperatureCheckInputSchema,
   type MakeTemperatureCheckVoteInput,
   MakeTemperatureCheckVoteInputSchema,
+  type MakeProposalVoteInput,
+  MakeProposalVoteInputSchema,
   ProposalSchema,
+  ProposalVoteValueSchema,
   TemperatureCheckSchema,
   TemperatureCheckVoteRecord,
   TemperatureCheckVoteSchema,
@@ -705,6 +708,83 @@ CALL_METHOD
           `)
         )
 
+      const getProposalVotesByAccounts = (input: {
+        keyValueStoreAddress: KeyValueStoreAddress
+        accounts: AccountAddress[]
+      }) =>
+        Effect.gen(function* () {
+          const stateVersion = yield* getStateVersion()
+
+          const AccountAddressSchema = Schema.Struct({ value: AccountAddress })
+
+          return yield* keyValueStoreDataService({
+            at_ledger_state: {
+              state_version: stateVersion
+            },
+            key_value_store_address: input.keyValueStoreAddress,
+            keys: input.accounts.map((address) => ({
+              key_json: { kind: 'Reference' as const, value: address }
+            }))
+          }).pipe(
+            Effect.map((result) =>
+              pipe(
+                result,
+                A.head,
+                Option.map((item) => item.entries),
+                Option.getOrElse(() =>
+                  A.empty<StateKeyValueStoreDataResponseItem>()
+                )
+              )
+            ),
+            Effect.flatMap(
+              Effect.forEach(
+                Effect.fnUntraced(function* (item) {
+                  const address = yield* Schema.decodeUnknown(
+                    AccountAddressSchema
+                  )(item.key.programmatic_json).pipe(
+                    Effect.map((result) => result.value)
+                  )
+
+                  const options = yield* Schema.decodeUnknown(
+                    ProposalVoteValueSchema
+                  )(item.value.programmatic_json)
+
+                  return {
+                    address,
+                    options
+                  }
+                })
+              )
+            )
+          )
+        })
+
+      const makeProposalVoteManifest = (input: MakeProposalVoteInput) =>
+        Effect.gen(function* () {
+          const parsedInput = yield* Schema.decodeUnknown(
+            MakeProposalVoteInputSchema
+          )(input)
+
+          const optionIds = parsedInput.optionIds
+            .map((id) => `Tuple(${id}u32)`)
+            .join(', ')
+
+          return TransactionManifestString.make(`
+CALL_METHOD
+  Address("${config.componentAddress}")
+  "vote_on_proposal"
+  Address("${parsedInput.accountAddress}")
+  ${parsedInput.proposalId}u64
+  Array<Tuple>(${optionIds})
+;
+CALL_METHOD
+  Address("${parsedInput.accountAddress}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP")
+;
+          `)
+        })
+
       return {
         getTemperatureChecks,
         getAllTemperatureChecksVotes,
@@ -717,7 +797,9 @@ CALL_METHOD
         getPaginatedTemperatureChecks,
         getPaginatedProposals,
         makeProposalManifest,
-        getTemperatureCheckVotesByIndex
+        getTemperatureCheckVotesByIndex,
+        getProposalVotesByAccounts,
+        makeProposalVoteManifest
       }
     })
   }
