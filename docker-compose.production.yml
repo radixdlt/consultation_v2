@@ -1,0 +1,48 @@
+services:
+  vote-collector:
+    build:
+      context: .
+      dockerfile: dockerfiles/server.Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/consultation
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+
+  consultation:
+    build:
+      context: .
+      dockerfile: dockerfiles/client.Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - vote-collector
+    networks:
+      - default
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: consultation
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - default
+
+volumes:
+  postgres_data:

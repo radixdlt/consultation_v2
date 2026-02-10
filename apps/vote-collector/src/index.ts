@@ -87,7 +87,16 @@ const RoutesWithCors = RpcServerLive.pipe(
 )
 
 const HttpServerLive = HttpLayerRouter.serve(RoutesWithCors).pipe(
-  Layer.provide(NodeHttpServer.layer(() => createServer(), { port: 3001 }))
+  Layer.provide(
+    Layer.unwrapEffect(
+      ConfigEffect.number('PORT').pipe(
+        ConfigEffect.withDefault(3001),
+        Effect.map((port) =>
+          NodeHttpServer.layer(() => createServer(), { port })
+        )
+      )
+    )
+  )
 )
 
 // Compose: services + transaction stream + HTTP server + PgClient
