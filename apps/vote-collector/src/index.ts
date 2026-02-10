@@ -1,11 +1,14 @@
-import { NodeRuntime } from '@effect/platform-node'
+import { HttpLayerRouter } from '@effect/platform'
+import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { GetLedgerStateService } from '@radix-effects/gateway'
+import { createServer } from 'node:http'
 import { Duration, Effect, Fiber, Layer, Option, Ref } from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import { Config, GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
+import { RpcServerLive } from './rpc/server'
 import {
   TransactionDetailsOptInsSchema,
   TransactionStreamConfig,
@@ -57,9 +60,18 @@ const TransactionStreamLayer = TransactionStreamService.Default.pipe(
   Layer.provide(StokenetGatewayApiClientLayer)
 )
 
-// Compose: services + transaction stream + PgClient
+// HTTP server for RPC endpoints — starts via layer lifecycle alongside the worker
+const HttpServerLive = RpcServerLive.pipe(
+  Layer.provide(HttpLayerRouter.layer),
+  Layer.provide(
+    NodeHttpServer.layer(() => createServer(), { port: 3001 })
+  )
+)
+
+// Compose: services + transaction stream + HTTP server + PgClient
 const AppLayer = BaseServicesLayer.pipe(
   Layer.provideMerge(TransactionStreamLayer),
+  Layer.provideMerge(HttpServerLive),
   Layer.provideMerge(PgClientLive)
 )
 
