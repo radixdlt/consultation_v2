@@ -382,3 +382,37 @@ export const ProposalVoteValueSchema = Schema.asSchema(
     }
   )
 )
+
+export const ProposalVoteRecord = Schema.asSchema(
+  Schema.transformOrFail(
+    ProgrammaticScryptoSborValueSchema,
+    Schema.Struct({
+      accountAddress: AccountAddress,
+      options: Schema.Array(Schema.Number)
+    }),
+    {
+      strict: true,
+      decode: (value, _, ast) =>
+        parseSbor(
+          value,
+          s.tuple([s.address(), s.array(s.tuple([s.number()]))])
+        ).pipe(
+          Effect.map(([address, options]) => ({
+            accountAddress: AccountAddress.make(address),
+            options: options.map((option) => option[0])
+          })),
+          Effect.catchAll(() =>
+            ParseResult.fail(
+              new ParseResult.Type(
+                ast,
+                value,
+                `Invalid proposal vote value: ${value}`
+              )
+            )
+          )
+        ),
+      encode: (_, __, ast) =>
+        ParseResult.fail(new ParseResult.Type(ast, _, 'Encoding not supported'))
+    }
+  )
+)

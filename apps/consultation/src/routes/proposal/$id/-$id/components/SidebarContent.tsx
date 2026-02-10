@@ -3,6 +3,7 @@ import type { ProposalId } from 'shared/governance/brandedTypes'
 import type { Proposal } from 'shared/governance/schemas'
 import { getProposalVotesByAccountsAtom } from '@/atom/proposalsAtom'
 import { SourceTemperatureCheck } from './SourceTemperatureCheck'
+import { VoteResultsSection } from './VoteResultsSection'
 import { VotingSection } from './VotingSection'
 import { YourVotesSection } from './YourVotesSection'
 
@@ -36,6 +37,8 @@ export function SidebarContent({ proposal, id }: SidebarContentProps) {
         accountsVotesResult={accountsVotesResult}
         voteOptions={proposal.voteOptions}
       />
+
+      <VoteResultsSection id={id} voteOptions={proposal.voteOptions} />
 
       <SourceTemperatureCheck
         temperatureCheckId={proposal.temperatureCheckId}

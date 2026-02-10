@@ -1,6 +1,6 @@
 import { StateVersion } from '@radix-effects/shared'
 import { Array as A, Effect } from 'effect'
-import { TemperatureCheckId } from 'shared/governance/brandedTypes'
+import { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
 import { GovernanceComponent } from 'shared/governance/index'
 import { KeyValueStoreAddress } from 'shared/schemas'
 import { VoteCalculationQueue } from './voteCalculationQueue'
@@ -48,12 +48,45 @@ export class VoteReconciliation extends Effect.Service<VoteReconciliation>()(
           }
         })
 
+      const reconcileOneProposal = (proposalId: ProposalId) =>
+        Effect.gen(function* () {
+          const proposal = yield* governance.getProposalById(proposalId)
+
+          const dbLastVoteCount = yield* repo.getLastVoteCount(
+            'proposal',
+            proposalId
+          )
+
+          yield* Effect.log('Reconciling proposal', {
+            id: proposalId,
+            onChainVoteCount: proposal.voteCount,
+            dbLastVoteCount
+          })
+
+          if (proposal.voteCount > dbLastVoteCount) {
+            yield* Effect.log('Stale proposal detected', {
+              id: proposalId,
+              onChainVoteCount: proposal.voteCount,
+              dbLastVoteCount
+            })
+
+            yield* upsert({
+              type: 'proposal',
+              entityId: proposalId,
+              keyValueStoreAddress: KeyValueStoreAddress.make(proposal.votes),
+              voteCount: proposal.voteCount,
+              start: proposal.start.getTime()
+            })
+          }
+        })
+
       return Effect.fn('VoteReconciliation.run')(
         function* () {
           const govState = yield* governance.getGovernanceState()
 
           yield* Effect.log('Startup reconciliation', {
             temperatureCheckCount: govState.temperatureCheckCount,
+            proposalCount: govState.proposalCount,
             stateVersion: govState.stateVersion
           })
 
@@ -63,6 +96,15 @@ export class VoteReconciliation extends Effect.Service<VoteReconciliation>()(
           ).map((i) => TemperatureCheckId.make(i))
 
           yield* Effect.forEach(temperatureCheckIds, reconcileOne, {
+            concurrency: 5,
+            discard: true
+          })
+
+          const proposalIds = A.range(0, govState.proposalCount - 1).map((i) =>
+            ProposalId.make(i)
+          )
+
+          yield* Effect.forEach(proposalIds, reconcileOneProposal, {
             concurrency: 5,
             discard: true
           })

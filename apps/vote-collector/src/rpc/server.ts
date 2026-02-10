@@ -8,8 +8,8 @@ const HandlersLive = VoteResultsRpcGroup.toLayer(
   Effect.gen(function* () {
     const repo = yield* VoteCalculationRepo
     return {
-      GetVoteResults: ({ entityId }) =>
-        repo.getResultsByEntity('temperature_check', entityId)
+      GetVoteResults: ({ type, entityId }) =>
+        repo.getResultsByEntity(type, entityId)
     }
   })
 )

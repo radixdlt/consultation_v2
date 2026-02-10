@@ -1,5 +1,6 @@
 import { Rpc, RpcGroup } from '@effect/rpc'
 import * as Schema from 'effect/Schema'
+import { EntityId, EntityType } from '../governance/brandedTypes'
 
 export const VoteResultSchema = Schema.Struct({
   vote: Schema.String,
@@ -7,7 +8,10 @@ export const VoteResultSchema = Schema.Struct({
 })
 
 export const GetVoteResults = Rpc.make('GetVoteResults', {
-  payload: { entityId: Schema.Number },
+  payload: {
+    type: EntityType,
+    entityId: EntityId
+  },
   success: Schema.Array(VoteResultSchema)
 })
 

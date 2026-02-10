@@ -12,7 +12,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
       const sqlClient = yield* SqlClient
 
       const getOrCreateStateId = (
-        type: 'temperature_check',
+        type: 'temperature_check' | 'proposal',
         entityId: number
       ) =>
         db

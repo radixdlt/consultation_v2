@@ -64,18 +64,49 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           at_ledger_state: { timestamp: new Date() }
         }).pipe(Effect.map((r) => StateVersion.make(r.state_version)))
 
-        const newVotes = yield* governance.getTemperatureCheckVotesByIndex({
-          stateVersion: currentSv,
-          keyValueStoreAddress: KeyValueStoreAddress.make(
-            payload.keyValueStoreAddress
-          ),
-          fromIndexInclusive: lastVoteCount,
-          toIndexInclusive: payload.voteCount
-        })
+        // Fetch new votes and normalize to { accountAddress, vote: string }[]
+        const newVotes = yield* (() => {
+          if (payload.type === 'temperature_check') {
+            return governance
+              .getTemperatureCheckVotesByIndex({
+                stateVersion: currentSv,
+                keyValueStoreAddress: KeyValueStoreAddress.make(
+                  payload.keyValueStoreAddress
+                ),
+                fromIndexInclusive: lastVoteCount,
+                toIndexInclusive: payload.voteCount
+              })
+              .pipe(
+                Effect.map(
+                  A.map((v) => ({ accountAddress: v.accountAddress, vote: v.vote }))
+                )
+              )
+          }
+          // proposal: fan out multi-option votes into one entry per option
+          return governance
+            .getProposalVotesByIndex({
+              stateVersion: currentSv,
+              keyValueStoreAddress: KeyValueStoreAddress.make(
+                payload.keyValueStoreAddress
+              ),
+              fromIndexInclusive: lastVoteCount,
+              toIndexInclusive: payload.voteCount
+            })
+            .pipe(
+              Effect.map(
+                A.flatMap((v) =>
+                  v.options.map((optionId) => ({
+                    accountAddress: v.accountAddress,
+                    vote: String(optionId)
+                  }))
+                )
+              )
+            )
+        })()
 
         yield* Effect.log('Fetched new votes', { count: newVotes.length })
 
-        // Step 3: Get state version at TC START DATE (for balance snapshot)
+        // Step 3: Get state version at entity START DATE (for balance snapshot)
         const snapshotStateVersion = yield* ledgerState({
           at_ledger_state: { timestamp: new Date(payload.start) }
         }).pipe(Effect.map((r) => r.state_version))
@@ -85,12 +116,13 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           snapshotDate: new Date(payload.start).toISOString()
         })
 
-        // Step 4: Snapshot balances ONLY for new voters (at TC start date)
+        // Step 4: Snapshot balances ONLY for new voters (at entity start date)
         const newBalances = yield* Effect.gen(function* () {
           if (A.isEmptyReadonlyArray(newVotes)) return {}
           const addresses = pipe(
             newVotes,
-            A.map((v) => v.accountAddress)
+            A.map((v) => v.accountAddress),
+            A.dedupe
           )
           const result = yield* snapshot({
             addresses,
