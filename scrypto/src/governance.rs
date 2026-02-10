@@ -1,12 +1,11 @@
-use scrypto::prelude::*;
 use crate::{
-    GovernanceParameters, Proposal, ProposalVoteOption, ProposalVoteOptionId,
-    ProposalVoteRecord, ProposalVoterEntry, TemperatureCheck, TemperatureCheckDraft,
-    TemperatureCheckVote, TemperatureCheckVoteRecord, TemperatureCheckVoterEntry,
-    TemperatureCheckCreatedEvent, TemperatureCheckVotedEvent,
-    ProposalCreatedEvent, ProposalVotedEvent, GovernanceParametersUpdatedEvent,
-    MAX_LINKS, MAX_VOTE_OPTIONS, MAX_SELECTIONS,
+    GovernanceParameters, GovernanceParametersUpdatedEvent, Proposal, ProposalCreatedEvent,
+    ProposalVoteOption, ProposalVoteOptionId, ProposalVoteRecord, ProposalVotedEvent,
+    ProposalVoterEntry, TemperatureCheck, TemperatureCheckCreatedEvent, TemperatureCheckDraft,
+    TemperatureCheckVote, TemperatureCheckVoteRecord, TemperatureCheckVotedEvent,
+    TemperatureCheckVoterEntry, MAX_LINKS, MAX_SELECTIONS, MAX_VOTE_OPTIONS,
 };
+use scrypto::prelude::*;
 
 #[blueprint]
 #[events(
@@ -63,6 +62,18 @@ mod governance {
             .roles(roles! {
                 owner => rule!(require(owner_badge));
             })
+            .enable_component_royalties(component_royalties! {
+                init {
+                    make_temperature_check => Free, updatable;
+                    make_proposal => Free, updatable;
+                    vote_on_temperature_check => Free, updatable;
+                    vote_on_proposal => Free, updatable;
+                    get_governance_parameters => Free, updatable;
+                    get_temperature_check_count => Free, updatable;
+                    get_proposal_count => Free, updatable;
+                    update_governance_parameters => Free, updatable;
+                }
+            })
             .globalize()
         }
 
@@ -111,7 +122,11 @@ mod governance {
             // Validate max_selections
             if let Some(n) = draft.max_selections {
                 assert!(n > 0, "max_selections must be greater than 0");
-                assert!(n <= MAX_SELECTIONS, "max_selections cannot exceed {}", MAX_SELECTIONS);
+                assert!(
+                    n <= MAX_SELECTIONS,
+                    "max_selections cannot exceed {}",
+                    MAX_SELECTIONS
+                );
                 assert!(
                     (n as usize) <= draft.vote_options.len(),
                     "max_selections cannot exceed number of vote options"
@@ -133,7 +148,9 @@ mod governance {
             self.temperature_check_count += 1;
 
             let now = Clock::current_time_rounded_to_seconds();
-            let deadline = now.add_days(self.governance_parameters.temperature_check_days as i64).unwrap();
+            let deadline = now
+                .add_days(self.governance_parameters.temperature_check_days as i64)
+                .unwrap();
 
             let temperature_check = TemperatureCheck {
                 title: draft.title,
@@ -146,7 +163,9 @@ mod governance {
                 voters: KeyValueStore::new(),
                 votes: KeyValueStore::new(),
                 vote_count: 0,
-                approval_threshold: self.governance_parameters.temperature_check_approval_threshold,
+                approval_threshold: self
+                    .governance_parameters
+                    .temperature_check_approval_threshold,
                 start: now,
                 deadline,
                 elevated_proposal_id: None,
@@ -192,7 +211,9 @@ mod governance {
             self.proposal_count += 1;
 
             let now = Clock::current_time_rounded_to_seconds();
-            let deadline = now.add_days(self.governance_parameters.proposal_length_days as i64).unwrap();
+            let deadline = now
+                .add_days(self.governance_parameters.proposal_length_days as i64)
+                .unwrap();
 
             let proposal = Proposal {
                 title: tc.title.clone(),
@@ -271,14 +292,15 @@ mod governance {
             tc.vote_count += 1;
 
             // Record the vote in both stores
-            tc.voters.insert(account, TemperatureCheckVoterEntry {
+            tc.voters
+                .insert(account, TemperatureCheckVoterEntry { vote_id, vote });
+            tc.votes.insert(
                 vote_id,
-                vote,
-            });
-            tc.votes.insert(vote_id, TemperatureCheckVoteRecord {
-                voter: account,
-                vote,
-            });
+                TemperatureCheckVoteRecord {
+                    voter: account,
+                    vote,
+                },
+            );
 
             Runtime::emit_event(TemperatureCheckVotedEvent {
                 temperature_check_id,
@@ -347,10 +369,7 @@ mod governance {
             // Check for duplicate selections
             let mut seen = Vec::new();
             for option in &options {
-                assert!(
-                    !seen.contains(option),
-                    "Duplicate vote option selected"
-                );
+                assert!(!seen.contains(option), "Duplicate vote option selected");
                 seen.push(*option);
             }
 
@@ -373,14 +392,20 @@ mod governance {
             proposal.vote_count += 1;
 
             // Record the vote in both stores
-            proposal.voters.insert(account, ProposalVoterEntry {
+            proposal.voters.insert(
+                account,
+                ProposalVoterEntry {
+                    vote_id,
+                    options: options.clone(),
+                },
+            );
+            proposal.votes.insert(
                 vote_id,
-                options: options.clone(),
-            });
-            proposal.votes.insert(vote_id, ProposalVoteRecord {
-                voter: account,
-                options: options.clone(),
-            });
+                ProposalVoteRecord {
+                    voter: account,
+                    options: options.clone(),
+                },
+            );
 
             Runtime::emit_event(ProposalVotedEvent {
                 proposal_id,

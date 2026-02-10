@@ -1,8 +1,8 @@
-use scrypto::prelude::*;
 use crate::{
-    Delegation, DelegationCreatedEvent, DelegationRemovedEvent,
-    MAX_DELEGATIONS, MIN_DELEGATION_FRACTION,
+    Delegation, DelegationCreatedEvent, DelegationRemovedEvent, MAX_DELEGATIONS,
+    MIN_DELEGATION_FRACTION,
 };
+use scrypto::prelude::*;
 
 #[blueprint]
 #[events(DelegationCreatedEvent, DelegationRemovedEvent)]
@@ -44,6 +44,14 @@ mod vote_delegation {
             .roles(roles! {
                 owner => rule!(require(owner_badge));
             })
+            .enable_component_royalties(component_royalties! {
+                init {
+                    make_delegation => Free, updatable;
+                    remove_delegation => Free, updatable;
+                    get_delegations => Free, updatable;
+                    get_delegatee_delegators => Free, updatable;
+                }
+            })
             .globalize()
         }
 
@@ -66,10 +74,7 @@ mod vote_delegation {
                 "Fraction must be between {} and 1 (inclusive)",
                 MIN_DELEGATION_FRACTION
             );
-            assert!(
-                delegator != delegatee,
-                "Cannot delegate to yourself"
-            );
+            assert!(delegator != delegatee, "Cannot delegate to yourself");
 
             let now = Clock::current_time_rounded_to_seconds();
             assert!(
@@ -84,7 +89,10 @@ mod vote_delegation {
 
             if let Some(existing_delegations) = self.delegators.get(&delegator) {
                 for delegation in existing_delegations.iter() {
-                    if delegation.valid_until.compare(now, TimeComparisonOperator::Gt) {
+                    if delegation
+                        .valid_until
+                        .compare(now, TimeComparisonOperator::Gt)
+                    {
                         // Still valid - skip if updating existing delegation to same delegatee
                         if delegation.delegatee != delegatee {
                             total_delegated = total_delegated + delegation.fraction;
@@ -172,7 +180,10 @@ mod vote_delegation {
                     if delegation.delegatee == delegatee {
                         found_target = true;
                         // Don't add to valid_delegations (removing it)
-                    } else if delegation.valid_until.compare(now, TimeComparisonOperator::Gt) {
+                    } else if delegation
+                        .valid_until
+                        .compare(now, TimeComparisonOperator::Gt)
+                    {
                         // Still valid and not the target
                         valid_delegations.push(delegation.clone());
                     } else {
@@ -184,7 +195,10 @@ mod vote_delegation {
                 panic!("No delegations found for this account");
             }
 
-            assert!(found_target, "No delegation found to the specified delegatee");
+            assert!(
+                found_target,
+                "No delegation found to the specified delegatee"
+            );
 
             // Update delegators map with cleaned-up list
             let mut delegations = self.delegators.get_mut(&delegator).unwrap();
