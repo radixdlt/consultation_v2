@@ -4,7 +4,7 @@ import type {
   ProgrammaticScryptoSborValue
 } from '@radixdlt/babylon-gateway-api-sdk'
 import { Effect } from 'effect'
-import { TemperatureCheckId } from 'shared/governance/brandedTypes'
+import { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
 import { GovernanceComponent } from 'shared/governance/index'
 import { VoteCalculationQueue } from '../vote-calculation/voteCalculationQueue'
 
@@ -39,10 +39,36 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
           })
         })
 
+      const handleProposalVoted = (event: DetailedEventsItem) =>
+        Effect.gen(function* () {
+          const data = event.payload
+            .programmatic_json as ProgrammaticScryptoSborValue
+          if (data.kind !== 'Tuple') return
+          const idField = data.fields[0]
+          if (!idField || idField.kind !== 'U64') return
+
+          const id = ProposalId.make(Number(idField.value))
+
+          yield* Effect.log('ProposalVotedEvent detected', { id })
+
+          const proposal = yield* governance.getProposalById(id)
+
+          yield* upsert({
+            type: 'proposal',
+            entityId: id,
+            keyValueStoreAddress: proposal.votes,
+            voteCount: proposal.voteCount,
+            start: proposal.start.getTime()
+          })
+        })
+
       const handlerMap = new Map<
         string,
         (event: DetailedEventsItem) => Effect.Effect<void, unknown>
-      >([['TemperatureCheckVotedEvent', handleTemperatureCheckVoted]])
+      >([
+        ['TemperatureCheckVotedEvent', handleTemperatureCheckVoted],
+        ['ProposalVotedEvent', handleProposalVoted]
+      ])
 
       const processBatch = (batch: CommittedTransactionInfo[]) =>
         Effect.gen(function* () {

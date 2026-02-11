@@ -1,11 +1,24 @@
-import { NodeRuntime } from '@effect/platform-node'
+import { HttpLayerRouter } from '@effect/platform'
+import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { GetLedgerStateService } from '@radix-effects/gateway'
-import { Duration, Effect, Fiber, Layer, Option, Ref } from 'effect'
+import { createServer } from 'node:http'
+import {
+  Duration,
+  Effect,
+  Fiber,
+  Layer,
+  Logger,
+  Option,
+  Ref,
+  Config as ConfigEffect
+} from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import { Config, GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
+import { DatabaseMigrations } from './db/migrate'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
+import { RpcServerLive } from './rpc/server'
 import {
   TransactionDetailsOptInsSchema,
   TransactionStreamConfig,
@@ -57,14 +70,55 @@ const TransactionStreamLayer = TransactionStreamService.Default.pipe(
   Layer.provide(StokenetGatewayApiClientLayer)
 )
 
-// Compose: services + transaction stream + PgClient
+// CORS must be composed into the route layer *before* serve(), because serve() consumes
+// the HttpRouter internally — Layer.provide after serve() can't reach it.
+const RoutesWithCors = Layer.unwrapEffect(
+  Effect.gen(function* () {
+    const allowedOrigins = yield* ConfigEffect.array(
+      ConfigEffect.string('ALLOWED_ORIGINS')
+    ).pipe(ConfigEffect.withDefault(['*']), Effect.orDie)
+
+    return RpcServerLive.pipe(
+      Layer.provide(HttpLayerRouter.cors({ allowedOrigins }))
+    )
+  })
+)
+
+const HttpServerLive = HttpLayerRouter.serve(RoutesWithCors).pipe(
+  Layer.provide(
+    Layer.unwrapEffect(
+      ConfigEffect.number('PORT').pipe(
+        ConfigEffect.withDefault(3001),
+        Effect.map((port) =>
+          NodeHttpServer.layer(() => createServer(), { port })
+        )
+      )
+    )
+  )
+)
+
+// JSON in production, pretty in development
+const LoggerLive = Layer.unwrapEffect(
+  ConfigEffect.string('NODE_ENV').pipe(
+    ConfigEffect.withDefault('development'),
+    Effect.map((env) => (env === 'production' ? Logger.json : Logger.pretty))
+  )
+)
+
+// Compose: services + transaction stream + HTTP server + PgClient
 const AppLayer = BaseServicesLayer.pipe(
   Layer.provideMerge(TransactionStreamLayer),
-  Layer.provideMerge(PgClientLive)
+  Layer.provideMerge(HttpServerLive),
+  Layer.provideMerge(PgClientLive),
+  Layer.provideMerge(LoggerLive)
 )
 
 NodeRuntime.runMain(
   Effect.gen(function* () {
+    // Phase 0: Run DB migrations (outside AppLayer so default env ConfigProvider is used)
+    const migrate = yield* DatabaseMigrations
+    yield* migrate()
+
     yield* Effect.log('Vote collector starting')
     // Phase 1: Startup reconciliation (returns stateVersion for gap-free stream start)
     const reconcile = yield* VoteReconciliation
@@ -78,5 +132,5 @@ NodeRuntime.runMain(
     const listen = yield* TransactionListener
     yield* listen(startingStateVersion)
     return yield* Fiber.join(consumerFiber)
-  }).pipe(Effect.provide(AppLayer))
+  }).pipe(Effect.provide([DatabaseMigrations.Default, AppLayer]))
 )

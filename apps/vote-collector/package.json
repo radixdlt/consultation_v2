@@ -24,11 +24,13 @@
 		"db": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"effect": "catalog:",
+		"pg": "^8.16.0",
 		"sbor-ez-mode": "catalog:",
 		"shared": "workspace:*"
 	},
 	"devDependencies": {
 		"@effect/language-service": "catalog:",
+		"@types/pg": "^8.16.0",
 		"@effect/vitest": "catalog:",
 		"@testcontainers/postgresql": "^11.10.0",
 		"tsdown": "catalog:",

@@ -33,6 +33,7 @@ import {
   type MakeProposalVoteInput,
   MakeProposalVoteInputSchema,
   ProposalSchema,
+  ProposalVoteRecord,
   ProposalVoteValueSchema,
   TemperatureCheckSchema,
   TemperatureCheckVoteRecord,
@@ -398,6 +399,52 @@ CALL_METHOD
                   return {
                     accountAddress,
                     vote
+                  }
+                }),
+                { concurrency: 10 }
+              )
+            )
+          )
+        })
+
+      const getProposalVotesByIndex = (input: {
+        keyValueStoreAddress: KeyValueStoreAddress
+        stateVersion: StateVersion
+        fromIndexInclusive: number
+        toIndexInclusive: number
+      }) =>
+        Effect.gen(function* () {
+          return yield* keyValueStoreDataService({
+            at_ledger_state: {
+              state_version: input.stateVersion
+            },
+            key_value_store_address: input.keyValueStoreAddress,
+            keys: makeVoteIndexKeys(
+              input.fromIndexInclusive,
+              input.toIndexInclusive
+            )
+          }).pipe(
+            Effect.map((result) =>
+              pipe(
+                result,
+                A.head,
+                Option.map((item) => item.entries),
+                Option.getOrElse(() =>
+                  A.empty<StateKeyValueStoreDataResponseItem>()
+                )
+              )
+            ),
+            Effect.flatMap(
+              Effect.forEach(
+                Effect.fnUntraced(function* (item) {
+                  const { accountAddress, options } =
+                    yield* Schema.decodeUnknown(ProposalVoteRecord)(
+                      item.value.programmatic_json
+                    )
+
+                  return {
+                    accountAddress,
+                    options
                   }
                 }),
                 { concurrency: 10 }
@@ -798,6 +845,7 @@ CALL_METHOD
         getPaginatedProposals,
         makeProposalManifest,
         getTemperatureCheckVotesByIndex,
+        getProposalVotesByIndex,
         getProposalVotesByAccounts,
         makeProposalVoteManifest
       }

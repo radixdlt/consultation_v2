@@ -11,6 +11,8 @@ Central index of context files for AI agents and coding assistants working with 
 | [effect-Schema](./context/effect-Schema.md) | Validation | Schema types, transforms, refinements |
 | [effect-Queue](./context/effect-Queue.md) | Concurrency | Fiber-safe queues, backpressure, producer/consumer |
 | [effect-Pipe](./context/effect-Pipe.md) | Composition | Standalone pipe, .pipe() method, flow, Pipeable |
+| [effect-Platform](./context/effect-Platform.md) | Platform Services | HTTP client/server, FileSystem, Terminal, Workers, Sockets |
+| [effect-Rpc](./context/effect-Rpc.md) | RPC Framework | Type-safe RPC, streaming, middleware, WebSocket/HTTP/Worker |
 | [effect-atom](./context/effect-atom.md) | State Management | Reactive atoms, Result type, React hooks |
 | [sql-drizzle](./context/sql-drizzle.md) | Database ORM | Drizzle + Effect, remote proxy, transactions |
 | [radix-Gateway](./context/radix-Gateway.md) | Radix Ledger | Gateway API client, tagged errors, pagination, SBOR schema, ROLA |
@@ -139,6 +141,98 @@ Central index of context files for AI agents and coding assistants working with 
 | Pure Either pipelines | [Pure Value Pipelines](./context/effect-Pipe.md#pure-value-pipelines-either-chain) |
 | When to use gen vs pipe | [Decision Table](./context/effect-Pipe.md#decision-table) |
 | flow() for reusable transforms | [flow vs pipe](./context/effect-Pipe.md#flow-vs-pipe) |
+
+---
+
+## Effect Platform
+
+> Unified, platform-independent abstractions for HTTP, filesystem, terminal, workers, and more
+
+**File:** [effect-Platform.md](./context/effect-Platform.md)
+
+| Section | Description |
+|---------|-------------|
+| [Package Overview](./context/effect-Platform.md#package-overview) | Dependencies, exports pattern, module organization |
+| [Module Map](./context/effect-Platform.md#module-map) | 56 modules across 10 categories |
+| [HTTP Client](./context/effect-Platform.md#http-client) | Service tag, verb shortcuts, middleware, retry |
+| [HTTP Server](./context/effect-Platform.md#http-server) | Abstract server interface, serving patterns |
+| [HTTP Router](./context/effect-Platform.md#http-router) | Radix-tree routing, verb combinators, composition |
+| [Declarative HTTP API](./context/effect-Platform.md#declarative-http-api) | HttpApi/Group/Endpoint/Builder, schema-driven endpoints |
+| [HTTP Request & Response](./context/effect-Platform.md#http-request--response-types) | Client/server request/response types |
+| [HTTP Middleware](./context/effect-Platform.md#http-middleware) | Logger, CORS, tracer, x-forwarded headers |
+| [FileSystem](./context/effect-Platform.md#filesystem) | Read/write/stream files, branded Size type |
+| [Terminal](./context/effect-Platform.md#terminal) | Terminal I/O, readLine, QuitException |
+| [KeyValueStore](./context/effect-Platform.md#keyvaluestore) | Key-value storage, SchemaStore, layerMemory/FileSystem |
+| [Command & CommandExecutor](./context/effect-Platform.md#command--commandexecutor) | Process execution, piping, streaming |
+| [Socket & SocketServer](./context/effect-Platform.md#socket--socketserver) | WebSocket support, channel conversion |
+| [Worker & WorkerRunner](./context/effect-Platform.md#worker--workerrunner) | Worker pools, schema-based dispatch |
+| [Error Model](./context/effect-Platform.md#error-model) | PlatformError, BadArgument, SystemError |
+| [Key Patterns](./context/effect-Platform.md#key-patterns) | Service tags, Layer provision, branded types, Schema integration |
+| [Architecture Flows](./context/effect-Platform.md#architecture-flows) | Client pipeline, server routing, declarative API flow |
+
+### Platform Subsections
+
+| Topic | Section |
+|-------|---------|
+| FetchHttpClient layer | [Fetch Implementation](./context/effect-Platform.md#fetch-implementation) |
+| HTTP verb shortcuts | [Convenience Methods](./context/effect-Platform.md#convenience-methods) |
+| Client middleware (map, transform) | [Client Middleware](./context/effect-Platform.md#client-middleware) |
+| Retry & error handling | [Error Handling & Retry](./context/effect-Platform.md#error-handling--retry) |
+| HttpRouter.Tag custom routers | [Custom Router Tags](./context/effect-Platform.md#custom-router-tags) |
+| HttpApiEndpoint definition | [HttpApiEndpoint](./context/effect-Platform.md#httpapiendpoint-individual-endpoint) |
+| HttpApiBuilder implementation | [HttpApiBuilder](./context/effect-Platform.md#httpapibuilder-implementation) |
+| File stream/sink I/O | [Stream-based I/O](./context/effect-Platform.md#stream-based-io) |
+| Command piping | [Command](./context/effect-Platform.md#command-functional-builder) |
+| Worker pools (elastic) | [Worker Pools](./context/effect-Platform.md#worker-pools) |
+| Scope for resource cleanup | [Scope for Resource Management](./context/effect-Platform.md#7-scope-for-resource-management) |
+| .env / file tree config | [PlatformConfigProvider Layers](./context/effect-Platform.md#platformconfigprovider-layers) |
+
+---
+
+## Effect RPC
+
+> Type-safe, transport-agnostic RPC framework built on Effect
+
+**File:** [effect-Rpc.md](./context/effect-Rpc.md)
+
+| Section | Description |
+|---------|-------------|
+| [Package Overview](./context/effect-Rpc.md#package-overview) | Dependencies, exports, module map |
+| [Rpc (Procedure Definition)](./context/effect-Rpc.md#rpc-procedure-definition) | Rpc.make(), payload/success/error/stream, type extractors |
+| [RpcGroup](./context/effect-Rpc.md#rpcgroup) | Grouping, .add/.merge/.middleware/.prefix, handler implementation |
+| [RpcServer](./context/effect-Rpc.md#rpcserver) | Server engine, Protocol tag, 7 transport protocols |
+| [RpcClient](./context/effect-Rpc.md#rpcclient) | Auto-generated typed stubs, Protocol tag, 3 transport protocols |
+| [RpcMiddleware](./context/effect-Rpc.md#rpcmiddleware) | Tag factory, provides/wrap/optional/requiredForClient |
+| [RpcMessage](./context/effect-Rpc.md#rpcmessage) | Wire protocol (FromClient/FromServer message types) |
+| [RpcSerialization](./context/effect-Rpc.md#rpcserialization) | 5 formats: JSON, NDJSON, JSON-RPC, ND-JSON-RPC, MsgPack |
+| [RpcSchema](./context/effect-Rpc.md#rpcschema) | Stream schema wrapper for streaming RPCs |
+| [RpcTest](./context/effect-Rpc.md#rpctest) | In-memory test client (no serialization) |
+| [Wrapper](./context/effect-Rpc.md#wrapper-fork--uninterruptible) | fork() and uninterruptible() for handler execution control |
+| [End-to-End Example](./context/effect-Rpc.md#end-to-end-example) | Define → group → handlers → server → client → test |
+| [Architecture Flow](./context/effect-Rpc.md#architecture-flow) | Full request lifecycle, stream backpressure, ping/pong |
+| [Key Patterns](./context/effect-Rpc.md#key-patterns) | Protocol abstraction, Schema-driven types, prefix namespacing |
+
+### RPC Subsections
+
+| Topic | Section |
+|-------|---------|
+| Rpc.make() options table | [Constructor](./context/effect-Rpc.md#constructor) |
+| Fluent combinators (setPayload, setSuccess) | [Fluent Combinators](./context/effect-Rpc.md#fluent-combinators) |
+| 15+ type extractors | [Type Extractors](./context/effect-Rpc.md#type-extractors) |
+| group.toLayer() handler impl | [Implementing Handlers](./context/effect-Rpc.md#implementing-handlers--tolayer) |
+| Server Protocol implementations | [Protocol Implementations (Server)](./context/effect-Rpc.md#protocol-implementations-server) |
+| layerHttpRouter convenience | [Convenience Layers](./context/effect-Rpc.md#convenience-layers) |
+| toWebHandler (edge deploy) | [Convenience Layers](./context/effect-Rpc.md#convenience-layers) |
+| Client prefix namespacing | [Client Type](./context/effect-Rpc.md#client-type) |
+| Client Protocol implementations | [Protocol Implementations (Client)](./context/effect-Rpc.md#protocol-implementations-client) |
+| withHeaders / currentHeaders | [Headers](./context/effect-Rpc.md#headers) |
+| Middleware Tag options | [Tag Options](./context/effect-Rpc.md#tag-options) |
+| Middleware application order | [Application Order](./context/effect-Rpc.md#application-order-server) |
+| Client-side middleware | [Client Middleware](./context/effect-Rpc.md#client-middleware) |
+| Serialization format guide | [Serialization Decision Guide](./context/effect-Rpc.md#serialization-decision-guide) |
+| Protocol feature matrix | [Protocol Feature Matrix](./context/effect-Rpc.md#protocol-feature-matrix) |
+| Backpressure (Ack protocol) | [Stream Backpressure](./context/effect-Rpc.md#stream-backpressure-ack-protocol) |
+| Rpc.fork / Rpc.uninterruptible | [Wrapper](./context/effect-Rpc.md#wrapper-fork--uninterruptible) |
 
 ---
 
@@ -311,6 +405,22 @@ Central index of context files for AI agents and coding assistants working with 
 | Compose Effect operations | [effect-Pipe](./context/effect-Pipe.md#standalone-vs-method-pipe) | [Patterns by Domain](./context/effect-Pipe.md#pipe-patterns-by-domain) |
 | Choose pipe vs gen vs fn | [effect-Pipe](./context/effect-Pipe.md#pipe-vs-effectgen-vs-effectfn) | [Decision Table](./context/effect-Pipe.md#decision-table) |
 | Transform plain values | [effect-Pipe](./context/effect-Pipe.md#pure-value-pipelines-either-chain) | [flow vs pipe](./context/effect-Pipe.md#flow-vs-pipe) |
+| Make HTTP requests | [effect-Platform](./context/effect-Platform.md#http-client) | [Fetch Implementation](./context/effect-Platform.md#fetch-implementation) |
+| Create HTTP server | [effect-Platform](./context/effect-Platform.md#http-server) | [Architecture Flows](./context/effect-Platform.md#architecture-flows) |
+| Define HTTP API declaratively | [effect-Platform](./context/effect-Platform.md#declarative-http-api) | [HttpApiBuilder](./context/effect-Platform.md#httpapibuilder-implementation) |
+| Route HTTP requests | [effect-Platform](./context/effect-Platform.md#http-router) | [Custom Router Tags](./context/effect-Platform.md#custom-router-tags) |
+| Read/write files | [effect-Platform](./context/effect-Platform.md#filesystem) | [Stream-based I/O](./context/effect-Platform.md#stream-based-io) |
+| Execute shell commands | [effect-Platform](./context/effect-Platform.md#command--commandexecutor) | [Process Interface](./context/effect-Platform.md#process-interface) |
+| Use WebSockets | [effect-Platform](./context/effect-Platform.md#socket--socketserver) | [WebSocket Support](./context/effect-Platform.md#websocket-support) |
+| Worker thread pool | [effect-Platform](./context/effect-Platform.md#worker--workerrunner) | [Worker Pools](./context/effect-Platform.md#worker-pools) |
+| Define RPC procedures | [effect-Rpc](./context/effect-Rpc.md#rpc-procedure-definition) | [Rpc.make()](./context/effect-Rpc.md#constructor) |
+| Group and implement RPC handlers | [effect-Rpc](./context/effect-Rpc.md#rpcgroup) | [Implementing Handlers](./context/effect-Rpc.md#implementing-handlers--tolayer) |
+| Serve RPCs over WebSocket/HTTP | [effect-Rpc](./context/effect-Rpc.md#rpcserver) | [Protocol Implementations (Server)](./context/effect-Rpc.md#protocol-implementations-server) |
+| Create typed RPC client | [effect-Rpc](./context/effect-Rpc.md#rpcclient) | [Protocol Implementations (Client)](./context/effect-Rpc.md#protocol-implementations-client) |
+| Add RPC middleware | [effect-Rpc](./context/effect-Rpc.md#rpcmiddleware) | [Tag Options](./context/effect-Rpc.md#tag-options) |
+| Stream data via RPC | [effect-Rpc](./context/effect-Rpc.md#rpcschema) | [Streaming as First-Class](./context/effect-Rpc.md#5-streaming-as-first-class) |
+| Choose RPC serialization format | [effect-Rpc](./context/effect-Rpc.md#rpcserialization) | [Serialization Decision Guide](./context/effect-Rpc.md#serialization-decision-guide) |
+| Test RPCs in-memory | [effect-Rpc](./context/effect-Rpc.md#rpctest) | [End-to-End Example](./context/effect-Rpc.md#end-to-end-example) |
 
 
 ---
