@@ -1,6 +1,6 @@
-import { Result, useAtomValue } from '@effect-atom/atom-react'
+import { Result, useAtomMount, useAtomValue } from '@effect-atom/atom-react'
 import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
-import { voteResultsAtom } from '@/atom/voteResultsAtom'
+import { voteResultsAtom, voteUpdatesAtom } from '@/atom/voteResultsAtom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type VoteResultsSectionProps = {
@@ -8,6 +8,7 @@ type VoteResultsSectionProps = {
 }
 
 export function VoteResultsSection({ id }: VoteResultsSectionProps) {
+  useAtomMount(voteUpdatesAtom('temperature_check')(id))
   const voteResultsResult = useAtomValue(voteResultsAtom('temperature_check')(id))
 
   return Result.builder(voteResultsResult)

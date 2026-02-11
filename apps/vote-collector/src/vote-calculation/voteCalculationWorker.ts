@@ -1,4 +1,5 @@
-import { Cause, Effect, Queue } from 'effect'
+import { Cause, Effect, PubSub, Queue } from 'effect'
+import { VoteUpdatePubSub } from '../sse/voteUpdatePubSub'
 import { VoteCalculation } from '../vote-calculation/voteCalculation'
 import { VoteCalculationQueue } from './voteCalculationQueue'
 
@@ -9,6 +10,7 @@ export class VoteCalculationWorker extends Effect.Service<VoteCalculationWorker>
     effect: Effect.gen(function* () {
       const calculateVotes = yield* VoteCalculation
       const { takeSnapshot, notify } = yield* VoteCalculationQueue
+      const pubsub = yield* VoteUpdatePubSub
 
       return Effect.fnUntraced(function* () {
         yield* Effect.log('Consumer loop started')
@@ -33,6 +35,12 @@ export class VoteCalculationWorker extends Effect.Service<VoteCalculationWorker>
                       type: payload.type,
                       entityId: payload.entityId,
                       results: result.results
+                    })
+                  ),
+                  Effect.tap(() =>
+                    PubSub.publish(pubsub, {
+                      type: payload.type,
+                      entityId: payload.entityId
                     })
                   ),
                   Effect.catchAllCause((cause) =>

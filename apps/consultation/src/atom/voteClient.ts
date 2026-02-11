@@ -3,6 +3,7 @@ import { Context, Layer } from 'effect'
 import { VoteResultsRpcGroup } from 'shared/rpc/voteResults'
 import { makeAtomRuntime } from '@/atom/makeRuntimeAtom'
 import { VoteResultsProtocolLive } from '@/lib/rpcClient'
+import { VoteEventSource } from '@/lib/voteEventSource'
 
 export class VoteClient extends Context.Tag('VoteClient')<
   VoteClient,
@@ -15,5 +16,8 @@ const VoteClientLive = Layer.scoped(
 )
 
 export const voteClientRuntime = makeAtomRuntime(
-  VoteClientLive.pipe(Layer.provide(VoteResultsProtocolLive))
+  Layer.mergeAll(
+    VoteClientLive.pipe(Layer.provide(VoteResultsProtocolLive)),
+    VoteEventSource.Default
+  )
 )
