@@ -3,12 +3,12 @@ import { Effect } from 'effect'
 import { type EntityId, type EntityType } from 'shared/governance/brandedTypes'
 import { VoteClient, voteClientRuntime } from '@/atom/voteClient'
 
-export const voteResultsAtom = Atom.family((type: EntityType) =>
+export const accountVotesAtom = Atom.family((type: EntityType) =>
   Atom.family((entityId: EntityId) =>
     voteClientRuntime.atom(
       Effect.gen(function* () {
         const client = yield* VoteClient
-        return yield* client.GetVoteResults({
+        return yield* client.GetAccountVotes({
           type,
           entityId
         })

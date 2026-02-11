@@ -2,6 +2,7 @@ import { useAtomValue } from '@effect-atom/atom-react'
 import type { ProposalId } from 'shared/governance/brandedTypes'
 import type { Proposal } from 'shared/governance/schemas'
 import { getProposalVotesByAccountsAtom } from '@/atom/proposalsAtom'
+import { AccountVotesSection } from './AccountVotesSection'
 import { SourceTemperatureCheck } from './SourceTemperatureCheck'
 import { VoteResultsSection } from './VoteResultsSection'
 import { VotingSection } from './VotingSection'
@@ -39,6 +40,8 @@ export function SidebarContent({ proposal, id }: SidebarContentProps) {
       />
 
       <VoteResultsSection id={id} voteOptions={proposal.voteOptions} />
+
+      <AccountVotesSection id={id} voteOptions={proposal.voteOptions} />
 
       <SourceTemperatureCheck
         temperatureCheckId={proposal.temperatureCheckId}

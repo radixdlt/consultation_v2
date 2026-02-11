@@ -9,7 +9,9 @@ const HandlersLive = VoteResultsRpcGroup.toLayer(
     const repo = yield* VoteCalculationRepo
     return {
       GetVoteResults: ({ type, entityId }) =>
-        repo.getResultsByEntity(type, entityId)
+        repo.getResultsByEntity(type, entityId),
+      GetAccountVotes: ({ type, entityId }) =>
+        repo.getAccountVotesByEntity(type, entityId)
     }
   })
 )

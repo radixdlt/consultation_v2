@@ -164,6 +164,13 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           results: R.toEntries(newPower).map(([vote, votePower]) => ({
             vote,
             votePower: votePower.toFixed()
+          })),
+          accountVotes: newVotes.map((v) => ({
+            accountAddress: v.accountAddress,
+            vote: v.vote,
+            votePower: (
+              newBalances[v.accountAddress] ?? new BigNumber(0)
+            ).toFixed()
           }))
         })
 

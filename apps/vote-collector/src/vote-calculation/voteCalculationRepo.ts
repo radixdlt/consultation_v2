@@ -1,8 +1,19 @@
+import { AccountAddress } from '@radix-effects/shared'
 import { SqlClient } from '@effect/sql/SqlClient'
-import { voteCalculationResults, voteCalculationState } from 'db/src/schema'
-import { and, eq, sql } from 'drizzle-orm'
+import {
+  voteCalculationAccountVotes,
+  voteCalculationResults,
+  voteCalculationState
+} from 'db/src/schema'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { Array as A, Effect, Option, pipe } from 'effect'
 import { ORM } from '../db/orm'
+
+export type AccountVoteRecord = {
+  readonly accountAddress: AccountAddress
+  readonly vote: string
+  readonly votePower: string
+}
 
 export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
   'VoteCalculationRepo',
@@ -88,6 +99,29 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           })
           .pipe(Effect.asVoid, Effect.orDie)
 
+      const upsertAccountVote = (params: AccountVoteRecord & {
+        stateId: number
+      }) =>
+        db
+          .insert(voteCalculationAccountVotes)
+          .values({
+            stateId: params.stateId,
+            accountAddress: params.accountAddress,
+            vote: params.vote,
+            votePower: params.votePower
+          })
+          .onConflictDoUpdate({
+            target: [
+              voteCalculationAccountVotes.stateId,
+              voteCalculationAccountVotes.accountAddress,
+              voteCalculationAccountVotes.vote
+            ],
+            set: {
+              votePower: params.votePower
+            }
+          })
+          .pipe(Effect.asVoid, Effect.orDie)
+
       const updateLastVoteCount = (
         type: string,
         entityId: number,
@@ -129,11 +163,25 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
         entityId: number
         lastVoteCount: number
         results: ReadonlyArray<{ vote: string; votePower: string }>
+        accountVotes: ReadonlyArray<AccountVoteRecord>
       }) =>
+        // TODO: consider batch INSERT ... ON CONFLICT if vote batches grow large
         sqlClient.withTransaction(
-          Effect.forEach(params.results, ({ vote, votePower }) =>
-            upsertVotePower({ stateId: params.stateId, vote, votePower })
+          Effect.forEach(
+            params.accountVotes,
+            ({ accountAddress, vote, votePower }) =>
+              upsertAccountVote({
+                stateId: params.stateId,
+                accountAddress,
+                vote,
+                votePower
+              })
           ).pipe(
+            Effect.andThen(
+              Effect.forEach(params.results, ({ vote, votePower }) =>
+                upsertVotePower({ stateId: params.stateId, vote, votePower })
+              )
+            ),
             Effect.andThen(
               updateLastVoteCount(
                 params.type,
@@ -145,11 +193,48 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           )
         )
 
+      // TODO: expose limit/offset through the RPC layer in a future version
+      const getAccountVotesByEntity = (
+        type: string,
+        entityId: number,
+        options?: { limit?: number; offset?: number }
+      ) =>
+        db
+          .select({
+            accountAddress: voteCalculationAccountVotes.accountAddress,
+            vote: voteCalculationAccountVotes.vote,
+            votePower: voteCalculationAccountVotes.votePower
+          })
+          .from(voteCalculationAccountVotes)
+          .innerJoin(
+            voteCalculationState,
+            eq(voteCalculationAccountVotes.stateId, voteCalculationState.id)
+          )
+          .where(
+            and(
+              eq(voteCalculationState.type, type),
+              eq(voteCalculationState.entityId, entityId)
+            )
+          )
+          .orderBy(desc(voteCalculationAccountVotes.votePower))
+          .limit(options?.limit ?? 500)
+          .offset(options?.offset ?? 0)
+          .pipe(
+            Effect.map(
+              A.map((r) => ({
+                ...r,
+                accountAddress: AccountAddress.make(r.accountAddress)
+              }))
+            ),
+            Effect.orDie
+          )
+
       return {
         getOrCreateStateId,
         getLastVoteCount,
         commitVoteResults,
-        getResultsByEntity
+        getResultsByEntity,
+        getAccountVotesByEntity
       } as const
     })
   }
