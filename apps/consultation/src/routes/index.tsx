@@ -1,6 +1,14 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { ClientOnly, createFileRoute } from '@tanstack/react-router'
 import { Page } from './-index/index'
 
 export const Route = createFileRoute('/')({
-  component: Page
+  component: RouteComponent
 })
+
+function RouteComponent() {
+  return (
+    <ClientOnly>
+      <Page />
+    </ClientOnly>
+  )
+}

@@ -40,6 +40,5 @@ export const voteUpdatesAtom = Atom.family((type: EntityType) =>
           )
         })
       )
-      .pipe(Atom.keepAlive)
   )
 )
