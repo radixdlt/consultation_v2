@@ -194,7 +194,11 @@ function ConnectedVoting({
     (voteChoice: Vote) => {
       setSelectedVote(voteChoice)
 
-      const accountsToVote = voteAllAccounts ? accountList : [currentAccount]
+      const accountsToVote = voteAllAccounts
+        ? accountList
+        : currentAccount
+          ? [currentAccount]
+          : []
 
       voteBatch({
         accounts: accountsToVote,
