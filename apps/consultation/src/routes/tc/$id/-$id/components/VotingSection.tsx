@@ -9,6 +9,7 @@ import { voteOnTemperatureCheckBatchAtom } from '@/atom/temperatureChecksAtom'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
+import { getTcVoteColor } from '@/lib/voteColors'
 import type { VotedAccount } from '../types'
 
 type Vote = 'For' | 'Against'
@@ -98,12 +99,13 @@ function AlreadyVotedDisplay({ vote, unvotedCount }: AlreadyVotedDisplayProps) {
       <div className="flex flex-col gap-3">
         {(['For', 'Against'] as const).map((opt) => {
           const isVoted = vote === opt
+          const color = getTcVoteColor(opt)
           return (
             <div
               key={opt}
               className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all ${
                 isVoted
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
+                  ? `${color.selected} font-medium`
                   : 'bg-muted border-border text-muted-foreground'
               }`}
             >
@@ -189,6 +191,7 @@ function ConnectedVoting({
       <div className="flex flex-col gap-3 mb-4">
         {(['For', 'Against'] as const).map((opt) => {
           const isSelected = selectedVote === opt
+          const color = getTcVoteColor(opt)
           return (
             <button
               key={opt}
@@ -197,7 +200,7 @@ function ConnectedVoting({
               disabled={isSubmitting}
               className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all cursor-pointer ${
                 isSelected
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
+                  ? `${color.selected} font-medium`
                   : 'bg-transparent border-border text-foreground hover:border-muted-foreground hover:bg-secondary/50'
               }`}
             >

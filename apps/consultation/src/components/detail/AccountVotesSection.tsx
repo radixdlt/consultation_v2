@@ -3,52 +3,15 @@ import { useState } from 'react'
 import type { EntityId, EntityType } from 'shared/governance/brandedTypes'
 import { accountVotesAtom } from '@/atom/accountVotesAtom'
 import { AddressLink } from '@/components/AddressLink'
+import { Skeleton } from '@/components/ui/skeleton'
 import { formatXrd } from '@/lib/utils'
+import {
+  type VoteColor,
+  getProposalVoteColor,
+  getTcVoteColor
+} from '@/lib/voteColors'
 
 type VoteOption = { readonly id: number; readonly label: string }
-
-type FilterButtonConfig = {
-  key: string
-  label: string
-  activeClass: string
-  inactiveClass: string
-  dotClass?: string
-}
-
-function buildFilterButtons(
-  entityType: EntityType,
-  voteOptions: readonly VoteOption[]
-): FilterButtonConfig[] {
-  if (entityType === 'temperature_check') {
-    return [
-      {
-        key: 'For',
-        label: 'For',
-        activeClass: 'bg-green-600 text-white border-transparent',
-        inactiveClass:
-          'bg-green-50 text-green-700 border-green-300 hover:opacity-80 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
-        dotClass: 'bg-green-500'
-      },
-      {
-        key: 'Against',
-        label: 'Against',
-        activeClass: 'bg-red-600 text-white border-transparent',
-        inactiveClass:
-          'bg-red-50 text-red-700 border-red-300 hover:opacity-80 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700',
-        dotClass: 'bg-red-500'
-      }
-    ]
-  }
-
-  return voteOptions.map((opt) => ({
-    key: String(opt.id),
-    label: opt.label,
-    activeClass: 'bg-primary text-primary-foreground border-primary',
-    inactiveClass:
-      'bg-transparent text-muted-foreground border-border hover:border-muted-foreground',
-    dotClass: 'bg-neutral-500'
-  }))
-}
 
 type AccountVotesSectionProps = {
   entityType: EntityType
@@ -65,10 +28,44 @@ export function AccountVotesSection({
     accountVotesAtom(entityType)(entityId)
   )
   const [selectedVote, setSelectedVote] = useState<string | null>(null)
-  const filterButtons = buildFilterButtons(entityType, voteOptions)
+
+  const isTc = entityType === 'temperature_check'
+
+  const filterOptions = voteOptions.map((opt, index) => {
+    const key = isTc ? opt.label : String(opt.id)
+    const color: VoteColor = isTc
+      ? getTcVoteColor(opt.label)
+      : getProposalVoteColor(index)
+    return { key, label: opt.label, color }
+  })
+
+  const colorByKey = new Map(filterOptions.map((f) => [f.key, f.color]))
 
   return Result.builder(accountVotesResult)
-    .onInitial(() => null)
+    .onInitial(() => (
+      <div className="bg-card border border-border p-6 shadow-sm">
+        <Skeleton className="h-4 w-24 mb-4" />
+        <div className="flex gap-2 mb-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-6 w-14" />
+          ))}
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0"
+            >
+              <div className="flex items-center gap-2">
+                <Skeleton className="size-2 rounded-full" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+    ))
     .onFailure(() => (
       <div className="bg-card border border-border p-6 shadow-sm">
         <div className="py-4 text-sm text-muted-foreground">
@@ -77,7 +74,18 @@ export function AccountVotesSection({
       </div>
     ))
     .onSuccess((accountVotes) => {
-      if (accountVotes.length === 0) return null
+      if (accountVotes.length === 0) {
+        return (
+          <div className="bg-card border border-border p-6 shadow-sm">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              Voters (0)
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              No voters yet.
+            </p>
+          </div>
+        )
+      }
 
       const sortedVoters = [...accountVotes].sort((a, b) => {
         return Number(b.votePower) - Number(a.votePower)
@@ -108,16 +116,18 @@ export function AccountVotesSection({
             >
               All
             </button>
-            {filterButtons.map((btn) => (
+            {filterOptions.map((opt) => (
               <button
-                key={btn.key}
+                key={opt.key}
                 type="button"
-                onClick={() => setSelectedVote(btn.key)}
+                onClick={() => setSelectedVote(opt.key)}
                 className={`px-3 py-1 text-xs font-medium border transition-colors cursor-pointer ${
-                  selectedVote === btn.key ? btn.activeClass : btn.inactiveClass
+                  selectedVote === opt.key
+                    ? opt.color.filterActive
+                    : opt.color.filterInactive
                 }`}
               >
-                {btn.label}
+                {opt.label}
               </button>
             ))}
           </div>
@@ -131,8 +141,7 @@ export function AccountVotesSection({
             ) : (
               filteredVoters.map((voter) => {
                 const dotColor =
-                  filterButtons.find((b) => b.key === voter.vote)?.dotClass ??
-                  'bg-neutral-500'
+                  colorByKey.get(voter.vote)?.dot ?? 'bg-neutral-500'
 
                 return (
                   <div

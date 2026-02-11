@@ -11,11 +11,13 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
 import { cn } from '@/lib/utils'
+import { getProposalVoteColor } from '@/lib/voteColors'
 import type { ProposalVotedAccount, VoteOption } from '../types'
 
 type OptionButtonProps = {
   label: string
   selected: boolean
+  selectedClass: string
   onClick?: () => void
   disabled?: boolean
 }
@@ -23,6 +25,7 @@ type OptionButtonProps = {
 function OptionButton({
   label,
   selected,
+  selectedClass,
   onClick,
   disabled
 }: OptionButtonProps) {
@@ -34,7 +37,7 @@ function OptionButton({
       className={cn(
         'w-full text-left px-4 py-3 border transition-all duration-150 flex items-center justify-between cursor-pointer',
         selected
-          ? 'bg-primary text-primary-foreground border-primary font-medium'
+          ? `${selectedClass} font-medium`
           : 'border-border hover:border-muted-foreground hover:bg-secondary/50',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
@@ -135,14 +138,15 @@ function AlreadyVotedDisplay({ currentVote, voteOptions, unvotedCount }: Already
         Your Vote
       </h3>
       <div className="flex flex-col gap-3">
-        {voteOptions.map((opt) => {
+        {voteOptions.map((opt, index) => {
           const isVoted = votedOptionIds.has(opt.id)
+          const color = getProposalVoteColor(index)
           return (
             <div
               key={opt.id}
               className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all ${
                 isVoted
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
+                  ? `${color.selected} font-medium`
                   : 'bg-muted border-border text-muted-foreground'
               }`}
             >
@@ -234,11 +238,12 @@ function ConnectedVoting({
       )}
 
       <div className="flex flex-col gap-3 mb-4">
-        {proposal.voteOptions.map((option) => (
+        {proposal.voteOptions.map((option, index) => (
           <OptionButton
             key={option.id}
             label={option.label}
             selected={selectedOptions.has(option.id)}
+            selectedClass={getProposalVoteColor(index).selected}
             onClick={() => handleOptionToggle(option.id)}
             disabled={isSubmitting}
           />

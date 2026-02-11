@@ -248,7 +248,7 @@ export function TemperatureCheckForm({
 
       {/* Vote Options Section */}
       <Card className="shadow-none">
-        <CardContent className="pt-6">
+        <CardContent className="pt-2">
           {/* Selection Mode Toggle */}
           <MaxSelectionsField form={form} optionCount={optionCount} />
 

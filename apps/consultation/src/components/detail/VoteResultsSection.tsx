@@ -1,43 +1,22 @@
 import { Result, useAtomMount, useAtomValue } from '@effect-atom/atom-react'
 import type { EntityId, EntityType } from 'shared/governance/brandedTypes'
 import { voteResultsAtom, voteUpdatesAtom } from '@/atom/voteResultsAtom'
+import { Skeleton } from '@/components/ui/skeleton'
 import { formatXrd } from '@/lib/utils'
+import { getProposalVoteColor, getTcVoteColor } from '@/lib/voteColors'
 
 type VoteOption = { readonly id: number; readonly label: string }
-
-type BarColor = {
-  bar: string
-  text: string
-}
-
-const TC_COLORS: Record<string, BarColor> = {
-  For: {
-    bar: 'bg-green-600 dark:bg-green-500',
-    text: ''
-  },
-  Against: {
-    bar: 'bg-red-500 dark:bg-red-400',
-    text: ''
-  }
-}
-
-const NEUTRAL_COLOR: BarColor = {
-  bar: 'bg-neutral-800 dark:bg-neutral-200',
-  text: ''
-}
 
 type VoteResultsSectionProps = {
   entityType: EntityType
   entityId: EntityId
   voteOptions: readonly VoteOption[]
-  colorMap?: Record<string, BarColor>
 }
 
 export function VoteResultsSection({
   entityType,
   entityId,
-  voteOptions,
-  colorMap
+  voteOptions
 }: VoteResultsSectionProps) {
   useAtomMount(voteUpdatesAtom(entityType)(entityId))
   const voteResultsResult = useAtomValue(
@@ -45,10 +24,26 @@ export function VoteResultsSection({
   )
 
   const isTc = entityType === 'temperature_check'
-  const resolvedColorMap = colorMap ?? (isTc ? TC_COLORS : undefined)
 
   return Result.builder(voteResultsResult)
-    .onInitial(() => null)
+    .onInitial(() => (
+      <div className="bg-card border border-border p-6 shadow-sm">
+        <div className="mb-6">
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i}>
+              <div className="flex justify-between mb-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <Skeleton className="h-2 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    ))
     .onFailure(() => (
       <div className="py-4 text-sm text-muted-foreground">
         Failed to load vote results.
@@ -67,10 +62,13 @@ export function VoteResultsSection({
       const voteKey = (opt: VoteOption) =>
         isTc ? opt.label : String(opt.id)
 
-      const allOptions = voteOptions.map((opt) => ({
+      const allOptions = voteOptions.map((opt, index) => ({
         key: voteKey(opt),
         label: opt.label,
-        power: resultMap.get(voteKey(opt)) ?? 0
+        power: resultMap.get(voteKey(opt)) ?? 0,
+        color: isTc
+          ? getTcVoteColor(opt.label)
+          : getProposalVoteColor(index)
       }))
 
       return (
@@ -88,8 +86,6 @@ export function VoteResultsSection({
                   ? (option.power / totalVotePower) * 100
                   : 0
 
-              const colors = resolvedColorMap?.[option.label] ?? NEUTRAL_COLOR
-
               return (
                 <div key={option.key}>
                   <div className="flex justify-between text-sm mb-2">
@@ -102,7 +98,7 @@ export function VoteResultsSection({
                   </div>
                   <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2">
                     <div
-                      className={`${colors.bar} h-full transition-all`}
+                      className={`${option.color.bar} h-full transition-all`}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
