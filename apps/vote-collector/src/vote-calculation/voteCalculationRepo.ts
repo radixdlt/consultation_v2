@@ -1,3 +1,4 @@
+import { AccountAddress } from '@radix-effects/shared'
 import { SqlClient } from '@effect/sql/SqlClient'
 import {
   voteCalculationAccountVotes,
@@ -9,7 +10,7 @@ import { Array as A, Effect, Option, pipe } from 'effect'
 import { ORM } from '../db/orm'
 
 export type AccountVoteRecord = {
-  readonly accountAddress: string
+  readonly accountAddress: AccountAddress
   readonly vote: string
   readonly votePower: string
 }
@@ -218,7 +219,15 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           .orderBy(desc(voteCalculationAccountVotes.votePower))
           .limit(options?.limit ?? 500)
           .offset(options?.offset ?? 0)
-          .pipe(Effect.orDie)
+          .pipe(
+            Effect.map(
+              A.map((r) => ({
+                ...r,
+                accountAddress: AccountAddress.make(r.accountAddress)
+              }))
+            ),
+            Effect.orDie
+          )
 
       return {
         getOrCreateStateId,

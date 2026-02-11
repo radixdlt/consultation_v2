@@ -1,3 +1,4 @@
+import { AccountAddress } from '@radix-effects/shared'
 import { Rpc, RpcGroup } from '@effect/rpc'
 import * as Schema from 'effect/Schema'
 import { EntityId, EntityType } from '../governance/brandedTypes'
@@ -8,7 +9,7 @@ export const VoteResultSchema = Schema.Struct({
 })
 
 export const AccountVoteSchema = Schema.Struct({
-  accountAddress: Schema.String,
+  accountAddress: AccountAddress,
   vote: Schema.String,
   votePower: Schema.String
 })
