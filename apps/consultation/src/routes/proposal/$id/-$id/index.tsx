@@ -1,15 +1,19 @@
 import { Result, useAtomValue } from '@effect-atom/atom-react'
 import { Cause } from 'effect'
-import { Vote } from 'lucide-react'
-import Markdown from 'react-markdown'
-import rehypeSanitize from 'rehype-sanitize'
-import remarkGfm from 'remark-gfm'
 import type { ProposalId } from 'shared/governance/brandedTypes'
-import { getProposalByIdAtom } from '@/atom/proposalsAtom'
-import { Button } from '@/components/ui/button'
-import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer'
+import type { Proposal } from 'shared/governance/schemas'
+import { getProposalByIdAtom, getProposalVotesByAccountsAtom } from '@/atom/proposalsAtom'
+import { AccountVotesSection } from '@/components/detail/AccountVotesSection'
+import { DetailPageDetails } from '@/components/detail/DetailPageDetails'
+import { DetailPageHeader } from '@/components/detail/DetailPageHeader'
+import { DetailPageLayout } from '@/components/detail/DetailPageLayout'
+import { OriginBadge } from '@/components/detail/OriginBadge'
+import { QuorumBadge } from '@/components/detail/QuorumBadge'
+import { VoteResultsSection } from '@/components/detail/VoteResultsSection'
 import { InlineCode } from '@/components/ui/typography'
+import { getItemStatus } from '@/routes/-index/components/StatusBadge'
 import { SidebarContent } from './components/SidebarContent'
+import { VotingSection } from './components/VotingSection'
 
 export function Page({ id }: { id: ProposalId }) {
   const proposal = useAtomValue(getProposalByIdAtom(id))
@@ -18,52 +22,84 @@ export function Page({ id }: { id: ProposalId }) {
     .onInitial(() => {
       return <div>Loading...</div>
     })
-    .onSuccess((proposal) => {
-      return (
-        <div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
-            {/* Left column - Markdown content */}
-            <div className="lg:col-span-2">
-              <div className="prose dark:prose-invert max-w-none">
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeSanitize]}
-                >
-                  {proposal.description}
-                </Markdown>
-              </div>
-            </div>
-
-            {/* Right column - Desktop only */}
-            <div className="hidden lg:block lg:sticky lg:top-20 lg:self-start">
-              <SidebarContent proposal={proposal} id={id} />
-            </div>
-          </div>
-
-          {/* Mobile drawer with FAB trigger */}
-          <div className="lg:hidden">
-            <Drawer>
-              <DrawerTrigger asChild>
-                <Button
-                  size="icon"
-                  className="fixed bottom-6 right-6 size-14 rounded-full shadow-lg"
-                >
-                  <Vote className="size-6" />
-                  <span className="sr-only">Open voting panel</span>
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent className="max-h-[80vh]">
-                <div className="overflow-y-auto p-6">
-                  <SidebarContent proposal={proposal} id={id} />
-                </div>
-              </DrawerContent>
-            </Drawer>
-          </div>
-        </div>
-      )
-    })
+    .onSuccess((p) => <PageContent proposal={p} id={id} />)
     .onFailure((error) => {
       return <InlineCode>{Cause.pretty(error)}</InlineCode>
     })
     .render()
+}
+
+function PageContent({ proposal, id }: { proposal: Proposal; id: ProposalId }) {
+  const status = getItemStatus(proposal.deadline)
+  const accountsVotesResult = useAtomValue(
+    getProposalVotesByAccountsAtom(proposal.voters)
+  )
+
+  const header = (
+    <DetailPageHeader
+      status={status}
+      typeBadge="GP"
+      id={proposal.id}
+      title={proposal.title}
+      deadline={proposal.deadline}
+      author={proposal.author}
+      links={proposal.links.map((l) => l.toString())}
+      quorumBadge={
+        <QuorumBadge entityType="proposal" entityId={id} quorum={proposal.quorum} />
+      }
+      originBadge={
+        <OriginBadge type="tc" id={proposal.temperatureCheckId} />
+      }
+    />
+  )
+
+  const details = (
+    <DetailPageDetails
+      shortDescription={proposal.shortDescription}
+      description={proposal.description}
+      title={proposal.title}
+    />
+  )
+
+  const resultsContent = (
+    <>
+      <VoteResultsSection
+        entityType="proposal"
+        entityId={id}
+        voteOptions={proposal.voteOptions}
+      />
+      <AccountVotesSection
+        entityType="proposal"
+        entityId={id}
+        voteOptions={proposal.voteOptions}
+      />
+    </>
+  )
+
+  const votingContent = (
+    <VotingSection
+      proposalId={id}
+      proposal={proposal}
+      keyValueStoreAddress={proposal.voters}
+      accountsVotesResult={accountsVotesResult}
+    />
+  )
+
+  const sidebar = (
+    <SidebarContent
+      proposal={proposal}
+      id={id}
+      accountsVotesResult={accountsVotesResult}
+    />
+  )
+
+  return (
+    <DetailPageLayout
+      header={header}
+      details={details}
+      sidebar={sidebar}
+      resultsContent={resultsContent}
+      votingContent={votingContent}
+    />
+  )
 }

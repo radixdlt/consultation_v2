@@ -195,7 +195,7 @@ function ConnectedVoting({
               type="button"
               onClick={() => setSelectedVote(opt)}
               disabled={isSubmitting}
-              className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all ${
+              className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-primary text-primary-foreground border-primary font-medium'
                   : 'bg-transparent border-border text-foreground hover:border-muted-foreground hover:bg-secondary/50'

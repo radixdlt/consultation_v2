@@ -1,12 +1,17 @@
 import type { Result } from '@effect-atom/atom-react'
 import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
 import type { TemperatureCheckSchema } from 'shared/governance/schemas'
-import { AccountVotesSection } from './AccountVotesSection'
-import { VoteResultsSection } from './VoteResultsSection'
+import { AccountVotesSection } from '@/components/detail/AccountVotesSection'
+import { VoteResultsSection } from '@/components/detail/VoteResultsSection'
 import { VotingSection } from './VotingSection'
 import type { VotedAccount } from '../types'
 
 type TemperatureCheck = typeof TemperatureCheckSchema.Type
+
+const TC_VOTE_OPTIONS = [
+  { id: 0, label: 'For' },
+  { id: 1, label: 'Against' }
+] as const
 
 type SidebarContentProps = {
   temperatureCheck: TemperatureCheck
@@ -17,7 +22,11 @@ type SidebarContentProps = {
 export function SidebarContent({ temperatureCheck, id, accountsVotesResult }: SidebarContentProps) {
   return (
     <div className="space-y-6">
-      <VoteResultsSection id={id} />
+      <VoteResultsSection
+        entityType="temperature_check"
+        entityId={id}
+        voteOptions={TC_VOTE_OPTIONS}
+      />
 
       <VotingSection
         temperatureCheckId={id}
@@ -25,7 +34,11 @@ export function SidebarContent({ temperatureCheck, id, accountsVotesResult }: Si
         accountsVotesResult={accountsVotesResult}
       />
 
-      <AccountVotesSection id={id} />
+      <AccountVotesSection
+        entityType="temperature_check"
+        entityId={id}
+        voteOptions={TC_VOTE_OPTIONS}
+      />
     </div>
   )
 }

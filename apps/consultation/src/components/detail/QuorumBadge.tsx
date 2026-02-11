@@ -1,15 +1,16 @@
 import { Result, useAtomValue } from '@effect-atom/atom-react'
-import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
+import type { EntityId, EntityType } from 'shared/governance/brandedTypes'
 import { voteResultsAtom } from '@/atom/voteResultsAtom'
 
 type QuorumBadgeProps = {
-  id: TemperatureCheckId
+  entityType: EntityType
+  entityId: EntityId
   quorum: string
 }
 
-export function QuorumBadge({ id, quorum }: QuorumBadgeProps) {
+export function QuorumBadge({ entityType, entityId, quorum }: QuorumBadgeProps) {
   const voteResultsResult = useAtomValue(
-    voteResultsAtom('temperature_check')(id)
+    voteResultsAtom(entityType)(entityId)
   )
 
   return Result.builder(voteResultsResult)
