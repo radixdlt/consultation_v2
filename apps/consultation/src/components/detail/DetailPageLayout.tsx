@@ -22,15 +22,15 @@ export function DetailPageLayout({
   return (
     <div>
       {/* Desktop layout */}
-      <div className="hidden lg:grid lg:grid-cols-3 lg:gap-12">
+      <div className="hidden lg:grid lg:grid-cols-8 lg:gap-12">
         {/* Left column - Header + Content */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-5 space-y-8">
           {header}
           {details}
         </div>
 
         {/* Right column - Sticky sidebar */}
-        <div className="lg:sticky lg:top-20 lg:self-start">
+        <div className="lg:col-span-3 lg:sticky lg:top-20 lg:self-start">
           {sidebar}
         </div>
       </div>
