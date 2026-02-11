@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { EntityId, type EntityType } from 'shared/governance/brandedTypes'
 import { AddressLink } from '@/components/AddressLink'
 import { Card } from '@/components/ui/card'
 import { formatDateRange } from '@/lib/utils'
@@ -13,7 +14,6 @@ type ItemCardProps = {
   author: string
   start: Date
   deadline: Date
-  voteCount: number
   quorum: string
   linkPrefix: '/tc' | '/proposal'
 }
@@ -25,13 +25,14 @@ export function ItemCard({
   author,
   start,
   deadline,
-  voteCount,
   quorum,
   linkPrefix
 }: ItemCardProps) {
   const status: ItemStatus = getItemStatus(deadline)
   const isActive = status === 'active'
   const typeLabel = linkPrefix === '/tc' ? 'TC' : 'GP'
+  const entityType: EntityType = linkPrefix === '/tc' ? 'temperature_check' : 'proposal'
+  const entityId = EntityId.make(id)
 
   return (
     <Link
@@ -70,7 +71,8 @@ export function ItemCard({
         {/* Mini Stats */}
         <div className="sm:w-48 flex sm:flex-col justify-between sm:justify-center sm:items-center gap-4 sm:border-l border-neutral-100 dark:border-neutral-800 sm:pl-6">
           <QuorumProgress
-            voteCount={voteCount}
+            entityType={entityType}
+            entityId={entityId}
             quorum={quorum}
             isActive={isActive}
           />

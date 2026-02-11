@@ -46,7 +46,6 @@ export function TemperatureChecksList({
                 author={tc.author}
                 start={tc.start}
                 deadline={tc.deadline}
-                voteCount={tc.voteCount}
                 quorum={tc.quorum}
                 linkPrefix="/tc"
               />
