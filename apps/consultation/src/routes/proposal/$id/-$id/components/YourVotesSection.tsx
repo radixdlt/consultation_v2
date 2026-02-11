@@ -1,5 +1,4 @@
 import { Result } from '@effect-atom/atom-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { truncateAddress } from '@/lib/utils'
 import type { ProposalVotedAccount, VoteOption } from '../types'
 
@@ -22,11 +21,11 @@ export function YourVotesSection({
       )
 
       return (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Votes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Your Votes
+          </h3>
+          <div className="space-y-3">
             {votes.map((vote) => (
               <div
                 key={vote.address}
@@ -42,7 +41,7 @@ export function YourVotesSection({
                   {vote.options.map((optionId) => (
                     <span
                       key={optionId}
-                      className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700"
+                      className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-xs font-medium text-foreground"
                     >
                       {optionLabelMap.get(optionId) ?? `Option ${optionId}`}
                     </span>
@@ -50,8 +49,8 @@ export function YourVotesSection({
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )
     })
     .render()

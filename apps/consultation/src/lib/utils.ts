@@ -49,3 +49,27 @@ function getAddressType(
   if (address.startsWith('validator_')) return 'validator'
   return 'account' // Default fallback
 }
+
+export function formatDateRange(start: Date, deadline: Date): string {
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric'
+  }
+
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: '2-digit'
+  }
+
+  const startDate = start.toLocaleDateString('en-US', dateOptions)
+  const startTime = start.toLocaleTimeString('en-US', timeOptions)
+
+  const deadlineDate = deadline.toLocaleDateString('en-US', {
+    ...dateOptions,
+    year:
+      start.getFullYear() !== deadline.getFullYear() ? 'numeric' : undefined
+  })
+  const deadlineTime = deadline.toLocaleTimeString('en-US', timeOptions)
+
+  return `${startDate} ${startTime} – ${deadlineDate} ${deadlineTime}`
+}

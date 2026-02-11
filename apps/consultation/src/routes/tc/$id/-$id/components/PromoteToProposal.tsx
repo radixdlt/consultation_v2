@@ -1,7 +1,7 @@
 import { Result, useAtom, useAtomValue } from '@effect-atom/atom-react'
 import { useNavigate } from '@tanstack/react-router'
 import { Option } from 'effect'
-import { ArrowRight, LoaderIcon, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, LoaderIcon, ShieldCheck } from 'lucide-react'
 import { useCallback } from 'react'
 import type {
   ProposalId,
@@ -22,13 +22,13 @@ export function PromoteToProposal({
   elevatedProposalId
 }: PromoteToProposalProps) {
   if (Option.isSome(elevatedProposalId)) {
-    return <ElevatedCard proposalId={elevatedProposalId.value} />
+    return <ElevatedBanner proposalId={elevatedProposalId.value} />
   }
 
   return <AdminPromoteCard temperatureCheckId={temperatureCheckId} />
 }
 
-function ElevatedCard({ proposalId }: { proposalId: ProposalId }) {
+function ElevatedBanner({ proposalId }: { proposalId: ProposalId }) {
   const navigate = useNavigate()
 
   const handleNavigate = useCallback(() => {
@@ -36,28 +36,14 @@ function ElevatedCard({ proposalId }: { proposalId: ProposalId }) {
   }, [navigate, proposalId])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ShieldCheck className="size-4" />
-          Proposal
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground mb-3">
-          This temperature check has been elevated to a proposal.
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleNavigate}
-          className="w-full"
-        >
-          View Proposal
-          <ArrowRight className="size-4" />
-        </Button>
-      </CardContent>
-    </Card>
+    <button
+      type="button"
+      onClick={handleNavigate}
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 hover:text-foreground transition-colors"
+    >
+      Originated from GP #{String(proposalId)}
+      <ArrowUpRight className="size-3" />
+    </button>
   )
 }
 

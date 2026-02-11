@@ -2,10 +2,8 @@ import { PlusIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Field,
-  FieldDescription,
   FieldError,
-  FieldGroup,
-  FieldLabel
+  FieldGroup
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { withForm } from '../formHook'
@@ -47,20 +45,16 @@ export const VoteOptionsField = withForm({
 
           return (
             <FieldGroup>
-              <FieldLabel>Vote Options</FieldLabel>
-              <FieldDescription>
-                Add between 2 and {maxOptions} options for voters to choose
-                from.
-              </FieldDescription>
-
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 {voteOptions.map((option, index) => (
-                  <div key={option.id} className="flex gap-2">
+                  <div key={option.id} className="flex gap-3 items-start">
                     <form.Field
                       name={`voteOptions[${index}].label`}
                       validators={{
                         onBlur: ({ value }) =>
-                          !value ? { message: 'Label is required' } : undefined,
+                          !value
+                            ? { message: 'Label is required' }
+                            : undefined,
                         onChange: () => undefined
                       }}
                     >
@@ -83,7 +77,7 @@ export const VoteOptionsField = withForm({
                                 subField.handleChange(e.target.value)
                               }
                               aria-invalid={isSubFieldInvalid}
-                              placeholder={`Option ${index + 1}`}
+                              placeholder={`Option ${index + 1} label`}
                             />
                             {isSubFieldInvalid && (
                               <FieldError errors={subField.state.meta.errors} />
@@ -93,30 +87,33 @@ export const VoteOptionsField = withForm({
                       }}
                     </form.Field>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleRemove(index)}
-                      disabled={voteOptions.length <= 2}
-                      aria-label={`Remove option ${index + 1}`}
-                    >
-                      <Trash2Icon className="size-4" />
-                    </Button>
+                    {voteOptions.length > 2 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemove(index)}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={`Remove option ${index + 1}`}
+                      >
+                        <Trash2Icon className="size-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAdd}
-                disabled={voteOptions.length >= maxOptions}
-              >
-                <PlusIcon className="size-4" />
-                Add Option
-              </Button>
+              {voteOptions.length < maxOptions && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAdd}
+                  className="w-full mt-2 py-3 border-dashed"
+                >
+                  <PlusIcon className="size-4" />
+                  Add Option
+                </Button>
+              )}
 
               {isInvalid && <FieldError errors={field.state.meta.errors} />}
             </FieldGroup>

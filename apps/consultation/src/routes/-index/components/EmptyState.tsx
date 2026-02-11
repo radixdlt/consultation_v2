@@ -14,8 +14,8 @@ export function EmptyState({ type }: EmptyStateProps) {
     : 'Temperature checks are used to gauge community interest before creating a formal proposal.'
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-      <div className="mb-4 rounded-full bg-muted p-3">
+    <div className="flex flex-col items-center justify-center border border-dashed border-neutral-200 dark:border-neutral-800 py-12">
+      <div className="mb-4 bg-muted p-3">
         <FileText className="size-6 text-muted-foreground" />
       </div>
       <h3 className="mb-1 text-lg font-medium">{title}</h3>

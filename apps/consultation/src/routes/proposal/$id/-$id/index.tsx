@@ -20,10 +20,10 @@ export function Page({ id }: { id: ProposalId }) {
     })
     .onSuccess((proposal) => {
       return (
-        <div className="p-6 lg:p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
             {/* Left column - Markdown content */}
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <div className="prose dark:prose-invert max-w-none">
                 <Markdown
                   remarkPlugins={[remarkGfm]}
@@ -35,7 +35,7 @@ export function Page({ id }: { id: ProposalId }) {
             </div>
 
             {/* Right column - Desktop only */}
-            <div className="hidden lg:block lg:sticky lg:top-4 lg:self-start">
+            <div className="hidden lg:block lg:sticky lg:top-20 lg:self-start">
               <SidebarContent proposal={proposal} id={id} />
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { Result, useAtom, useAtomValue } from '@effect-atom/atom-react'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
-import { LoaderIcon } from 'lucide-react'
+import { Check, LoaderIcon } from 'lucide-react'
 import { useState } from 'react'
 import type { ProposalId } from 'shared/governance/brandedTypes'
 import type { Proposal } from 'shared/governance/schemas'
@@ -8,7 +8,6 @@ import type { KeyValueStoreAddress } from 'shared/schemas'
 import { accountsAtom } from '@/atom/dappToolkitAtom'
 import { voteOnProposalBatchAtom } from '@/atom/proposalsAtom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
 import { cn } from '@/lib/utils'
@@ -28,15 +27,21 @@ function OptionButton({
   disabled
 }: OptionButtonProps) {
   return (
-    <Button
+    <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      variant={selected ? 'default' : 'outline'}
-      className={cn('w-full justify-start', selected && 'ring-2 ring-primary')}
+      className={cn(
+        'w-full text-left px-4 py-3 border transition-all duration-150 flex items-center justify-between',
+        selected
+          ? 'bg-foreground text-background border-foreground'
+          : 'border-border hover:border-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800/50',
+        disabled && 'opacity-50 cursor-not-allowed'
+      )}
     >
-      {label}
-    </Button>
+      <span className="font-medium text-sm">{label}</span>
+      {selected && <Check className="size-4 shrink-0" />}
+    </button>
   )
 }
 
@@ -134,30 +139,28 @@ function DisconnectedVoting({
   voteOptions: readonly VoteOption[]
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cast Your Vote</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="relative">
-          <div className="blur-sm pointer-events-none space-y-2">
-            {voteOptions.map((option) => (
-              <OptionButton
-                key={option.id}
-                label={option.label}
-                selected={false}
-                disabled
-              />
-            ))}
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-sm font-medium bg-background/80 px-3 py-1.5 rounded">
-              Connect wallet to vote
-            </p>
-          </div>
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        Cast Your Vote
+      </h3>
+      <div className="relative">
+        <div className="blur-sm pointer-events-none space-y-2">
+          {voteOptions.map((option) => (
+            <OptionButton
+              key={option.id}
+              label={option.label}
+              selected={false}
+              disabled
+            />
+          ))}
         </div>
-      </CardContent>
-    </Card>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-sm font-medium bg-background/80 px-3 py-1.5">
+            Connect wallet to vote
+          </p>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -215,45 +218,47 @@ function ConnectedVoting({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cast Your Vote</CardTitle>
-        {maxSelections > 1 && (
-          <p className="text-sm text-muted-foreground">
-            Select up to {maxSelections} options
-          </p>
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        Cast Your Vote
+      </h3>
+      {maxSelections > 1 && (
+        <p className="text-sm text-muted-foreground">
+          Select up to {maxSelections} options
+        </p>
+      )}
+      <div className="space-y-2">
+        {proposal.voteOptions.map((option) => (
+          <OptionButton
+            key={option.id}
+            label={option.label}
+            selected={selectedOptions.has(option.id)}
+            onClick={() => handleOptionToggle(option.id)}
+            disabled={isSubmitting}
+          />
+        ))}
+      </div>
+
+      <Button
+        type="button"
+        onClick={handleSubmit}
+        disabled={isSubmitting || selectedOptions.size === 0}
+        className={cn(
+          'w-full',
+          selectedOptions.size > 0 &&
+            'bg-emerald-600 text-white hover:bg-emerald-700'
         )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          {proposal.voteOptions.map((option) => (
-            <OptionButton
-              key={option.id}
-              label={option.label}
-              selected={selectedOptions.has(option.id)}
-              onClick={() => handleOptionToggle(option.id)}
-              disabled={isSubmitting}
-            />
-          ))}
-        </div>
+      >
+        {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
+        Submit Vote
+      </Button>
 
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSubmitting || selectedOptions.size === 0}
-          className="w-full"
-        >
-          {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
-          Submit Vote
-        </Button>
-
-        <VoteAllCheckbox
-          checked={voteAllAccounts}
-          onCheckedChange={setVoteAllAccounts}
-          disabled={isSubmitting}
-          accountCount={accountList.length}
-        />
-      </CardContent>
-    </Card>
+      <VoteAllCheckbox
+        checked={voteAllAccounts}
+        onCheckedChange={setVoteAllAccounts}
+        disabled={isSubmitting}
+        accountCount={accountList.length}
+      />
+    </div>
   )
 }

@@ -7,7 +7,7 @@ function H1({ className, ...props }: React.ComponentProps<'h1'>) {
     <h1
       data-slot="h1"
       className={cn(
-        'scroll-m-20 text-4xl font-extrabold tracking-tight text-balance',
+        'scroll-m-20 text-3xl md:text-4xl font-light tracking-tight text-balance',
         className
       )}
       {...props}
@@ -92,7 +92,7 @@ function InlineCode({ className, ...props }: React.ComponentProps<'code'>) {
     <code
       data-slot="inline-code"
       className={cn(
-        'bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold',
+        'bg-muted relative px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold',
         className
       )}
       {...props}

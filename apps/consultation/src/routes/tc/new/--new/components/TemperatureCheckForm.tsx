@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle
@@ -20,7 +21,6 @@ import {
   FieldLabel
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { useAppForm } from '../formHook'
 import { temperatureCheckFormOpts } from '../formOptions'
@@ -115,17 +115,21 @@ export function TemperatureCheckForm({
       .orNull() ?? false
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle>Create Temperature Check</CardTitle>
-      </CardHeader>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        form.handleSubmit()
+      }}
+      className="space-y-8"
+    >
+      {/* Basic Information Section */}
+      <Card className="shadow-none">
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Basic Information
+          </CardTitle>
+        </CardHeader>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          form.handleSubmit()
-        }}
-      >
         <CardContent>
           <FieldGroup>
             {/* Title */}
@@ -149,7 +153,7 @@ export function TemperatureCheckForm({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       aria-invalid={isInvalid}
-                      placeholder="Enter a clear, descriptive title"
+                      placeholder="Enter a clear, concise title"
                     />
                     {isInvalid && (
                       <FieldError errors={field.state.meta.errors} />
@@ -182,11 +186,11 @@ export function TemperatureCheckForm({
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       aria-invalid={isInvalid}
-                      placeholder="A brief summary of the temperature check (max 500 characters)"
-                      className="min-h-[80px]"
+                      placeholder="A brief summary of your proposal (displayed on the page)"
+                      className="min-h-[100px]"
                     />
                     <FieldDescription>
-                      This will be displayed in the temperature check list.
+                      This summary will be displayed on the TC/GP detail pages
                     </FieldDescription>
                     {isInvalid && (
                       <FieldError errors={field.state.meta.errors} />
@@ -198,8 +202,6 @@ export function TemperatureCheckForm({
 
             {/* Description (Markdown File Upload) */}
             <MarkdownUploadField form={form} />
-
-            <Separator />
 
             {/* RadixTalk URL */}
             <form.Field
@@ -215,7 +217,7 @@ export function TemperatureCheckForm({
                 return (
                   <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={`${formId}-radixTalkUrl`}>
-                      RadixTalk URL *
+                      RadixTalk URL
                     </FieldLabel>
                     <FieldDescription>
                       Link to the RFC discussion on RadixTalk.
@@ -240,38 +242,48 @@ export function TemperatureCheckForm({
 
             {/* Additional Links */}
             <LinksField form={form} />
-
-            <Separator />
-
-            {/* Vote Options */}
-            <VoteOptionsField form={form} maxOptions={maxVoteOptions} />
-
-            <Separator />
-
-            {/* Max Selections */}
-            <MaxSelectionsField form={form} optionCount={optionCount} />
           </FieldGroup>
         </CardContent>
+      </Card>
 
-        <CardFooter>
-          <Button
-            type="submit"
-            disabled={!canSubmit || makeResult.waiting || !hasAccounts}
-            className="w-full mt-4"
-          >
-            {makeResult.waiting ? (
-              <>
-                <LoaderIcon className="size-4 animate-spin" />
-                Creating...
-              </>
-            ) : !hasAccounts ? (
-              'Connect Wallet to Create'
-            ) : (
-              'Create Temperature Check'
-            )}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+      {/* Vote Options Section */}
+      <Card className="shadow-none">
+        <CardContent className="pt-6">
+          {/* Selection Mode Toggle */}
+          <MaxSelectionsField form={form} optionCount={optionCount} />
+
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mt-6 mb-2">
+            Vote Options
+          </CardTitle>
+          <CardDescription className="text-xs mb-6">
+            These options will be available if the TC is promoted to a
+            Governance Proposal. Provide at least 2 options.
+          </CardDescription>
+
+          {/* Vote Options */}
+          <VoteOptionsField form={form} maxOptions={maxVoteOptions} />
+        </CardContent>
+      </Card>
+
+      {/* Submit */}
+      <CardFooter className="p-0">
+        <Button
+          type="submit"
+          disabled={!canSubmit || makeResult.waiting || !hasAccounts}
+          className="w-full py-6 text-base"
+        >
+          {makeResult.waiting ? (
+            <>
+              <LoaderIcon className="size-5 animate-spin" />
+              Creating...
+            </>
+          ) : !hasAccounts ? (
+            'Connect Wallet to Create'
+          ) : (
+            'Submit Temperature Check'
+          )}
+        </Button>
+      </CardFooter>
+    </form>
   )
 }

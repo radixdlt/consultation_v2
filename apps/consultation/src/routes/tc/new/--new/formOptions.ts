@@ -18,7 +18,7 @@ export const temperatureCheckFormOpts = formOptions({
     shortDescription: '',
     description: '',
     radixTalkUrl: '',
-    links: [] as string[],
+    links: [''] as string[],
     voteOptions: DEFAULT_VOTE_OPTIONS,
     maxSelections: 1
   }

@@ -46,7 +46,7 @@ export function AccountVotesSection({
                 <span className="truncate text-sm" title={entry.accountAddress}>
                   {truncateAddress(entry.accountAddress)}
                 </span>
-                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">
+                <span className="shrink-0 bg-muted px-1.5 py-0.5 text-xs font-medium">
                   {optionLabelMap.get(entry.vote) ?? `Option ${entry.vote}`}
                 </span>
                 <span className="shrink-0 text-muted-foreground text-sm tabular-nums">

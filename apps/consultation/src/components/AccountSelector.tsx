@@ -1,11 +1,15 @@
 import { Result, useAtomValue } from '@effect-atom/atom-react'
 import { ClientOnly } from '@tanstack/react-router'
+import { Wallet } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { accountsAtom } from '@/atom/dappToolkitAtom'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
@@ -49,7 +53,8 @@ function AccountSelectorContent() {
 
       return (
         <Select value={currentAddress} onValueChange={handleValueChange}>
-          <SelectTrigger size="sm" className="w-[180px]">
+          <SelectTrigger size="sm" className="w-[120px] sm:w-[180px]">
+            <Wallet className="size-3.5 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="Select account">
               {currentAccount?.label ||
                 (currentAccount?.address
@@ -58,18 +63,22 @@ function AccountSelectorContent() {
             </SelectValue>
           </SelectTrigger>
           <SelectContent align="end">
-            {accounts.map((account) => (
-              <SelectItem key={account.address} value={account.address}>
-                <div className="flex flex-col">
-                  {account.label && (
-                    <span className="font-medium">{account.label}</span>
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {truncateAddress(account.address)}
-                  </span>
-                </div>
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel>Select an Account</SelectLabel>
+              <SelectSeparator />
+              {accounts.map((account) => (
+                <SelectItem key={account.address} value={account.address}>
+                  <div className="flex flex-col">
+                    {account.label && (
+                      <span className="font-medium">{account.label}</span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {truncateAddress(account.address)}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
       )

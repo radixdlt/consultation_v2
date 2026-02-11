@@ -21,7 +21,9 @@ export function SidebarContent({ proposal, id }: SidebarContentProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{proposal.title}</h1>
+        <h1 className="font-light text-3xl tracking-tight">
+          {proposal.title}
+        </h1>
         <p className="mt-2 text-muted-foreground">
           {proposal.shortDescription}
         </p>
@@ -47,22 +49,28 @@ export function SidebarContent({ proposal, id }: SidebarContentProps) {
         temperatureCheckId={proposal.temperatureCheckId}
       />
 
-      <div className="space-y-3 text-sm">
+      <div className="space-y-3 text-sm border-t border-border pt-4">
         <div>
-          <span className="font-medium">Author</span>
-          <p className="text-muted-foreground truncate">{proposal.author}</p>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Author
+          </span>
+          <p className="text-foreground truncate mt-0.5">{proposal.author}</p>
         </div>
 
         <div>
-          <span className="font-medium">Vote Options</span>
-          <p className="text-muted-foreground">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Vote Options
+          </span>
+          <p className="text-foreground mt-0.5">
             {proposal.voteOptions.map((option) => option.label).join(', ')}
           </p>
         </div>
 
         <div>
-          <span className="font-medium">Links</span>
-          <div className="space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Links
+          </span>
+          <div className="space-y-1 mt-0.5">
             {proposal.links.map((link) => (
               <a
                 key={link.toString()}
@@ -78,13 +86,17 @@ export function SidebarContent({ proposal, id }: SidebarContentProps) {
         </div>
 
         <div>
-          <span className="font-medium">ID</span>
-          <p className="text-muted-foreground">{proposal.id}</p>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            ID
+          </span>
+          <p className="text-foreground mt-0.5">{proposal.id}</p>
         </div>
 
         <div>
-          <span className="font-medium">Votes Store</span>
-          <p className="text-muted-foreground truncate">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Votes Store
+          </span>
+          <p className="text-foreground truncate mt-0.5">
             {proposal.votes.toString()}
           </p>
         </div>
