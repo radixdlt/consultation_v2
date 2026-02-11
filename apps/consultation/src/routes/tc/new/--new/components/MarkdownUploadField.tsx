@@ -50,7 +50,8 @@ export const MarkdownUploadField = withForm({
       <form.Field
         name="description"
         validators={{
-          onBlur: effectSchemaValidator(DescriptionSchema)
+          onBlur: effectSchemaValidator(DescriptionSchema),
+          onChange: effectSchemaValidator(DescriptionSchema)
         }}
       >
         {(field) => {

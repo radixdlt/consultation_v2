@@ -19,6 +19,8 @@ import { DatabaseMigrations } from './db/migrate'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
 import { RpcServerLive } from './rpc/server'
+import { SseRouteLive } from './sse/sseRoute'
+import { VoteUpdatePubSub } from './sse/voteUpdatePubSub'
 import {
   TransactionDetailsOptInsSchema,
   TransactionStreamConfig,
@@ -46,6 +48,7 @@ const BaseServicesLayer = Layer.mergeAll(
   Layer.provide(VoteCalculationQueue.Default),
   Layer.provide(ORM.Default),
   Layer.provide(StokenetGatewayApiClientLayer),
+  Layer.provideMerge(VoteUpdatePubSub.Default),
   Layer.provideMerge(Config.StokenetLive)
 )
 
@@ -78,8 +81,9 @@ const RoutesWithCors = Layer.unwrapEffect(
       ConfigEffect.string('ALLOWED_ORIGINS')
     ).pipe(ConfigEffect.withDefault(['*']), Effect.orDie)
 
-    return RpcServerLive.pipe(
-      Layer.provide(HttpLayerRouter.cors({ allowedOrigins }))
+    return Layer.mergeAll(RpcServerLive, SseRouteLive).pipe(
+      Layer.provide(HttpLayerRouter.cors({ allowedOrigins })),
+      Layer.provide(VoteUpdatePubSub.Default)
     )
   })
 )
@@ -115,6 +119,7 @@ const AppLayer = BaseServicesLayer.pipe(
 
 NodeRuntime.runMain(
   Effect.gen(function* () {
+    yield* Effect.log('Vote collector starting migrations')
     // Phase 0: Run DB migrations (outside AppLayer so default env ConfigProvider is used)
     const migrate = yield* DatabaseMigrations
     yield* migrate()

@@ -13,6 +13,11 @@ export class DatabaseMigrations extends Effect.Service<DatabaseMigrations>()(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
 
+      const connectionString = yield* Config.string('DATABASE_URL')
+      const ssl = yield* Config.boolean('DATABASE_SSL').pipe(
+        Config.withDefault(false)
+      )
+
       const resolveMigrationsFolder = Effect.gen(function* () {
         const candidates = [
           'packages/database/drizzle',
@@ -30,20 +35,12 @@ export class DatabaseMigrations extends Effect.Service<DatabaseMigrations>()(
       })
 
       return Effect.fnUntraced(function* () {
-        const connectionString = yield* Config.string('DATABASE_URL')
-        const ssl = yield* Config.boolean('DATABASE_SSL').pipe(
-          Config.withDefault(false)
-        )
         const migrationsFolder = yield* resolveMigrationsFolder
         yield* Effect.log(`Running migrations from ${migrationsFolder}`)
         yield* Effect.acquireUseRelease(
-          Effect.sync(
-            () => new pg.Pool({ connectionString, ssl })
-          ),
+          Effect.sync(() => new pg.Pool({ connectionString, ssl })),
           (pool) =>
-            Effect.promise(() =>
-              migrate(drizzle(pool), { migrationsFolder })
-            ),
+            Effect.promise(() => migrate(drizzle(pool), { migrationsFolder })),
           (pool) => Effect.promise(() => pool.end())
         )
         yield* Effect.log('Migrations complete')

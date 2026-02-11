@@ -1,6 +1,6 @@
-import { Result, useAtomValue } from '@effect-atom/atom-react'
+import { Result, useAtomMount, useAtomValue } from '@effect-atom/atom-react'
 import type { ProposalId } from 'shared/governance/brandedTypes'
-import { voteResultsAtom } from '@/atom/voteResultsAtom'
+import { voteResultsAtom, voteUpdatesAtom } from '@/atom/voteResultsAtom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { VoteOption } from '../types'
 
@@ -13,6 +13,7 @@ export function VoteResultsSection({
   id,
   voteOptions
 }: VoteResultsSectionProps) {
+  useAtomMount(voteUpdatesAtom('proposal')(id))
   const voteResultsResult = useAtomValue(voteResultsAtom('proposal')(id))
 
   const optionLabelMap = new Map(
