@@ -3,7 +3,7 @@ import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
 import type { TemperatureCheckSchema } from 'shared/governance/schemas'
 import { AccountVotesSection } from '@/components/detail/AccountVotesSection'
 import { VoteResultsSection } from '@/components/detail/VoteResultsSection'
-import { TC_VOTE_OPTIONS } from '@/lib/voteColors'
+import { TC_VOTE_OPTIONS } from '@/lib/voting'
 import { VotingSection } from './VotingSection'
 import type { VotedAccount } from '../types'
 

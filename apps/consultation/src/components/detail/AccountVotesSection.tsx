@@ -5,8 +5,8 @@ import { accountVotesAtom } from '@/atom/accountVotesAtom'
 import { AddressLink } from '@/components/AddressLink'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatXrd } from '@/lib/utils'
-import type { VoteOption } from '@/lib/voteColors'
-import { resolveVoteOptions } from '@/lib/voteColors'
+import type { VoteOption } from '@/lib/voting'
+import { resolveVoteOptions } from '@/lib/voting'
 
 type AccountVotesSectionProps = {
   entityType: EntityType

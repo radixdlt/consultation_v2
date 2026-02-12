@@ -9,7 +9,7 @@ import { voteOnTemperatureCheckBatchAtom } from '@/atom/temperatureChecksAtom'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
-import { getTcVoteColor } from '@/lib/voteColors'
+import { getTcVoteColor } from '@/lib/voting'
 import type { VotedAccount } from '../types'
 
 type Vote = 'For' | 'Against'
