@@ -1,4 +1,4 @@
-import { GetLedgerStateService } from '@radix-effects/gateway'
+import { GatewayApiClient, GetLedgerStateService } from '@radix-effects/gateway'
 import { StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, pipe, Record as R } from 'effect'
@@ -20,6 +20,7 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
     effect: Effect.gen(function* () {
       const repo = yield* VoteCalculationRepo
       const governance = yield* GovernanceComponent
+      const gatewayApiClient = yield* GatewayApiClient
       const ledgerState = yield* GetLedgerStateService
       const snapshot = yield* Snapshot
 
@@ -60,9 +61,13 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
         })
 
         // Step 2: Fetch ALL votes at current state version, filter to new ones
-        const currentSv = yield* ledgerState({
-          at_ledger_state: { timestamp: new Date() }
-        }).pipe(Effect.map((r) => StateVersion.make(r.state_version)))
+        const currentSv = yield* gatewayApiClient.status
+          .getCurrent()
+          .pipe(
+            Effect.map((r) =>
+              StateVersion.make(r.ledger_state.state_version)
+            )
+          )
 
         // Fetch new votes and normalize to { accountAddress, vote: string }[]
         const newVotes = yield* (() => {

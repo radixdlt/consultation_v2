@@ -1,7 +1,7 @@
 import { Atom } from '@effect-atom/atom-react'
 import {
-  GetFungibleBalance,
-  GetLedgerStateService
+  GatewayApiClient,
+  GetFungibleBalance
 } from '@radix-effects/gateway'
 import { AccountAddress, StateVersion } from '@radix-effects/shared'
 import { Effect, Layer, Option } from 'effect'
@@ -25,7 +25,6 @@ const runtime = makeAtomRuntime(
   Layer.mergeAll(
     GovernanceComponent.Default,
     GetFungibleBalance.Default,
-    GetLedgerStateService.Default,
     SendTransaction.Default
   ).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
@@ -40,11 +39,15 @@ export const isAdminAtom = Atom.family((accountAddress: string) =>
     Effect.gen(function* () {
       const config = yield* Config
       const getFungibleBalance = yield* GetFungibleBalance
-      const getLedgerState = yield* GetLedgerStateService
+      const gatewayApiClient = yield* GatewayApiClient
 
-      const stateVersion = yield* getLedgerState({
-        at_ledger_state: { timestamp: new Date() }
-      }).pipe(Effect.map((result) => StateVersion.make(result.state_version)))
+      const stateVersion = yield* gatewayApiClient.status
+        .getCurrent()
+        .pipe(
+          Effect.map((result) =>
+            StateVersion.make(result.ledger_state.state_version)
+          )
+        )
 
       const balances = yield* getFungibleBalance({
         addresses: [accountAddress],

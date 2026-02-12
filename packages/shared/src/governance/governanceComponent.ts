@@ -1,4 +1,5 @@
 import {
+  GatewayApiClient,
   GetComponentStateService,
   GetKeyValueStoreService,
   GetLedgerStateService,
@@ -76,17 +77,19 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
     effect: Effect.gen(function* () {
       const keyValueStore = yield* GetKeyValueStoreService
       const keyValueStoreDataService = yield* KeyValueStoreDataService
-      const ledgerState = yield* GetLedgerStateService
+      const gatewayApiClient = yield* GatewayApiClient
 
       const getComponentStateService = yield* GetComponentStateService
       const config = yield* Config
 
       const getStateVersion = () =>
-        ledgerState({
-          at_ledger_state: {
-            timestamp: new Date()
-          }
-        }).pipe(Effect.map((result) => StateVersion.make(result.state_version)))
+        gatewayApiClient.status
+          .getCurrent()
+          .pipe(
+            Effect.map((result) =>
+              StateVersion.make(result.ledger_state.state_version)
+            )
+          )
 
       const getComponentState = (stateVersion: StateVersion) =>
         getComponentStateService
