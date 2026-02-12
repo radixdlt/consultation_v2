@@ -60,23 +60,16 @@ export function formatXrd(value: number): string {
   return value.toFixed(2)
 }
 
-export function formatDateRange(start: Date, deadline: Date): string {
-  const dateOptions: Intl.DateTimeFormatOptions = {
+export function formatDateTime(date: Date): string {
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
     month: 'short',
     day: 'numeric',
-    year: 'numeric'
-  }
-
-  const timeOptions: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: '2-digit'
-  }
+  })
+}
 
-  const startDate = start.toLocaleDateString('en-US', dateOptions)
-  const startTime = start.toLocaleTimeString('en-US', timeOptions)
-
-  const deadlineDate = deadline.toLocaleDateString('en-US', dateOptions)
-  const deadlineTime = deadline.toLocaleTimeString('en-US', timeOptions)
-
-  return `${startDate} ${startTime} – ${deadlineDate} ${deadlineTime}`
+export function formatDateRange(start: Date, deadline: Date): string {
+  return `${formatDateTime(start)} – ${formatDateTime(deadline)}`
 }

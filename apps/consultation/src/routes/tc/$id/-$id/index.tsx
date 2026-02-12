@@ -48,6 +48,7 @@ function PageContent({ tc, id }: { tc: TemperatureCheck; id: TemperatureCheckId 
       typeBadge="TC"
       id={tc.id}
       title={tc.title}
+      start={tc.start}
       deadline={tc.deadline}
       author={tc.author}
       links={tc.links.map((l) => l.toString())}

@@ -1,26 +1,18 @@
 import { Calendar, ExternalLink, LinkIcon, User } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { AddressLink } from '@/components/AddressLink'
+import { formatDateTime } from '@/lib/utils'
 import {
   type ItemStatus,
   StatusBadge
 } from '@/routes/-index/components/StatusBadge'
-
-function formatDateTime(date: Date): string {
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
 
 type DetailPageHeaderProps = {
   status: ItemStatus
   typeBadge: string
   id: number
   title: string
+  start: Date
   deadline: Date
   author: string
   links: readonly string[]
@@ -33,6 +25,7 @@ export function DetailPageHeader({
   typeBadge,
   id,
   title,
+  start,
   deadline,
   author,
   links,
@@ -57,9 +50,14 @@ export function DetailPageHeader({
         </span>
         {originBadge}
       </div>
-      <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-        <Calendar className="size-4" />
-        <span className="font-mono">Ends: {formatDateTime(deadline)}</span>
+      <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+        <Calendar className="size-4 mt-0.5" />
+        <span className="font-mono">
+          <span>{formatDateTime(start)}</span>
+          <span className="mx-1">–</span>
+          <br className="sm:hidden" />
+          <span>{formatDateTime(deadline)}</span>
+        </span>
       </div>
       {author && (
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">

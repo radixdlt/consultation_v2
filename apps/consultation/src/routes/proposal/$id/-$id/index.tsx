@@ -41,6 +41,7 @@ function PageContent({ proposal, id }: { proposal: Proposal; id: ProposalId }) {
       typeBadge="GP"
       id={proposal.id}
       title={proposal.title}
+      start={proposal.start}
       deadline={proposal.deadline}
       author={proposal.author}
       links={proposal.links.map((l) => l.toString())}
