@@ -59,17 +59,12 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           newVoteCount: payload.voteCount - lastVoteCount
         })
 
-        // Step 2: Fetch ALL votes at current state version, filter to new ones
-        const currentSv = yield* ledgerState({
-          at_ledger_state: { timestamp: new Date() }
-        }).pipe(Effect.map((r) => StateVersion.make(r.state_version)))
-
+        // Step 2: Fetch ALL votes at latest state version, filter to new ones
         // Fetch new votes and normalize to { accountAddress, vote: string }[]
         const newVotes = yield* (() => {
           if (payload.type === 'temperature_check') {
             return governance
               .getTemperatureCheckVotesByIndex({
-                stateVersion: currentSv,
                 keyValueStoreAddress: KeyValueStoreAddress.make(
                   payload.keyValueStoreAddress
                 ),
@@ -85,7 +80,6 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           // proposal: fan out multi-option votes into one entry per option
           return governance
             .getProposalVotesByIndex({
-              stateVersion: currentSv,
               keyValueStoreAddress: KeyValueStoreAddress.make(
                 payload.keyValueStoreAddress
               ),

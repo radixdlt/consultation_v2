@@ -1,13 +1,11 @@
 import {
   GetComponentStateService,
   GetKeyValueStoreService,
-  GetLedgerStateService,
   KeyValueStoreDataService,
   StateEntityDetails
 } from '@radix-effects/gateway'
 import {
   AccountAddress,
-  StateVersion,
   TransactionManifestString
 } from '@radix-effects/shared'
 import type { StateKeyValueStoreDataResponseItem } from '@radixdlt/babylon-gateway-api-sdk'
@@ -70,31 +68,19 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
       GetKeyValueStoreService.Default,
       StateEntityDetails.Default,
       GetComponentStateService.Default,
-      GetLedgerStateService.Default,
       KeyValueStoreDataService.Default
     ],
     effect: Effect.gen(function* () {
       const keyValueStore = yield* GetKeyValueStoreService
       const keyValueStoreDataService = yield* KeyValueStoreDataService
-      const ledgerState = yield* GetLedgerStateService
 
       const getComponentStateService = yield* GetComponentStateService
       const config = yield* Config
 
-      const getStateVersion = () =>
-        ledgerState({
-          at_ledger_state: {
-            timestamp: new Date()
-          }
-        }).pipe(Effect.map((result) => StateVersion.make(result.state_version)))
-
-      const getComponentState = (stateVersion: StateVersion) =>
+      const getComponentState = () =>
         getComponentStateService
           .run({
             addresses: [config.componentAddress],
-            at_ledger_state: {
-              state_version: stateVersion
-            },
             schema: Governance
           })
           .pipe(
@@ -113,13 +99,10 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
             )
           )
 
-      const getTemperatureChecks = (stateVersion: StateVersion) =>
-        getComponentState(stateVersion).pipe(
+      const getTemperatureChecks = () =>
+        getComponentState().pipe(
           Effect.flatMap((componentState) =>
             keyValueStore({
-              at_ledger_state: {
-                state_version: stateVersion
-              },
               address: componentState.temperature_checks
             })
           ),
@@ -155,20 +138,13 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
 
       const getTemperatureCheckById = (id: TemperatureCheckId) =>
         Effect.gen(function* () {
-          const stateVersion = yield* getStateVersion()
-
-          const keyValueStoreAddress = yield* getComponentState(
-            stateVersion
-          ).pipe(
+          const keyValueStoreAddress = yield* getComponentState().pipe(
             Effect.map((result) =>
               KeyValueStoreAddress.make(result.temperature_checks)
             )
           )
 
           const temperatureCheck = yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: stateVersion
-            },
             key_value_store_address: keyValueStoreAddress,
             keys: [
               {
@@ -207,13 +183,9 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
         })
 
       const getAllTemperatureChecksVotes = (input: {
-        stateVersion: StateVersion
         keyValueStoreAddress: KeyValueStoreAddress
       }) =>
         keyValueStore({
-          at_ledger_state: {
-            state_version: input.stateVersion
-          },
           address: input.keyValueStoreAddress
         }).pipe(
           Effect.map((result) =>
@@ -294,7 +266,7 @@ CALL_METHOD
             MakeTemperatureCheckVoteInputSchema
           )(input)
 
-          return TransactionManifestString.make(`   
+          return TransactionManifestString.make(`
             CALL_METHOD
               Address("${config.componentAddress}")
               "vote_on_temperature_check"
@@ -302,7 +274,7 @@ CALL_METHOD
               ${parsedInput.temperatureCheckId}u64 # temperature check id
               Enum<${parsedInput.vote === 'For' ? 0 : 1}u8>() # for or against temp check, this is "for", Enum<1u8>() would be "against"
             ;
-    
+
             CALL_METHOD
               Address("${parsedInput.accountAddress}")
               "deposit_batch"
@@ -316,14 +288,9 @@ CALL_METHOD
         accounts: AccountAddress[]
       }) =>
         Effect.gen(function* () {
-          const stateVersion = yield* getStateVersion()
-
           const AccountAddressSchema = Schema.Struct({ value: AccountAddress })
 
           return yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: stateVersion
-            },
             key_value_store_address: input.keyValueStoreAddress,
             keys: input.accounts.map((address) => ({
               key_json: { kind: 'Reference' as const, value: address }
@@ -364,15 +331,11 @@ CALL_METHOD
 
       const getTemperatureCheckVotesByIndex = (input: {
         keyValueStoreAddress: KeyValueStoreAddress
-        stateVersion: StateVersion
         fromIndexInclusive: number
         toIndexInclusive: number
       }) =>
         Effect.gen(function* () {
           return yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: input.stateVersion
-            },
             key_value_store_address: input.keyValueStoreAddress,
             keys: makeVoteIndexKeys(
               input.fromIndexInclusive,
@@ -409,15 +372,11 @@ CALL_METHOD
 
       const getProposalVotesByIndex = (input: {
         keyValueStoreAddress: KeyValueStoreAddress
-        stateVersion: StateVersion
         fromIndexInclusive: number
         toIndexInclusive: number
       }) =>
         Effect.gen(function* () {
           return yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: input.stateVersion
-            },
             key_value_store_address: input.keyValueStoreAddress,
             keys: makeVoteIndexKeys(
               input.fromIndexInclusive,
@@ -455,10 +414,8 @@ CALL_METHOD
 
       const getGovernanceState = () =>
         Effect.gen(function* () {
-          const stateVersion = yield* getStateVersion()
-          const componentState = yield* getComponentState(stateVersion)
+          const componentState = yield* getComponentState()
           return {
-            stateVersion,
             temperatureCheckCount: componentState.temperature_check_count,
             proposalCount: componentState.proposal_count,
             temperatureChecksKvs: KeyValueStoreAddress.make(
@@ -470,18 +427,11 @@ CALL_METHOD
 
       const getProposalById = (id: ProposalId) =>
         Effect.gen(function* () {
-          const stateVersion = yield* getStateVersion()
-
-          const keyValueStoreAddress = yield* getComponentState(
-            stateVersion
-          ).pipe(
+          const keyValueStoreAddress = yield* getComponentState().pipe(
             Effect.map((result) => KeyValueStoreAddress.make(result.proposals))
           )
 
           const proposal = yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: stateVersion
-            },
             key_value_store_address: keyValueStoreAddress,
             keys: [
               {
@@ -524,7 +474,7 @@ CALL_METHOD
         sortOrder?: 'asc' | 'desc'
       }) =>
         Effect.gen(function* () {
-          const { stateVersion, temperatureCheckCount, temperatureChecksKvs } =
+          const { temperatureCheckCount, temperatureChecksKvs } =
             yield* getGovernanceState()
 
           const sortOrder = input.sortOrder ?? 'desc'
@@ -578,9 +528,6 @@ CALL_METHOD
           }))
 
           const items = yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: stateVersion
-            },
             key_value_store_address: temperatureChecksKvs,
             keys
           }).pipe(
@@ -636,7 +583,7 @@ CALL_METHOD
         sortOrder?: 'asc' | 'desc'
       }) =>
         Effect.gen(function* () {
-          const { stateVersion, proposalCount, proposalsKvs } =
+          const { proposalCount, proposalsKvs } =
             yield* getGovernanceState()
 
           const sortOrder = input.sortOrder ?? 'desc'
@@ -685,9 +632,6 @@ CALL_METHOD
           }))
 
           const items = yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: stateVersion
-            },
             key_value_store_address: proposalsKvs,
             keys
           }).pipe(
@@ -760,14 +704,9 @@ CALL_METHOD
         accounts: AccountAddress[]
       }) =>
         Effect.gen(function* () {
-          const stateVersion = yield* getStateVersion()
-
           const AccountAddressSchema = Schema.Struct({ value: AccountAddress })
 
           return yield* keyValueStoreDataService({
-            at_ledger_state: {
-              state_version: stateVersion
-            },
             key_value_store_address: input.keyValueStoreAddress,
             keys: input.accounts.map((address) => ({
               key_json: { kind: 'Reference' as const, value: address }

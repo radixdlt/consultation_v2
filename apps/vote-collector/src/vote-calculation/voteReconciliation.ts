@@ -1,3 +1,4 @@
+import { GetLedgerStateService } from '@radix-effects/gateway'
 import { StateVersion } from '@radix-effects/shared'
 import { Array as A, Effect } from 'effect'
 import { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
@@ -9,11 +10,16 @@ import { VoteCalculationRepo } from './voteCalculationRepo'
 export class VoteReconciliation extends Effect.Service<VoteReconciliation>()(
   'VoteReconciliation',
   {
-    dependencies: [GovernanceComponent.Default, VoteCalculationRepo.Default],
+    dependencies: [
+      GovernanceComponent.Default,
+      VoteCalculationRepo.Default,
+      GetLedgerStateService.Default
+    ],
     effect: Effect.gen(function* () {
       const { upsert } = yield* VoteCalculationQueue
       const governance = yield* GovernanceComponent
       const repo = yield* VoteCalculationRepo
+      const ledgerState = yield* GetLedgerStateService
 
       const reconcileOne = (temperatureCheckId: TemperatureCheckId) =>
         Effect.gen(function* () {
@@ -83,11 +89,12 @@ export class VoteReconciliation extends Effect.Service<VoteReconciliation>()(
       return Effect.fn('VoteReconciliation.run')(
         function* () {
           const govState = yield* governance.getGovernanceState()
+          const currentState = yield* ledgerState({})
 
           yield* Effect.log('Startup reconciliation', {
             temperatureCheckCount: govState.temperatureCheckCount,
             proposalCount: govState.proposalCount,
-            stateVersion: govState.stateVersion
+            stateVersion: currentState.state_version
           })
 
           const temperatureCheckIds = A.range(
@@ -111,7 +118,7 @@ export class VoteReconciliation extends Effect.Service<VoteReconciliation>()(
 
           yield* Effect.log('Startup reconciliation complete')
 
-          return StateVersion.make(govState.stateVersion)
+          return StateVersion.make(currentState.state_version)
         },
         Effect.annotateLogs({ service: 'VoteReconciliation' })
       )

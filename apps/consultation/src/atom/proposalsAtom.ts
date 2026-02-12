@@ -1,5 +1,4 @@
 import { Atom } from '@effect-atom/atom-react'
-import { GetLedgerStateService } from '@radix-effects/gateway'
 import { AccountAddress } from '@radix-effects/shared'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
 import { Data, Effect, Layer, Option } from 'effect'
@@ -23,7 +22,6 @@ import { withToast } from './withToast'
 const runtime = makeAtomRuntime(
   Layer.mergeAll(
     GovernanceComponent.Default,
-    GetLedgerStateService.Default,
     SendTransaction.Default
   ).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
