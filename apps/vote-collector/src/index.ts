@@ -2,16 +2,7 @@ import { HttpLayerRouter } from '@effect/platform'
 import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { GetLedgerStateService } from '@radix-effects/gateway'
 import { createServer } from 'node:http'
-import {
-  Duration,
-  Effect,
-  Fiber,
-  Layer,
-  Logger,
-  Option,
-  Ref,
-  Config as ConfigEffect
-} from 'effect'
+import { Effect, Layer, Logger, Config as ConfigEffect, Data } from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import { Config, GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
@@ -22,9 +13,7 @@ import { RpcServerLive } from './rpc/server'
 import { SseRouteLive } from './sse/sseRoute'
 import { VoteUpdatePubSub } from './sse/voteUpdatePubSub'
 import {
-  TransactionDetailsOptInsSchema,
-  TransactionStreamConfig,
-  type TransactionStreamConfigSchema,
+  TransactionStreamConfigLayer,
   TransactionStreamService
 } from './streamer'
 import { GovernanceEventProcessor } from './streamer/governanceEvents'
@@ -34,7 +23,12 @@ import { VoteCalculationQueue } from './vote-calculation/voteCalculationQueue'
 import { VoteCalculationWorker } from './vote-calculation/voteCalculationWorker'
 import { VoteReconciliation } from './vote-calculation/voteReconciliation'
 
-// Domain services — provideMerge so Config is available to both internal services and the main program
+class UnsupportedNetworkIdError extends Data.TaggedError(
+  '@VoteCollector/UnsupportedNetworkIdError'
+)<{
+  message: string
+}> {}
+
 const BaseServicesLayer = Layer.mergeAll(
   GovernanceComponent.Default,
   GovernanceEventProcessor.Default,
@@ -43,34 +37,35 @@ const BaseServicesLayer = Layer.mergeAll(
   VoteCalculation.Default,
   VoteReconciliation.Default,
   VoteCalculationWorker.Default,
-  TransactionListener.Default
+  TransactionListener.Default,
+  TransactionStreamService.Default
 ).pipe(
   Layer.provide(VoteCalculationQueue.Default),
+  Layer.provideMerge(TransactionStreamConfigLayer),
   Layer.provide(ORM.Default),
   Layer.provide(StokenetGatewayApiClientLayer),
   Layer.provideMerge(VoteUpdatePubSub.Default),
-  Layer.provideMerge(Config.StokenetLive)
-)
-
-// Transaction stream config: affected_global_entities opt-in, 10s poll interval
-const TransactionStreamConfigLayer = Layer.effect(
-  TransactionStreamConfig,
-  Ref.make<typeof TransactionStreamConfigSchema.Type>({
-    stateVersion: Option.none(),
-    limitPerPage: 100,
-    waitTime: Duration.seconds(10),
-    optIns: {
-      ...TransactionDetailsOptInsSchema.make(),
-      affected_global_entities: true,
-      detailed_events: true
-    }
-  })
-)
-
-// provideMerge so TransactionStreamConfig ref is accessible to transactionListener for cursor mutation
-const TransactionStreamLayer = TransactionStreamService.Default.pipe(
-  Layer.provideMerge(TransactionStreamConfigLayer),
-  Layer.provide(StokenetGatewayApiClientLayer)
+  Layer.provideMerge(
+    Layer.unwrapEffect(
+      Effect.gen(function* () {
+        const networkId = yield* ConfigEffect.number('NETWORK_ID').pipe(
+          ConfigEffect.withDefault(2),
+          Effect.orDie
+        )
+        if (networkId === 1) {
+          return yield* new UnsupportedNetworkIdError({
+            message: `Mainnet (network ID 1) is not supported yet`
+          })
+        } else if (networkId === 2) {
+          return Config.StokenetLive
+        } else {
+          return yield* new UnsupportedNetworkIdError({
+            message: `Unsupported network ID: ${networkId}`
+          })
+        }
+      })
+    )
+  )
 )
 
 // CORS must be composed into the route layer *before* serve(), because serve() consumes
@@ -105,13 +100,13 @@ const HttpServerLive = HttpLayerRouter.serve(RoutesWithCors).pipe(
 const LoggerLive = Layer.unwrapEffect(
   ConfigEffect.string('NODE_ENV').pipe(
     ConfigEffect.withDefault('development'),
-    Effect.map((env) => (env === 'production' ? Logger.json : Logger.pretty))
+    Effect.map((env) => (env === 'production' ? Logger.json : Logger.pretty)),
+    Effect.orDie
   )
 )
 
 // Compose: services + transaction stream + HTTP server + PgClient
 const AppLayer = BaseServicesLayer.pipe(
-  Layer.provideMerge(TransactionStreamLayer),
   Layer.provideMerge(HttpServerLive),
   Layer.provideMerge(PgClientLive),
   Layer.provideMerge(LoggerLive)
@@ -129,13 +124,12 @@ NodeRuntime.runMain(
     const reconcile = yield* VoteReconciliation
     const startingStateVersion = yield* reconcile()
 
-    // Phase 2: Fork consumer loop
+    // Phase 2: Run consumer + transaction listener concurrently (fail-fast on either crash)
     const runConsumer = yield* VoteCalculationWorker
-    const consumerFiber = yield* Effect.fork(runConsumer())
-
-    // Phase 3: Transaction stream listener (blocks main fiber)
     const listen = yield* TransactionListener
-    yield* listen(startingStateVersion)
-    return yield* Fiber.join(consumerFiber)
+
+    yield* Effect.all([runConsumer(), listen(startingStateVersion)], {
+      concurrency: 2
+    })
   }).pipe(Effect.provide([DatabaseMigrations.Default, AppLayer]))
 )

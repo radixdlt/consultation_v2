@@ -1,3 +1,4 @@
+import { StateVersion } from '@radix-effects/shared'
 import { Schema } from 'effect'
 
 export const TransactionDetailsOptInsSchema = Schema.Struct({
@@ -55,7 +56,7 @@ export type TransactionDetailsOptIns =
   typeof TransactionDetailsOptInsSchema.Type
 
 export const TransactionStreamConfigSchema = Schema.Struct({
-  stateVersion: Schema.Option(Schema.Number),
+  stateVersion: Schema.Option(StateVersion),
   limitPerPage: Schema.Number,
   waitTime: Schema.Duration,
   optIns: TransactionDetailsOptInsSchema
