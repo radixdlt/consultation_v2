@@ -1,7 +1,22 @@
 import { GatewayApiClient } from '@radix-effects/gateway'
-import { Array as A, Effect, Option, Order, pipe, Ref, Stream } from 'effect'
+import {
+  Array as A,
+  Duration,
+  Effect,
+  Layer,
+  Option,
+  Order,
+  pipe,
+  Ref,
+  Stream
+} from 'effect'
 import { Config } from 'shared/governance/config'
 import { TransactionStreamConfig } from './config'
+import {
+  TransactionDetailsOptInsSchema,
+  TransactionStreamConfigSchema
+} from './schemas'
+import { StateVersion } from '@radix-effects/shared'
 
 export class TransactionStreamService extends Effect.Service<TransactionStreamService>()(
   'TransactionStreamService',
@@ -14,7 +29,7 @@ export class TransactionStreamService extends Effect.Service<TransactionStreamSe
         .pipe(Effect.catchAll(Effect.die))
       yield* Effect.logDebug(currentStateVersion.ledger_state)
 
-      return Stream.paginateEffect(1, () =>
+      return Stream.paginateEffect(StateVersion.make(1), () =>
         Effect.gen(function* () {
           const transactionStreamConfigRef = yield* TransactionStreamConfig
           const transactionStreamConfig =
@@ -25,7 +40,9 @@ export class TransactionStreamService extends Effect.Service<TransactionStreamSe
             Option.match({
               onNone: () =>
                 gatewayApiClient.status.getCurrent().pipe(
-                  Effect.map((res) => res.ledger_state.state_version),
+                  Effect.map((res) =>
+                    StateVersion.make(res.ledger_state.state_version)
+                  ),
                   Effect.catchAll(Effect.die)
                 ),
               onSome: (version) => Effect.succeed(version)
@@ -83,26 +100,40 @@ export class TransactionStreamService extends Effect.Service<TransactionStreamSe
           )
 
           const nextStateVersion = lastItem.pipe(
-            Option.map((res) => res.state_version + 1),
+            Option.map((res) => StateVersion.make(res.state_version + 1)),
             Option.getOrElse(() => stateVersion)
           )
-
-          yield* Ref.update(transactionStreamConfigRef, (config) => {
-            return {
-              ...config,
-              stateVersion: Option.some(nextStateVersion)
-            }
-          })
 
           if (nextStateVersion === stateVersion) {
             yield* Effect.logDebug('Waiting for new transactions...')
             yield* Effect.sleep(transactionStreamConfig.waitTime)
-            return [[], Option.some(stateVersion)]
+            return [
+              { items: [], nextStateVersion: stateVersion },
+              Option.some(stateVersion)
+            ]
           }
 
-          return [result.items, Option.some(nextStateVersion)]
+          return [
+            { items: result.items, nextStateVersion },
+            Option.some(nextStateVersion)
+          ]
         })
-      ).pipe(Stream.filter((item) => item.length > 0))
+      ).pipe(Stream.filter((chunk) => chunk.items.length > 0))
     })
   }
 ) {}
+
+// Transaction stream config: affected_global_entities opt-in, 10s poll interval
+export const TransactionStreamConfigLayer = Layer.effect(
+  TransactionStreamConfig,
+  Ref.make<typeof TransactionStreamConfigSchema.Type>({
+    stateVersion: Option.none(),
+    limitPerPage: 100,
+    waitTime: Duration.seconds(10),
+    optIns: {
+      ...TransactionDetailsOptInsSchema.make(),
+      affected_global_entities: true,
+      detailed_events: true
+    }
+  })
+)

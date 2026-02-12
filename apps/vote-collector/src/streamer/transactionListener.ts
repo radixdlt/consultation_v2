@@ -13,15 +13,10 @@ export class TransactionListener extends Effect.Service<TransactionListener>()(
       return Effect.fnUntraced(function* (startingStateVersion: StateVersion) {
         // Set the stream cursor to the reconciliation stateVersion so we don't miss any txs
         const configRef = yield* TransactionStreamConfig
-        yield* Ref.set(
-          configRef,
-          yield* Ref.get(configRef).pipe(
-            Effect.map((c) => ({
-              ...c,
-              stateVersion: Option.some(startingStateVersion as number)
-            }))
-          )
-        )
+        yield* Ref.update(configRef, (c) => ({
+          ...c,
+          stateVersion: Option.some(startingStateVersion)
+        }))
 
         const stream = yield* TransactionStreamService
 
@@ -32,15 +27,20 @@ export class TransactionListener extends Effect.Service<TransactionListener>()(
         // No client-side filter needed — the local streamer applies
         // affected_global_entities_filter server-side in the Gateway API request
         yield* stream.pipe(
-          Stream.runForEach((batch) =>
+          Stream.runForEach(({ items, nextStateVersion }) =>
             Effect.gen(function* () {
-              const maxSv = Math.max(...batch.map((tx) => tx.state_version))
+              const maxSv = Math.max(...items.map((tx) => tx.state_version))
               yield* Effect.log('Governance tx detected', {
-                batchSize: batch.length,
+                batchSize: items.length,
                 stateVersion: maxSv
               })
 
-              yield* processBatch(batch)
+              yield* processBatch(items)
+
+              yield* Ref.update(configRef, (c) => ({
+                ...c,
+                stateVersion: Option.some(nextStateVersion)
+              }))
             })
           ),
           Effect.retry(
