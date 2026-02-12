@@ -5,7 +5,7 @@ import { voteResultsAtom } from '@/atom/voteResultsAtom'
 type QuorumBadgeProps = {
   entityType: EntityType
   entityId: EntityId
-  quorum: string
+  quorum: number
 }
 
 export function QuorumBadge({ entityType, entityId, quorum }: QuorumBadgeProps) {
@@ -21,11 +21,11 @@ export function QuorumBadge({ entityType, entityId, quorum }: QuorumBadgeProps) 
         (sum, r) => sum + Number(r.votePower),
         0
       )
-      const quorumTarget = Number(quorum)
-      const rawPercentage = !Number.isFinite(quorumTarget) || quorumTarget <= 0
+      const rawPercentage = !Number.isFinite(quorum) || quorum <= 0
         ? 0
-        : (totalVotePower / quorumTarget) * 100
-      const quorumMet = Number.isFinite(quorumTarget) && quorumTarget > 0 && totalVotePower >= quorumTarget
+        : (totalVotePower / quorum) * 100
+      const quorumMet = Number.isFinite(quorum) && quorum > 0 && totalVotePower >= quorum
+      const displayPercent = quorumMet ? 100 : Math.min(Math.floor(rawPercentage), 99)
 
       return (
         <span
@@ -35,7 +35,7 @@ export function QuorumBadge({ entityType, entityId, quorum }: QuorumBadgeProps) 
               : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
           }`}
         >
-          Quorum {Math.round(rawPercentage)}%
+          Quorum {displayPercent}%
         </span>
       )
     })

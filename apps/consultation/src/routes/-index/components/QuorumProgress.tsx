@@ -7,7 +7,7 @@ import { formatXrd } from '@/lib/utils'
 type QuorumProgressProps = {
   entityType: EntityType
   entityId: EntityId
-  quorum: string
+  quorum: number
   isActive?: boolean
 }
 
@@ -40,10 +40,9 @@ export function QuorumProgress({
         (sum, r) => sum + Number(r.votePower),
         0
       )
-      const quorumTarget = Number(quorum)
-      const quorumProgress = !Number.isFinite(quorumTarget) || quorumTarget <= 0
+      const quorumProgress = !Number.isFinite(quorum) || quorum <= 0
         ? 0
-        : (totalPower / quorumTarget) * 100
+        : (totalPower / quorum) * 100
 
       return (
         <QuorumProgressDisplay

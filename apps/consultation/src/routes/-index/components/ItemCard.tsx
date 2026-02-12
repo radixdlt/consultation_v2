@@ -16,7 +16,7 @@ type ItemCardProps = {
   author: string
   start: Date
   deadline: Date
-  quorum: string
+  quorum: number
   linkPrefix: '/tc' | '/proposal'
 }
 

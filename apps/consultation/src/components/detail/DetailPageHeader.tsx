@@ -68,7 +68,7 @@ export function DetailPageHeader({
       )}
       {links.length > 0 && (
         <div className="mt-4 flex items-center gap-4">
-          {links.map((link) => (
+          {links.filter((link) => /^https?:\/\//i.test(link)).map((link) => (
             <a
               key={link}
               href={link}

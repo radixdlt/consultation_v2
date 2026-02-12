@@ -41,7 +41,7 @@ export function ProposalsList({ sortOrder }: ProposalsListProps) {
                 author={proposal.author}
                 start={proposal.start}
                 deadline={proposal.deadline}
-                quorum={proposal.quorum}
+                quorum={Number(proposal.quorum)}
                 linkPrefix="/proposal"
               />
             ))}

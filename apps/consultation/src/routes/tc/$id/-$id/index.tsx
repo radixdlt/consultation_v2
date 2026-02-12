@@ -49,7 +49,7 @@ function PageContent({ tc, id }: { tc: TemperatureCheck; id: TemperatureCheckId 
       author={tc.author}
       links={tc.links.map((l) => l.toString())}
       quorumBadge={
-        <QuorumBadge entityType="temperature_check" entityId={id} quorum={tc.quorum} />
+        <QuorumBadge entityType="temperature_check" entityId={id} quorum={Number(tc.quorum)} />
       }
       originBadge={
         <PromoteToProposal
@@ -64,7 +64,7 @@ function PageContent({ tc, id }: { tc: TemperatureCheck; id: TemperatureCheckId 
     <DetailPageDetails
       shortDescription={tc.shortDescription}
       description={tc.description}
-      title={tc.title}
+      filename={`tc-${tc.id}-details.md`}
     />
   )
 

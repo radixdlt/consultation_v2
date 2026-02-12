@@ -46,7 +46,7 @@ function PageContent({ proposal, id }: { proposal: Proposal; id: ProposalId }) {
       author={proposal.author}
       links={proposal.links.map((l) => l.toString())}
       quorumBadge={
-        <QuorumBadge entityType="proposal" entityId={id} quorum={proposal.quorum} />
+        <QuorumBadge entityType="proposal" entityId={id} quorum={Number(proposal.quorum)} />
       }
       originBadge={
         <OriginBadge type="tc" id={proposal.temperatureCheckId} />
@@ -58,7 +58,7 @@ function PageContent({ proposal, id }: { proposal: Proposal; id: ProposalId }) {
     <DetailPageDetails
       shortDescription={proposal.shortDescription}
       description={proposal.description}
-      title={proposal.title}
+      filename={`proposal-${proposal.id}-details.md`}
     />
   )
 

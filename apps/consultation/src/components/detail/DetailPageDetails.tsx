@@ -7,13 +7,13 @@ import remarkGfm from 'remark-gfm'
 type DetailPageDetailsProps = {
   shortDescription: string
   description?: string
-  title?: string
+  filename: string
 }
 
 export function DetailPageDetails({
   shortDescription,
   description,
-  title
+  filename
 }: DetailPageDetailsProps) {
   const handleDownload = useCallback(() => {
     if (!description) return
@@ -21,10 +21,10 @@ export function DetailPageDetails({
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${(title ?? 'details').replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-').toLowerCase()}.md`
+    a.download = filename
     a.click()
-    URL.revokeObjectURL(url)
-  }, [description, title])
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }, [description, filename])
 
   return (
     <>
