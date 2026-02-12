@@ -35,7 +35,7 @@ export function QuorumBadge({ entityType, entityId, quorum }: QuorumBadgeProps) 
               : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
           }`}
         >
-          Quorum {displayPercent}%
+          {quorumMet ? 'Quorum Reached' : `Quorum ${displayPercent}%`}
         </span>
       )
     })
