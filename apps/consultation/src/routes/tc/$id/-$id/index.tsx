@@ -1,15 +1,22 @@
 import { Result, useAtomValue } from '@effect-atom/atom-react'
 import { Cause } from 'effect'
-import { Vote } from 'lucide-react'
-import Markdown from 'react-markdown'
-import rehypeSanitize from 'rehype-sanitize'
-import remarkGfm from 'remark-gfm'
 import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
-import { getTemperatureCheckByIdAtom } from '@/atom/temperatureChecksAtom'
-import { Button } from '@/components/ui/button'
-import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer'
+import type { TemperatureCheckSchema } from 'shared/governance/schemas'
+import { getTemperatureCheckByIdAtom, getTemperatureCheckVotesByAccountsAtom } from '@/atom/temperatureChecksAtom'
+import { AccountVotesSection } from '@/components/detail/AccountVotesSection'
+import { DetailPageDetails } from '@/components/detail/DetailPageDetails'
+import { DetailPageHeader } from '@/components/detail/DetailPageHeader'
+import { DetailPageLayout } from '@/components/detail/DetailPageLayout'
+import { QuorumBadge } from '@/components/detail/QuorumBadge'
+import { VoteResultsSection } from '@/components/detail/VoteResultsSection'
 import { InlineCode } from '@/components/ui/typography'
+import { TC_VOTE_OPTIONS } from '@/lib/voting'
+import { getItemStatus } from '@/routes/-index/components/StatusBadge'
+import { PromoteToProposal } from './components/PromoteToProposal'
 import { SidebarContent } from './components/SidebarContent'
+import { VotingSection } from './components/VotingSection'
+
+type TemperatureCheck = typeof TemperatureCheckSchema.Type
 
 export function Page({ id }: { id: TemperatureCheckId }) {
   const temperatureCheck = useAtomValue(getTemperatureCheckByIdAtom(id))
@@ -18,52 +25,87 @@ export function Page({ id }: { id: TemperatureCheckId }) {
     .onInitial(() => {
       return <div>Loading...</div>
     })
-    .onSuccess((temperatureCheck) => {
-      return (
-        <div className="p-6 lg:p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Left column - Markdown content */}
-            <div className="lg:col-span-3">
-              <div className="prose dark:prose-invert max-w-none">
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeSanitize]}
-                >
-                  {temperatureCheck.description}
-                </Markdown>
-              </div>
-            </div>
-
-            {/* Right column - Desktop only */}
-            <div className="hidden lg:block lg:sticky lg:top-4 lg:self-start">
-              <SidebarContent temperatureCheck={temperatureCheck} id={id} />
-            </div>
-          </div>
-
-          {/* Mobile drawer with FAB trigger */}
-          <div className="lg:hidden">
-            <Drawer>
-              <DrawerTrigger asChild>
-                <Button
-                  size="icon"
-                  className="fixed bottom-6 right-6 size-14 rounded-full shadow-lg"
-                >
-                  <Vote className="size-6" />
-                  <span className="sr-only">Open voting panel</span>
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent className="max-h-[80vh]">
-                <div className="overflow-y-auto p-6">
-                  <SidebarContent temperatureCheck={temperatureCheck} id={id} />
-                </div>
-              </DrawerContent>
-            </Drawer>
-          </div>
-        </div>
-      )
-    })
+    .onSuccess((tc) => <PageContent tc={tc} id={id} />)
     .onFailure((error) => {
       return <InlineCode>{Cause.pretty(error)}</InlineCode>
     })
     .render()
+}
+
+function PageContent({ tc, id }: { tc: TemperatureCheck; id: TemperatureCheckId }) {
+  const status = getItemStatus(tc.deadline)
+  const accountsVotesResult = useAtomValue(
+    getTemperatureCheckVotesByAccountsAtom(tc.voters)
+  )
+
+  const header = (
+    <DetailPageHeader
+      status={status}
+      typeBadge="TC"
+      id={tc.id}
+      title={tc.title}
+      start={tc.start}
+      deadline={tc.deadline}
+      author={tc.author}
+      links={tc.links.map((l) => l.toString())}
+      quorumBadge={
+        <QuorumBadge entityType="temperature_check" entityId={id} quorum={Number(tc.quorum)} />
+      }
+      originBadge={
+        <PromoteToProposal
+          temperatureCheckId={id}
+          elevatedProposalId={tc.elevatedProposalId}
+        />
+      }
+    />
+  )
+
+  const details = (
+    <DetailPageDetails
+      shortDescription={tc.shortDescription}
+      description={tc.description}
+      filename={`tc-${tc.id}-details.md`}
+    />
+  )
+
+  const resultsContent = (
+    <>
+      <VoteResultsSection
+        entityType="temperature_check"
+        entityId={id}
+        voteOptions={TC_VOTE_OPTIONS}
+      />
+      <AccountVotesSection
+        entityType="temperature_check"
+        entityId={id}
+        voteOptions={TC_VOTE_OPTIONS}
+      />
+    </>
+  )
+
+  const votingContent = (
+    <VotingSection
+      temperatureCheckId={id}
+      keyValueStoreAddress={tc.voters}
+      accountsVotesResult={accountsVotesResult}
+    />
+  )
+
+  const sidebar = (
+    <SidebarContent
+      temperatureCheck={tc}
+      id={id}
+      accountsVotesResult={accountsVotesResult}
+    />
+  )
+
+  return (
+    <DetailPageLayout
+      header={header}
+      details={details}
+      sidebar={sidebar}
+      resultsContent={resultsContent}
+      votingContent={votingContent}
+    />
+  )
 }

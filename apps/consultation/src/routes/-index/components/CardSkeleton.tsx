@@ -33,7 +33,7 @@ export function CardSkeleton() {
         <div className="flex flex-col items-end gap-1.5 sm:ml-4">
           <Skeleton className="h-5 w-20" />
           <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-2 w-24 rounded-full" />
+          <Skeleton className="h-2 w-24" />
         </div>
       </div>
     </Card>

@@ -40,7 +40,7 @@ const getActualTheme = (theme: Theme): ActualTheme => {
 
 export const ThemeProvider = ({
   children,
-  defaultTheme = 'system',
+  defaultTheme = 'dark',
   storageKey = 'vite-ui-theme',
   ...props
 }: ThemeProviderProps) => {

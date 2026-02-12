@@ -1,39 +1,65 @@
-import type React from 'react'
+import { useState } from 'react'
+import type { SortOrder } from '@/atom/proposalsAtom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { H1, P } from '@/components/ui/typography'
-import { ProposalsList, TemperatureChecksList } from './components'
+import {
+  ProposalsList,
+  SortToggle,
+  TemperatureChecksList
+} from './components'
 
 export const Page: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <H1>Governance</H1>
-          <P className="mt-2 text-muted-foreground">
-            Participate in community governance through temperature checks and
-            proposals.
-          </P>
-        </div>
+  const [activeTab, setActiveTab] = useState('proposals')
+  const [proposalSort, setProposalSort] = useState<SortOrder>('desc')
+  const [tcSort, setTcSort] = useState<SortOrder>('desc')
 
-        {/* Tabs */}
-        <Tabs defaultValue="proposals" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="proposals">Governance Proposals</TabsTrigger>
-            <TabsTrigger value="temperature-checks">
+  const currentSort = activeTab === 'proposals' ? proposalSort : tcSort
+  const onSortChange = activeTab === 'proposals' ? setProposalSort : setTcSort
+
+  return (
+    <>
+      {/* Header */}
+      <div className="mb-8">
+        <H1>Radix Governance</H1>
+        <P className="mt-2 text-neutral-500 dark:text-neutral-400">
+          Participate in community governance through temperature checks and
+          proposals.
+        </P>
+      </div>
+
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <div className="mb-1 sm:mb-6 flex flex-wrap items-center justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="proposals" className="text-xs sm:text-sm">
+              Proposals
+            </TabsTrigger>
+            <TabsTrigger
+              value="temperature-checks"
+              className="text-xs sm:text-sm"
+            >
               Temperature Checks
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="proposals">
-            <ProposalsList />
-          </TabsContent>
+          <SortToggle
+            sortOrder={currentSort}
+            onSortOrderChange={onSortChange}
+          />
+        </div>
 
-          <TabsContent value="temperature-checks">
-            <TemperatureChecksList />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+        <TabsContent value="proposals">
+          <ProposalsList sortOrder={proposalSort} />
+        </TabsContent>
+
+        <TabsContent value="temperature-checks">
+          <TemperatureChecksList sortOrder={tcSort} />
+        </TabsContent>
+      </Tabs>
+    </>
   )
 }

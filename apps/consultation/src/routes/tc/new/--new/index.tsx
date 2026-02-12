@@ -1,68 +1,33 @@
 import { useNavigate } from '@tanstack/react-router'
-import { CheckCircle2Icon } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card'
+import { useCallback } from 'react'
 import { TemperatureCheckForm } from './components/TemperatureCheckForm'
 
-type SuccessData = {
-  id: number
-  title: string
-}
-
-function SuccessScreen({ data }: { data: SuccessData }) {
+export const Page: React.FC = () => {
   const navigate = useNavigate()
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate({ to: '/tc/$id', params: { id: String(data.id) } })
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [navigate, data.id])
-
-  return (
-    <Card className="w-full max-w-2xl text-center">
-      <CardHeader>
-        <div className="flex justify-center mb-4">
-          <CheckCircle2Icon className="size-16 text-green-500" />
-        </div>
-        <CardTitle className="text-2xl">Temperature Check Created</CardTitle>
-        <CardDescription className="text-base mt-2">
-          "{data.title}" has been created successfully.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground text-sm">
-          Redirecting to your temperature check...
-        </p>
-      </CardContent>
-    </Card>
+  const handleSuccess = useCallback(
+    (result: unknown) => {
+      const event = result as { temperature_check_id: number; title: string }
+      navigate({ to: '/tc/$id', params: { id: String(event.temperature_check_id) } })
+    },
+    [navigate]
   )
-}
-
-export const Page: React.FC = () => {
-  const [successData, setSuccessData] = useState<SuccessData | null>(null)
-
-  const handleSuccess = useCallback((result: unknown) => {
-    const event = result as { temperature_check_id: number; title: string }
-    setSuccessData({
-      id: event.temperature_check_id,
-      title: event.title
-    })
-  }, [])
 
   return (
-    <div className="container mx-auto py-8 flex justify-center">
-      {successData ? (
-        <SuccessScreen data={successData} />
-      ) : (
-        <TemperatureCheckForm onSuccess={handleSuccess} />
-      )}
+    <div className="max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-light text-foreground tracking-tight">
+          New Proposal
+        </h1>
+        <p className="text-muted-foreground mt-2 max-w-lg">
+          This creates a Temperature Check (TC) to gauge community interest.
+          If the TC passes, it will be promoted to a full Governance Proposal
+          (GP) for final voting.
+        </p>
+      </div>
+
+      <TemperatureCheckForm onSuccess={handleSuccess} />
     </div>
   )
 }

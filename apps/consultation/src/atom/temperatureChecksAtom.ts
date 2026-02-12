@@ -25,6 +25,7 @@ import {
   WalletErrorResponse
 } from '@/lib/dappToolkit'
 import { getCurrentAccount } from '@/lib/selectedAccount'
+import { truncateAddress } from '@/lib/utils'
 import { accountsAtom } from './dappToolkitAtom'
 import { withToast } from './withToast'
 
@@ -88,7 +89,8 @@ export const makeTemperatureCheckAtom = runtime.fn(
 
       yield* Effect.log('Transaction manifest:', manifest)
 
-      const result = yield* sendTransaction(manifest)
+      const message = `Creating TC ${input.title} with ${truncateAddress(currentAccount.address)}`
+      const result = yield* sendTransaction(manifest, message)
 
       const events = yield* gatewayApiClient.transaction
         .getCommittedDetails(result.transactionIntentHash)
@@ -161,7 +163,8 @@ const voteOnTemperatureCheck = (input: MakeTemperatureCheckVoteInput) =>
     const manifest =
       yield* governanceComponent.makeTemperatureCheckVoteManifest(input)
 
-    return yield* sendTransaction(manifest, `Temperature check ID`).pipe(
+    const message = `Vote ${input.vote} on TC #${input.temperatureCheckId} with ${truncateAddress(input.accountAddress)}`
+    return yield* sendTransaction(manifest, message).pipe(
       Effect.catchTag('WalletErrorResponse', (error) =>
         Effect.gen(function* () {
           if (

@@ -1,6 +1,6 @@
 import { Result, useAtom, useAtomValue } from '@effect-atom/atom-react'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
-import { LoaderIcon } from 'lucide-react'
+import { ArrowRightLeft, Check, CheckCircle, LoaderIcon, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import type { ProposalId } from 'shared/governance/brandedTypes'
 import type { Proposal } from 'shared/governance/schemas'
@@ -8,15 +8,17 @@ import type { KeyValueStoreAddress } from 'shared/schemas'
 import { accountsAtom } from '@/atom/dappToolkitAtom'
 import { voteOnProposalBatchAtom } from '@/atom/proposalsAtom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
 import { cn } from '@/lib/utils'
-import type { ProposalVotedAccount, VoteOption } from '../types'
+import { getProposalVoteColor } from '@/lib/voting'
+import type { VoteOption } from '@/lib/voting'
+import type { ProposalVotedAccount } from '../types'
 
 type OptionButtonProps = {
   label: string
   selected: boolean
+  selectedClass: string
   onClick?: () => void
   disabled?: boolean
 }
@@ -24,49 +26,26 @@ type OptionButtonProps = {
 function OptionButton({
   label,
   selected,
+  selectedClass,
   onClick,
   disabled
 }: OptionButtonProps) {
   return (
-    <Button
+    <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      variant={selected ? 'default' : 'outline'}
-      className={cn('w-full justify-start', selected && 'ring-2 ring-primary')}
+      className={cn(
+        'w-full text-left px-4 py-3 border transition-all duration-150 flex items-center justify-between cursor-pointer',
+        selected
+          ? `${selectedClass} font-medium`
+          : 'border-border hover:border-muted-foreground hover:bg-secondary/50',
+        disabled && 'opacity-50 cursor-not-allowed'
+      )}
     >
-      {label}
-    </Button>
-  )
-}
-
-type VoteAllCheckboxProps = {
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-  disabled?: boolean
-  accountCount: number
-}
-
-function VoteAllCheckbox({
-  checked,
-  onCheckedChange,
-  disabled,
-  accountCount
-}: VoteAllCheckboxProps) {
-  if (accountCount < 2) return null
-
-  return (
-    <div className="flex items-center space-x-2">
-      <Checkbox
-        id="vote-all-proposal"
-        checked={checked}
-        onCheckedChange={(checked) => onCheckedChange(checked === true)}
-        disabled={disabled}
-      />
-      <label htmlFor="vote-all-proposal" className="text-sm">
-        Vote with all connected accounts ({accountCount})
-      </label>
-    </div>
+      <span className="font-medium text-sm">{label}</span>
+      {selected && <Check className="size-4 shrink-0" />}
+    </button>
   )
 }
 
@@ -84,27 +63,37 @@ export function VotingSection({
   accountsVotesResult
 }: VotingSectionProps) {
   const accounts = useAtomValue(accountsAtom)
+  const currentAccount = useCurrentAccount()
 
   return Result.builder(accounts)
-    .onInitial(() => <VotingSkeleton voteOptions={proposal.voteOptions} />)
+    .onInitial(() => <DisconnectedVoting />)
     .onSuccess((accountList) => {
       if (accountList.length === 0) {
-        return <DisconnectedVoting voteOptions={proposal.voteOptions} />
+        return <DisconnectedVoting />
       }
 
-      const allAccountsVoted = Result.builder(accountsVotesResult)
-        .onSuccess(
-          (votes) =>
-            accountList.length > 0 &&
-            accountList.every((acc) =>
-              votes.some((v) => v.address === acc.address)
-            )
-        )
-        .onInitial(() => false)
-        .onFailure(() => false)
-        .render()
+      if (accountsVotesResult && currentAccount) {
+        const votesData = Result.builder(accountsVotesResult)
+          .onSuccess((votes) => ({
+            currentVote: votes.find((v) => v.address === currentAccount.address),
+            unvotedCount: accountList.filter(
+              (acc) => !votes.some((v) => v.address === acc.address)
+            ).length
+          }))
+          .onInitial(() => undefined)
+          .onFailure(() => undefined)
+          .render()
 
-      if (allAccountsVoted) return null
+        if (votesData?.currentVote) {
+          return (
+            <AlreadyVotedDisplay
+              currentVote={votesData.currentVote}
+              voteOptions={proposal.voteOptions}
+              unvotedCount={votesData.unvotedCount}
+            />
+          )
+        }
+      }
 
       return (
         <ConnectedVoting
@@ -112,52 +101,76 @@ export function VotingSection({
           proposal={proposal}
           keyValueStoreAddress={keyValueStoreAddress}
           accountList={accountList}
-          accountsVotesResult={accountsVotesResult}
         />
       )
     })
-    .onFailure(() => <DisconnectedVoting voteOptions={proposal.voteOptions} />)
+    .onFailure(() => <DisconnectedVoting />)
     .render()
 }
 
-function VotingSkeleton({
-  voteOptions
-}: {
-  voteOptions: readonly VoteOption[]
-}) {
-  return <DisconnectedVoting voteOptions={voteOptions} />
+function DisconnectedVoting() {
+  return (
+    <div className="bg-secondary/50 border border-border p-6">
+      <h3 className="text-sm font-semibold text-foreground mb-4">
+        Cast your Vote
+      </h3>
+      <div className="text-center py-6">
+        <Wallet className="size-8 mx-auto mb-3 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Connect your wallet to vote.
+        </p>
+      </div>
+    </div>
+  )
 }
 
-function DisconnectedVoting({
-  voteOptions
-}: {
+type AlreadyVotedDisplayProps = {
+  currentVote: ProposalVotedAccount
   voteOptions: readonly VoteOption[]
-}) {
+  unvotedCount: number
+}
+
+function AlreadyVotedDisplay({ currentVote, voteOptions, unvotedCount }: AlreadyVotedDisplayProps) {
+  const votedOptionIds = new Set(currentVote.options)
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cast Your Vote</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="relative">
-          <div className="blur-sm pointer-events-none space-y-2">
-            {voteOptions.map((option) => (
-              <OptionButton
-                key={option.id}
-                label={option.label}
-                selected={false}
-                disabled
-              />
-            ))}
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-sm font-medium bg-background/80 px-3 py-1.5 rounded">
-              Connect wallet to vote
-            </p>
-          </div>
+    <div className="bg-secondary/50 border border-border p-6">
+      <h3 className="text-sm font-semibold text-foreground mb-4">
+        Your Vote
+      </h3>
+      <div className="flex flex-col gap-3">
+        {voteOptions.map((opt, index) => {
+          const isVoted = votedOptionIds.has(opt.id)
+          const color = getProposalVoteColor(index)
+          return (
+            <div
+              key={opt.id}
+              className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all ${
+                isVoted
+                  ? `${color.selected} font-medium`
+                  : 'bg-muted border-border text-muted-foreground'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                {opt.label}
+              </span>
+              {isVoted && <CheckCircle className="size-4" />}
+            </div>
+          )
+        })}
+      </div>
+
+      {unvotedCount > 0 && (
+        <div className="flex items-start gap-2 mt-4 text-xs text-muted-foreground bg-secondary/80 border border-border p-2.5">
+          <ArrowRightLeft className="size-3.5 shrink-0 mt-0.5" />
+          <span>
+            {unvotedCount === 1
+              ? 'You have 1 connected account that hasn\'t voted yet. Switch accounts to cast their vote.'
+              : `You have ${unvotedCount} connected accounts that haven't voted yet. Switch accounts to cast their votes.`}
+          </span>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
 
@@ -166,7 +179,6 @@ type ConnectedVotingProps = {
   proposal: Proposal
   keyValueStoreAddress: KeyValueStoreAddress
   accountList: WalletDataStateAccount[]
-  accountsVotesResult: Result.Result<ProposalVotedAccount[], unknown>
 }
 
 function ConnectedVoting({
@@ -204,56 +216,73 @@ function ConnectedVoting({
 
     const accountsToVote = voteAllAccounts ? accountList : [currentAccount]
 
+    const selectedOptionLabels = proposal.voteOptions
+      .filter((o) => selectedOptions.has(o.id))
+      .map((o) => o.label)
+
     voteBatch({
       accounts: accountsToVote.filter(
         (acc): acc is WalletDataStateAccount => acc !== undefined
       ),
       proposalId,
       keyValueStoreAddress,
-      optionIds: Array.from(selectedOptions)
+      optionIds: Array.from(selectedOptions),
+      selectedOptionLabels
     })
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cast Your Vote</CardTitle>
-        {maxSelections > 1 && (
-          <p className="text-sm text-muted-foreground">
-            Select up to {maxSelections} options
-          </p>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          {proposal.voteOptions.map((option) => (
-            <OptionButton
-              key={option.id}
-              label={option.label}
-              selected={selectedOptions.has(option.id)}
-              onClick={() => handleOptionToggle(option.id)}
-              disabled={isSubmitting}
-            />
-          ))}
+    <div className="bg-secondary/50 border border-border p-6">
+      <h3 className="text-sm font-semibold text-foreground mb-4">
+        Cast your Vote
+      </h3>
+
+      {maxSelections > 1 && (
+        <p className="text-sm text-muted-foreground mb-4">
+          Select up to {maxSelections} options
+        </p>
+      )}
+
+      <div className="flex flex-col gap-3 mb-4">
+        {proposal.voteOptions.map((option, index) => (
+          <OptionButton
+            key={option.id}
+            label={option.label}
+            selected={selectedOptions.has(option.id)}
+            selectedClass={getProposalVoteColor(index).selected}
+            onClick={() => handleOptionToggle(option.id)}
+            disabled={isSubmitting}
+          />
+        ))}
+      </div>
+
+      {accountList.length >= 2 && (
+        <div className="flex items-center space-x-2 mb-4">
+          <Checkbox
+            id="vote-all-proposal"
+            checked={voteAllAccounts}
+            onCheckedChange={(checked) => setVoteAllAccounts(checked === true)}
+            disabled={isSubmitting}
+          />
+          <label htmlFor="vote-all-proposal" className="text-sm">
+            Use all connected accounts ({accountList.length})
+          </label>
         </div>
+      )}
 
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSubmitting || selectedOptions.size === 0}
-          className="w-full"
-        >
-          {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
-          Submit Vote
-        </Button>
-
-        <VoteAllCheckbox
-          checked={voteAllAccounts}
-          onCheckedChange={setVoteAllAccounts}
-          disabled={isSubmitting}
-          accountCount={accountList.length}
-        />
-      </CardContent>
-    </Card>
+      <Button
+        type="button"
+        onClick={handleSubmit}
+        disabled={isSubmitting || selectedOptions.size === 0}
+        className={cn(
+          'w-full',
+          selectedOptions.size > 0 &&
+            'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500 border-transparent'
+        )}
+      >
+        {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
+        Sign Transaction
+      </Button>
+    </div>
   )
 }

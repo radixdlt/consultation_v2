@@ -49,3 +49,31 @@ function getAddressType(
   if (address.startsWith('validator_')) return 'validator'
   return 'account' // Default fallback
 }
+
+export function formatXrd(value: number): string {
+  if (!Number.isFinite(value) || value < 0) {
+    return '0.00'
+  }
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(2)}M`
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(2)}K`
+  }
+  return value.toFixed(2)
+}
+
+export function formatDateTime(date: Date): string {
+  return date.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+}
+
+export function formatDateRange(start: Date, deadline: Date): string {
+  return `${formatDateTime(start)} – ${formatDateTime(deadline)}`
+}

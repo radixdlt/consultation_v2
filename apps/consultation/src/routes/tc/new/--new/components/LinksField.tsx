@@ -1,5 +1,5 @@
 import { useStore } from '@tanstack/react-form'
-import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { LinkIcon, PlusIcon, XIcon } from 'lucide-react'
 import { useId, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,9 +41,14 @@ export const LinksField = withForm({
 
     return (
       <FieldGroup>
-        <FieldLabel>Additional Links</FieldLabel>
+        <FieldLabel>
+          External Links
+          <span className="text-muted-foreground font-normal ml-2">
+            (optional)
+          </span>
+        </FieldLabel>
         <FieldDescription>
-          Add any other relevant links (documentation, resources, etc.)
+          Links to discussions, documentation, or related resources
         </FieldDescription>
 
         <div className="flex flex-col gap-2">
@@ -65,6 +70,9 @@ export const LinksField = withForm({
                 return (
                   <Field data-invalid={isLinkInvalid}>
                     <div className="flex gap-2">
+                      <div className="flex items-center justify-center w-10 shrink-0 bg-muted text-muted-foreground border border-border">
+                        <LinkIcon className="size-4" />
+                      </div>
                       <Input
                         id={linkInputId}
                         name={linkField.name}
@@ -76,15 +84,18 @@ export const LinksField = withForm({
                         placeholder="https://..."
                         className="flex-1"
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleRemove(index)}
-                        aria-label={`Remove link ${index + 1}`}
-                      >
-                        <Trash2Icon className="size-4" />
-                      </Button>
+                      {links.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemove(index)}
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label={`Remove link ${index + 1}`}
+                        >
+                          <XIcon className="size-4" />
+                        </Button>
+                      )}
                     </div>
                     {isLinkInvalid && (
                       <FieldError errors={linkField.state.meta.errors} />
@@ -96,10 +107,18 @@ export const LinksField = withForm({
           ))}
         </div>
 
-        <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
-          <PlusIcon className="size-4" />
-          Add Link
-        </Button>
+        {links.length < 10 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleAdd}
+            className="w-fit mt-1 text-muted-foreground"
+          >
+            <PlusIcon className="size-3" />
+            Add another link
+          </Button>
+        )}
       </FieldGroup>
     )
   }

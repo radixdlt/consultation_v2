@@ -1,15 +1,13 @@
 import { Result, useAtom, useAtomValue } from '@effect-atom/atom-react'
 import { useNavigate } from '@tanstack/react-router'
 import { Option } from 'effect'
-import { ArrowRight, LoaderIcon, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, LoaderIcon } from 'lucide-react'
 import { useCallback } from 'react'
 import type {
   ProposalId,
   TemperatureCheckId
 } from 'shared/governance/brandedTypes'
 import { isAdminAtom, promoteToProposalAtom } from '@/atom/adminAtom'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
 
 type PromoteToProposalProps = {
@@ -22,13 +20,13 @@ export function PromoteToProposal({
   elevatedProposalId
 }: PromoteToProposalProps) {
   if (Option.isSome(elevatedProposalId)) {
-    return <ElevatedCard proposalId={elevatedProposalId.value} />
+    return <ElevatedBanner proposalId={elevatedProposalId.value} />
   }
 
-  return <AdminPromoteCard temperatureCheckId={temperatureCheckId} />
+  return <AdminPromoteBadge temperatureCheckId={temperatureCheckId} />
 }
 
-function ElevatedCard({ proposalId }: { proposalId: ProposalId }) {
+function ElevatedBanner({ proposalId }: { proposalId: ProposalId }) {
   const navigate = useNavigate()
 
   const handleNavigate = useCallback(() => {
@@ -36,32 +34,18 @@ function ElevatedCard({ proposalId }: { proposalId: ProposalId }) {
   }, [navigate, proposalId])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ShieldCheck className="size-4" />
-          Proposal
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground mb-3">
-          This temperature check has been elevated to a proposal.
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleNavigate}
-          className="w-full"
-        >
-          View Proposal
-          <ArrowRight className="size-4" />
-        </Button>
-      </CardContent>
-    </Card>
+    <button
+      type="button"
+      onClick={handleNavigate}
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 hover:text-foreground transition-colors cursor-pointer"
+    >
+      Elevated to GP #{String(proposalId)}
+      <ArrowUpRight className="size-3" />
+    </button>
   )
 }
 
-function AdminPromoteCard({
+function AdminPromoteBadge({
   temperatureCheckId
 }: {
   temperatureCheckId: TemperatureCheckId
@@ -70,17 +54,15 @@ function AdminPromoteCard({
 
   if (!currentAccount) return null
 
-  const accountAddress = currentAccount.address
-
   return (
-    <AdminPromoteCardWithAddress
+    <AdminPromoteBadgeWithAddress
       temperatureCheckId={temperatureCheckId}
-      accountAddress={accountAddress}
+      accountAddress={currentAccount.address}
     />
   )
 }
 
-function AdminPromoteCardWithAddress({
+function AdminPromoteBadgeWithAddress({
   temperatureCheckId,
   accountAddress
 }: {
@@ -95,12 +77,12 @@ function AdminPromoteCardWithAddress({
     .onSuccess((isAdmin) => {
       if (!isAdmin) return null
 
-      return <PromoteCard temperatureCheckId={temperatureCheckId} />
+      return <PromoteBadge temperatureCheckId={temperatureCheckId} />
     })
     .render()
 }
 
-function PromoteCard({
+function PromoteBadge({
   temperatureCheckId
 }: {
   temperatureCheckId: TemperatureCheckId
@@ -108,30 +90,32 @@ function PromoteCard({
   const [promoteResult, promote] = useAtom(promoteToProposalAtom)
 
   const isSubmitting = promoteResult.waiting
+  const hasError = Result.builder(promoteResult)
+    .onFailure(() => true)
+    .orNull() ?? false
 
   const handlePromote = useCallback(() => {
     promote(temperatureCheckId)
   }, [promote, temperatureCheckId])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ShieldCheck className="size-4" />
-          Admin
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Button
-          type="button"
-          onClick={handlePromote}
-          disabled={isSubmitting}
-          className="w-full"
-        >
-          {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
-          Promote to Proposal
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handlePromote}
+        disabled={isSubmitting}
+        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/60 transition-colors cursor-pointer disabled:opacity-50"
+      >
+        {isSubmitting ? (
+          <LoaderIcon className="size-3 animate-spin" />
+        ) : (
+          <ArrowUpRight className="size-3" />
+        )}
+        Promote to GP
+      </button>
+      {hasError && (
+        <span className="text-xs text-destructive">Promotion failed</span>
+      )}
+    </div>
   )
 }

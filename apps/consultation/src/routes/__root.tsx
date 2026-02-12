@@ -15,8 +15,7 @@ import appCss from '../styles.css?url'
 const themeScript = `
   (function() {
     const stored = localStorage.getItem('vite-ui-theme');
-    const theme = stored === 'dark' || stored === 'light' ? stored :
-      (stored === 'system' || !stored) && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const theme = stored === 'dark' || stored === 'light' ? stored : 'dark';
     document.documentElement.classList.add(theme);
   })();
 `
@@ -32,13 +31,22 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1'
       },
       {
-        title: 'TanStack Start Starter'
+        title: 'Radix Consultation'
       }
     ],
     links: [
       {
         rel: 'stylesheet',
         href: appCss
+      },
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.googleapis.com'
+      },
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossOrigin: 'anonymous'
       }
     ],
     scripts: [
@@ -56,7 +64,7 @@ function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-foreground mb-2">404</h1>
+        <h1 className="text-4xl font-light text-foreground mb-2">404</h1>
         <p className="text-muted-foreground">Page not found</p>
       </div>
     </div>
@@ -68,8 +76,15 @@ function RootComponent() {
     <RegistryProvider>
       <Toaster />
       <ThemeProvider>
-        <Header />
-        <Outlet />
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <main className="flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <Outlet />
+          </main>
+          <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+            Powered by Radix DLT
+          </footer>
+        </div>
       </ThemeProvider>
     </RegistryProvider>
   )

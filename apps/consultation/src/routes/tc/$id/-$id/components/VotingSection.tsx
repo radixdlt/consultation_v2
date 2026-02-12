@@ -1,104 +1,23 @@
 import { Result, useAtom, useAtomValue } from '@effect-atom/atom-react'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
-import { LoaderIcon } from 'lucide-react'
+import { ArrowRightLeft, Check, CheckCircle, LoaderIcon, ThumbsDown, ThumbsUp, Wallet } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
 import type { KeyValueStoreAddress } from 'shared/schemas'
 import { accountsAtom } from '@/atom/dappToolkitAtom'
 import { voteOnTemperatureCheckBatchAtom } from '@/atom/temperatureChecksAtom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
+import { getTcVoteColor } from '@/lib/voting'
 import type { VotedAccount } from '../types'
 
 type Vote = 'For' | 'Against'
 
-type VoteButtonProps = {
-  vote: Vote
-  onClick?: () => void
-  disabled?: boolean
-  loading?: boolean
-}
-
-function VoteButton({ vote, onClick, disabled, loading }: VoteButtonProps) {
-  const colorClasses =
-    vote === 'For'
-      ? 'bg-emerald-600 hover:bg-emerald-700'
-      : 'bg-rose-600 hover:bg-rose-700'
-
-  return (
-    <Button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex-1 ${colorClasses} font-bold`}
-    >
-      {loading && <LoaderIcon className="size-4 animate-spin" />}
-      {vote}
-    </Button>
-  )
-}
-
-type VoteButtonsProps = {
-  onVote?: (vote: Vote) => void
-  disabled?: boolean
-  loadingVote?: Vote | null
-}
-
-type VoteAllCheckboxProps = {
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-  disabled?: boolean
-  accountCount: number
-}
-
-function VoteAllCheckbox({
-  checked,
-  onCheckedChange,
-  disabled,
-  accountCount
-}: VoteAllCheckboxProps) {
-  if (accountCount < 2) return null
-
-  return (
-    <div className="flex items-center space-x-2">
-      <Checkbox
-        id="vote-all"
-        checked={checked}
-        onCheckedChange={(checked) => onCheckedChange(checked === true)}
-        disabled={disabled}
-      />
-      <label htmlFor="vote-all" className="text-sm">
-        Vote with all connected accounts ({accountCount})
-      </label>
-    </div>
-  )
-}
-
-function VoteButtons({ onVote, disabled, loadingVote }: VoteButtonsProps) {
-  return (
-    <div className="flex gap-4">
-      <VoteButton
-        vote="For"
-        onClick={() => onVote?.('For')}
-        disabled={disabled}
-        loading={loadingVote === 'For'}
-      />
-      <VoteButton
-        vote="Against"
-        onClick={() => onVote?.('Against')}
-        disabled={disabled}
-        loading={loadingVote === 'Against'}
-      />
-    </div>
-  )
-}
-
 type VotingSectionProps = {
   temperatureCheckId: TemperatureCheckId
   keyValueStoreAddress: KeyValueStoreAddress
-  accountsVotesResult: Result.Result<VotedAccount[], unknown>
+  accountsVotesResult: Result.Result<VotedAccount[], unknown> | undefined
 }
 
 export function VotingSection({
@@ -107,35 +26,42 @@ export function VotingSection({
   accountsVotesResult
 }: VotingSectionProps) {
   const accounts = useAtomValue(accountsAtom)
+  const currentAccount = useCurrentAccount()
 
   return Result.builder(accounts)
-    .onInitial(() => <VotingSkeleton />)
+    .onInitial(() => <DisconnectedVoting />)
     .onSuccess((accountList) => {
       if (accountList.length === 0) {
         return <DisconnectedVoting />
       }
 
-      // Check if all accounts have voted
-      const allAccountsVoted = Result.builder(accountsVotesResult)
-        .onSuccess(
-          (votes) =>
-            accountList.length > 0 &&
-            accountList.every((acc) =>
-              votes.some((v) => v.address === acc.address)
-            )
-        )
-        .onInitial(() => false)
-        .onFailure(() => false)
-        .render()
+      if (accountsVotesResult && currentAccount) {
+        const votesData = Result.builder(accountsVotesResult)
+          .onSuccess((votes) => ({
+            currentVote: votes.find((v) => v.address === currentAccount.address),
+            unvotedCount: accountList.filter(
+              (acc) => !votes.some((v) => v.address === acc.address)
+            ).length
+          }))
+          .onInitial(() => undefined)
+          .onFailure(() => undefined)
+          .render()
 
-      if (allAccountsVoted) return null
+        if (votesData?.currentVote) {
+          return (
+            <AlreadyVotedDisplay
+              vote={votesData.currentVote.vote}
+              unvotedCount={votesData.unvotedCount}
+            />
+          )
+        }
+      }
 
       return (
         <ConnectedVoting
           temperatureCheckId={temperatureCheckId}
           keyValueStoreAddress={keyValueStoreAddress}
           accountList={accountList}
-          accountsVotesResult={accountsVotesResult}
         />
       )
     })
@@ -143,29 +69,71 @@ export function VotingSection({
     .render()
 }
 
-function VotingSkeleton() {
-  return <DisconnectedVoting />
-}
-
 function DisconnectedVoting() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cast Your Vote</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="relative">
-          <div className="blur-sm pointer-events-none">
-            <VoteButtons disabled />
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-sm font-medium bg-background/80 px-3 py-1.5 rounded">
-              Connect wallet to vote
-            </p>
-          </div>
+    <div className="bg-secondary/50 border border-border p-6">
+      <h3 className="text-sm font-semibold text-foreground mb-4">
+        Cast your Vote
+      </h3>
+      <div className="text-center py-6">
+        <Wallet className="size-8 mx-auto mb-3 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Connect your wallet to vote.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+type AlreadyVotedDisplayProps = {
+  vote: 'For' | 'Against'
+  unvotedCount: number
+}
+
+function AlreadyVotedDisplay({ vote, unvotedCount }: AlreadyVotedDisplayProps) {
+  return (
+    <div className="bg-secondary/50 border border-border p-6">
+      <h3 className="text-sm font-semibold text-foreground mb-4">
+        Your Vote
+      </h3>
+      <div className="flex flex-col gap-3">
+        {(['For', 'Against'] as const).map((opt) => {
+          const isVoted = vote === opt
+          const color = getTcVoteColor(opt)
+          return (
+            <div
+              key={opt}
+              className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all ${
+                isVoted
+                  ? `${color.selected} font-medium`
+                  : 'bg-muted border-border text-muted-foreground'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                {opt === 'For' ? (
+                  <ThumbsUp className="size-4" />
+                ) : (
+                  <ThumbsDown className="size-4" />
+                )}
+                {opt.toUpperCase()}
+              </span>
+              {isVoted && <CheckCircle className="size-4" />}
+            </div>
+          )
+        })}
+      </div>
+
+      {unvotedCount > 0 && (
+        <div className="flex items-start gap-2 mt-4 text-xs text-muted-foreground bg-secondary/80 border border-border p-2.5">
+          <ArrowRightLeft className="size-3.5 shrink-0 mt-0.5" />
+          <span>
+            {unvotedCount === 1
+              ? 'You have 1 connected account that hasn\'t voted yet. Switch accounts to cast their vote.'
+              : `You have ${unvotedCount} connected accounts that haven't voted yet. Switch accounts to cast their votes.`}
+          </span>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
 
@@ -173,7 +141,6 @@ type ConnectedVotingProps = {
   temperatureCheckId: TemperatureCheckId
   keyValueStoreAddress: KeyValueStoreAddress
   accountList: WalletDataStateAccount[]
-  accountsVotesResult: Result.Result<VotedAccount[], unknown>
 }
 
 function ConnectedVoting({
@@ -190,52 +157,90 @@ function ConnectedVoting({
 
   const isSubmitting = voteResult.waiting
 
-  const handleVote = useCallback(
-    (voteChoice: Vote) => {
-      setSelectedVote(voteChoice)
+  const handleVote = useCallback(() => {
+    if (!selectedVote) return
 
-      const accountsToVote = voteAllAccounts
-        ? accountList
-        : currentAccount
-          ? [currentAccount]
-          : []
+    const accountsToVote = voteAllAccounts
+      ? accountList
+      : currentAccount
+        ? [currentAccount]
+        : []
 
-      voteBatch({
-        accounts: accountsToVote,
-        temperatureCheckId,
-        keyValueStoreAddress,
-        vote: voteChoice
-      })
-    },
-    [
-      accountList,
+    voteBatch({
+      accounts: accountsToVote,
       temperatureCheckId,
       keyValueStoreAddress,
-      voteBatch,
-      voteAllAccounts,
-      currentAccount
-    ]
-  )
+      vote: selectedVote
+    })
+  }, [
+    accountList,
+    temperatureCheckId,
+    keyValueStoreAddress,
+    voteBatch,
+    voteAllAccounts,
+    currentAccount,
+    selectedVote
+  ])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cast Your Vote</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <VoteButtons
-          onVote={handleVote}
-          disabled={isSubmitting}
-          loadingVote={isSubmitting ? selectedVote : null}
-        />
+    <div className="bg-secondary/50 border border-border p-6">
+      <h3 className="text-sm font-semibold text-foreground mb-4">
+        Cast your Vote
+      </h3>
 
-        <VoteAllCheckbox
-          checked={voteAllAccounts}
-          onCheckedChange={setVoteAllAccounts}
-          disabled={isSubmitting}
-          accountCount={accountList.length}
-        />
-      </CardContent>
-    </Card>
+      <div className="flex flex-col gap-3 mb-4">
+        {(['For', 'Against'] as const).map((opt) => {
+          const isSelected = selectedVote === opt
+          const color = getTcVoteColor(opt)
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setSelectedVote(opt)}
+              disabled={isSubmitting}
+              className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all cursor-pointer ${
+                isSelected
+                  ? `${color.selected} font-medium`
+                  : 'bg-transparent border-border text-foreground hover:border-muted-foreground hover:bg-secondary/50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                {opt === 'For' ? (
+                  <ThumbsUp className="size-4" />
+                ) : (
+                  <ThumbsDown className="size-4" />
+                )}
+                {opt.toUpperCase()}
+              </span>
+              {isSelected && <Check className="size-4" />}
+            </button>
+          )
+        })}
+      </div>
+
+      {accountList.length >= 2 && (
+        <div className="flex items-center space-x-2 mb-4">
+          <Checkbox
+            id="vote-all"
+            checked={voteAllAccounts}
+            onCheckedChange={(checked) => setVoteAllAccounts(checked === true)}
+            disabled={isSubmitting}
+          />
+          <label htmlFor="vote-all" className="text-sm">
+            Use all connected accounts ({accountList.length})
+          </label>
+        </div>
+      )}
+
+      <Button
+        type="button"
+        onClick={handleVote}
+        disabled={!selectedVote || isSubmitting}
+        className={`w-full ${selectedVote ? 'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500 border-transparent' : ''}`}
+      >
+        {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
+        Sign Transaction
+      </Button>
+    </div>
   )
 }

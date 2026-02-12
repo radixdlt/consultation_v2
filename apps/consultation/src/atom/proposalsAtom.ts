@@ -2,6 +2,7 @@ import { Atom } from '@effect-atom/atom-react'
 import { AccountAddress } from '@radix-effects/shared'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
 import { Data, Effect, Layer, Option } from 'effect'
+import { truncateAddress } from '@/lib/utils'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import type { ProposalId } from 'shared/governance/brandedTypes'
 import {
@@ -100,14 +101,14 @@ const componentErrorMessage = {
   accountAlreadyVoted: 'accountAlreadyVoted'
 } as const
 
-const voteOnProposal = (input: MakeProposalVoteInput) =>
+const voteOnProposal = (input: MakeProposalVoteInput, message?: string) =>
   Effect.gen(function* () {
     const governanceComponent = yield* GovernanceComponent
     const sendTransaction = yield* SendTransaction
 
     const manifest = yield* governanceComponent.makeProposalVoteManifest(input)
 
-    return yield* sendTransaction(manifest, 'Proposal vote').pipe(
+    return yield* sendTransaction(manifest, message ?? 'Proposal vote').pipe(
       Effect.catchTag('WalletErrorResponse', (error) =>
         Effect.gen(function* () {
           if (
@@ -135,6 +136,7 @@ export const voteOnProposalBatchAtom = runtime.fn(
         proposalId: ProposalId
         keyValueStoreAddress: KeyValueStoreAddress
         optionIds: number[]
+        selectedOptionLabels: string[]
       },
       get
     ) {
@@ -167,11 +169,12 @@ export const voteOnProposalBatchAtom = runtime.fn(
       const results: VoteResult[] = []
 
       for (const account of accountsToVote) {
+        const message = `Vote ${input.selectedOptionLabels.join(', ')} on GP #${input.proposalId} with ${truncateAddress(account.address)}`
         const result = yield* voteOnProposal({
           accountAddress: AccountAddress.make(account.address),
           proposalId: input.proposalId,
           optionIds: input.optionIds
-        }).pipe(
+        }, message).pipe(
           Effect.map(
             (): VoteResult => ({ account: account.address, success: true })
           ),
