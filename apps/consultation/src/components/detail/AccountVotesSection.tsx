@@ -91,15 +91,15 @@ export function AccountVotesSection({
         return Number(b.votePower) - Number(a.votePower)
       })
 
-      const filteredVoters =
+      const filteredCount =
         selectedVote === null
-          ? sortedVoters
-          : sortedVoters.filter((v) => v.vote === selectedVote)
+          ? sortedVoters.length
+          : sortedVoters.filter((v) => v.vote === selectedVote).length
 
       return (
         <div className="bg-card border border-border p-6 shadow-sm">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-            Voters ({filteredVoters.length}
+            Voters ({filteredCount}
             {selectedVote !== null ? ` / ${accountVotes.length}` : ''})
           </h3>
 
@@ -133,40 +133,52 @@ export function AccountVotesSection({
           </div>
 
           {/* Voters list */}
-          <div className="space-y-3 max-h-36 overflow-y-auto">
-            {filteredVoters.length === 0 ? (
+          <div className="max-h-36 overflow-y-auto">
+            {filteredCount === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No voters for this option yet.
               </p>
             ) : (
-              filteredVoters.map((voter) => {
-                const dotColor =
-                  colorByKey.get(voter.vote)?.dot ?? 'bg-neutral-500'
+              <div className="space-y-3">
+                {sortedVoters.map((voter, index) => {
+                  const dotColor =
+                    colorByKey.get(voter.vote)?.dot ?? 'bg-neutral-500'
+                  const isVisible =
+                    selectedVote === null || voter.vote === selectedVote
+                  const isLastVisible =
+                    isVisible &&
+                    !sortedVoters
+                      .slice(index + 1)
+                      .some(
+                        (v) =>
+                          selectedVote === null || v.vote === selectedVote
+                      )
 
-                return (
-                  <div
-                    key={`${voter.accountAddress}-${voter.vote}`}
-                    className="flex items-center justify-between text-sm border-b border-border/50 pb-2 last:border-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`size-2 rounded-full ${dotColor}`}
-                      />
-                      <AddressLink
-                        address={voter.accountAddress}
-                        prefixLength={8}
-                        suffixLength={4}
-                        className="font-mono text-xs text-muted-foreground"
-                      />
+                  return (
+                    <div
+                      key={`${voter.accountAddress}-${voter.vote}`}
+                      className={`flex items-center justify-between text-sm pb-2 ${isVisible ? 'opacity-100' : 'hidden'} ${isLastVisible ? '' : 'border-b border-border/50'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`size-2 rounded-full ${dotColor}`}
+                        />
+                        <AddressLink
+                          address={voter.accountAddress}
+                          prefixLength={8}
+                          suffixLength={4}
+                          className="font-mono text-xs text-muted-foreground"
+                        />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-muted-foreground">
+                          {formatXrd(Number(voter.votePower))} XRD
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs text-muted-foreground">
-                        {formatXrd(Number(voter.votePower))} XRD
-                      </span>
-                    </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+              </div>
             )}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { Result, useAtomValue } from '@effect-atom/atom-react'
 import type { EntityId, EntityType } from 'shared/governance/brandedTypes'
 import { voteResultsAtom } from '@/atom/voteResultsAtom'
+import { Skeleton } from '@/components/ui/skeleton'
 import { formatXrd } from '@/lib/utils'
 
 type QuorumProgressProps = {
@@ -21,9 +22,7 @@ export function QuorumProgress({
   )
 
   return Result.builder(voteResultsResult)
-    .onInitial(() => (
-      <QuorumProgressDisplay quorumProgress={0} totalPower={0} isActive={isActive} />
-    ))
+    .onInitial(() => <QuorumProgressSkeleton />)
     .onFailure(() => (
       <QuorumProgressDisplay quorumProgress={0} totalPower={0} isActive={isActive} />
     ))
@@ -50,6 +49,24 @@ type QuorumProgressDisplayProps = {
   quorumProgress: number
   totalPower: number
   isActive?: boolean
+}
+
+function QuorumProgressSkeleton() {
+  return (
+    <div className="flex flex-row sm:flex-col gap-8 sm:gap-4">
+      <div className="flex-1 sm:flex-none">
+        <div className="text-xs text-neutral-500 uppercase mb-1">
+          Quorum Progress
+        </div>
+        <Skeleton className="h-7 w-12 mt-0.5" />
+        <Skeleton className="w-full h-1.5 mt-2" />
+      </div>
+      <div>
+        <div className="text-xs text-neutral-500 uppercase mb-1">Votes</div>
+        <Skeleton className="h-5 w-20" />
+      </div>
+    </div>
+  )
 }
 
 function QuorumProgressDisplay({
