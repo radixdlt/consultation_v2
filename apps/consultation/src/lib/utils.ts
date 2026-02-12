@@ -64,12 +64,13 @@ export function formatXrd(value: number): string {
 }
 
 export function formatDateTime(date: Date): string {
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
+  return date.toLocaleString('en-GB', {
     day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
   })
 }
 
