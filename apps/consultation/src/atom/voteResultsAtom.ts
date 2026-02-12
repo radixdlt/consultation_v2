@@ -1,6 +1,7 @@
 import { Atom } from '@effect-atom/atom-react'
 import { Effect, Stream } from 'effect'
 import { type EntityId, type EntityType } from 'shared/governance/brandedTypes'
+import { accountVotesAtom } from '@/atom/accountVotesAtom'
 import { VoteClient, voteClientRuntime } from '@/atom/voteClient'
 import { VoteEventSource } from '@/lib/voteEventSource'
 
@@ -35,7 +36,10 @@ export const voteUpdatesAtom = Atom.family((type: EntityType) =>
 
           yield* Stream.merge(voteUpdates, reconnections).pipe(
             Stream.runForEach(() =>
-              Effect.sync(() => get.refresh(voteResultsAtom(type)(entityId)))
+              Effect.sync(() => {
+                get.refresh(voteResultsAtom(type)(entityId))
+                get.refresh(accountVotesAtom(type)(entityId))
+              })
             )
           )
         })
