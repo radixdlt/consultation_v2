@@ -1,9 +1,6 @@
 import { Atom } from '@effect-atom/atom-react'
-import {
-  GetFungibleBalance,
-  GetLedgerStateService
-} from '@radix-effects/gateway'
-import { AccountAddress, StateVersion } from '@radix-effects/shared'
+import { GetFungibleBalance } from '@radix-effects/gateway'
+import { AccountAddress } from '@radix-effects/shared'
 import { Effect, Layer, Option } from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
@@ -25,7 +22,6 @@ const runtime = makeAtomRuntime(
   Layer.mergeAll(
     GovernanceComponent.Default,
     GetFungibleBalance.Default,
-    GetLedgerStateService.Default,
     SendTransaction.Default
   ).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
@@ -40,17 +36,9 @@ export const isAdminAtom = Atom.family((accountAddress: string) =>
     Effect.gen(function* () {
       const config = yield* Config
       const getFungibleBalance = yield* GetFungibleBalance
-      const getLedgerState = yield* GetLedgerStateService
-
-      const stateVersion = yield* getLedgerState({
-        at_ledger_state: { timestamp: new Date() }
-      }).pipe(Effect.map((result) => StateVersion.make(result.state_version)))
 
       const balances = yield* getFungibleBalance({
-        addresses: [accountAddress],
-        at_ledger_state: {
-          state_version: stateVersion
-        }
+        addresses: [accountAddress]
       })
 
       return balances.some((account) =>

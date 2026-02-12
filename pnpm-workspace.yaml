@@ -15,7 +15,7 @@ catalog:
   '@effect/sql-drizzle': ^0.47.0
   '@effect/sql-pg': ^0.49.7
   '@effect/vitest': ^0.27.0
-  '@radix-effects/gateway': ^0.4.2
+  '@radix-effects/gateway': ^0.5.0
   '@radix-effects/shared': ^0.0.1
   '@radixdlt/babylon-gateway-api-sdk': ^1.10.1
   '@types/node': ^25.0.0

@@ -1,6 +1,6 @@
 import { Atom } from '@effect-atom/atom-react'
-import { GatewayApiClient, GetLedgerStateService } from '@radix-effects/gateway'
-import { AccountAddress, StateVersion } from '@radix-effects/shared'
+import { GatewayApiClient } from '@radix-effects/gateway'
+import { AccountAddress } from '@radix-effects/shared'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
 import { Array as A, Data, Effect, Layer, Option, pipe } from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
@@ -31,7 +31,6 @@ import { withToast } from './withToast'
 const runtime = makeAtomRuntime(
   Layer.mergeAll(
     GovernanceComponent.Default,
-    GetLedgerStateService.Default,
     SendTransaction.Default
   ).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
@@ -44,14 +43,7 @@ export const temperatureChecksAtom = runtime.atom(
   Effect.gen(function* () {
     const governanceComponent = yield* GovernanceComponent
 
-    const ledgerState = yield* GetLedgerStateService
-    const stateVersion = yield* ledgerState({
-      at_ledger_state: {
-        timestamp: new Date()
-      }
-    }).pipe(Effect.map((result) => StateVersion.make(result.state_version)))
-
-    return yield* governanceComponent.getTemperatureChecks(stateVersion)
+    return yield* governanceComponent.getTemperatureChecks()
   })
 )
 
