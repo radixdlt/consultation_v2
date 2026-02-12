@@ -216,13 +216,18 @@ function ConnectedVoting({
 
     const accountsToVote = voteAllAccounts ? accountList : [currentAccount]
 
+    const selectedOptionLabels = proposal.voteOptions
+      .filter((o) => selectedOptions.has(o.id))
+      .map((o) => o.label)
+
     voteBatch({
       accounts: accountsToVote.filter(
         (acc): acc is WalletDataStateAccount => acc !== undefined
       ),
       proposalId,
       keyValueStoreAddress,
-      optionIds: Array.from(selectedOptions)
+      optionIds: Array.from(selectedOptions),
+      selectedOptionLabels
     })
   }
 

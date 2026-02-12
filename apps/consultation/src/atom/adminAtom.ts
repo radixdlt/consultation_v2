@@ -75,7 +75,7 @@ export const promoteToProposalAtom = runtime.fn(
 
       yield* Effect.log('Promote to proposal manifest:', manifest)
 
-      const result = yield* sendTransaction(manifest, 'Promote to proposal')
+      const result = yield* sendTransaction(manifest, `Promoting TC #${temperatureCheckId} to Proposal`)
 
       get.refresh(getTemperatureCheckByIdAtom(temperatureCheckId))
 
