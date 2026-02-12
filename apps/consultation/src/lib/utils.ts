@@ -63,7 +63,8 @@ export function formatXrd(value: number): string {
 export function formatDateRange(start: Date, deadline: Date): string {
   const dateOptions: Intl.DateTimeFormatOptions = {
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    year: 'numeric'
   }
 
   const timeOptions: Intl.DateTimeFormatOptions = {
@@ -74,11 +75,7 @@ export function formatDateRange(start: Date, deadline: Date): string {
   const startDate = start.toLocaleDateString('en-US', dateOptions)
   const startTime = start.toLocaleTimeString('en-US', timeOptions)
 
-  const deadlineDate = deadline.toLocaleDateString('en-US', {
-    ...dateOptions,
-    year:
-      start.getFullYear() !== deadline.getFullYear() ? 'numeric' : undefined
-  })
+  const deadlineDate = deadline.toLocaleDateString('en-US', dateOptions)
   const deadlineTime = deadline.toLocaleTimeString('en-US', timeOptions)
 
   return `${startDate} ${startTime} – ${deadlineDate} ${deadlineTime}`

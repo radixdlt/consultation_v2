@@ -59,17 +59,17 @@ export function ItemCard({
             {shortDescription}
           </p>
 
-          <div className="pt-2 flex items-center text-xs text-neutral-500 gap-4">
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center text-xs text-neutral-500 gap-1 sm:gap-4">
             <span>
               By <AddressLink address={author} />
             </span>
-            <span>&middot;</span>
+            <span className="hidden sm:inline">&middot;</span>
             <span>{formatDateRange(start, deadline)}</span>
           </div>
         </div>
 
         {/* Mini Stats */}
-        <div className="sm:w-48 flex sm:flex-col justify-between sm:justify-center sm:items-center gap-4 sm:border-l border-neutral-100 dark:border-neutral-800 sm:pl-6">
+        <div className="sm:w-48 flex sm:flex-col justify-between sm:justify-center sm:items-center gap-4 border-t sm:border-t-0 sm:border-l border-neutral-100 dark:border-neutral-800 pt-4 sm:pt-0 sm:pl-6">
           <QuorumProgress
             entityType={entityType}
             entityId={entityId}

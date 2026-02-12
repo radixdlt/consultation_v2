@@ -61,9 +61,9 @@ function QuorumProgressDisplay({
   const isHighProgress = quorumProgress >= 100
 
   return (
-    <div className="flex flex-col justify-center gap-4">
+    <div className="flex flex-row sm:flex-col gap-8 sm:gap-4">
       {/* Quorum Progress */}
-      <div>
+      <div className="flex-1 sm:flex-none">
         <div className="text-xs text-neutral-500 uppercase mb-1">
           Quorum Progress
         </div>
@@ -80,7 +80,7 @@ function QuorumProgressDisplay({
         </div>
       </div>
 
-      {/* Votes */}
+      {/* Votes - beside quorum on mobile, below on desktop */}
       <div>
         <div className="text-xs text-neutral-500 uppercase mb-1">Votes</div>
         <div className="text-sm font-mono text-neutral-700 dark:text-neutral-300">
