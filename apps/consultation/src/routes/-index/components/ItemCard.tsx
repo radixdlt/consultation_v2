@@ -1,11 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { EntityId, type EntityType } from 'shared/governance/brandedTypes'
+import { EntityId } from 'shared/governance/brandedTypes'
+import type { EntityType } from 'shared/governance/brandedTypes'
 import { AddressLink } from '@/components/AddressLink'
 import { Card } from '@/components/ui/card'
 import { formatDateRange } from '@/lib/utils'
 import { EndingSoonBadge } from './EndingSoonBadge'
 import { QuorumProgress } from './QuorumProgress'
-import { getItemStatus, type ItemStatus, StatusBadge } from './StatusBadge'
+import type { ItemStatus } from './StatusBadge'
+import { getItemStatus, StatusBadge } from './StatusBadge'
 
 type ItemCardProps = {
   id: number

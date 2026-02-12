@@ -5,13 +5,8 @@ import { accountVotesAtom } from '@/atom/accountVotesAtom'
 import { AddressLink } from '@/components/AddressLink'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatXrd } from '@/lib/utils'
-import {
-  type VoteColor,
-  getProposalVoteColor,
-  getTcVoteColor
-} from '@/lib/voteColors'
-
-type VoteOption = { readonly id: number; readonly label: string }
+import type { VoteOption } from '@/lib/voteColors'
+import { resolveVoteOptions } from '@/lib/voteColors'
 
 type AccountVotesSectionProps = {
   entityType: EntityType
@@ -29,16 +24,7 @@ export function AccountVotesSection({
   )
   const [selectedVote, setSelectedVote] = useState<string | null>(null)
 
-  const isTc = entityType === 'temperature_check'
-
-  const filterOptions = voteOptions.map((opt, index) => {
-    const key = isTc ? opt.label : String(opt.id)
-    const color: VoteColor = isTc
-      ? getTcVoteColor(opt.label)
-      : getProposalVoteColor(index)
-    return { key, label: opt.label, color }
-  })
-
+  const filterOptions = resolveVoteOptions(entityType, voteOptions)
   const colorByKey = new Map(filterOptions.map((f) => [f.key, f.color]))
 
   return Result.builder(accountVotesResult)
@@ -140,44 +126,37 @@ export function AccountVotesSection({
               </p>
             ) : (
               <div className="space-y-3">
-                {sortedVoters.map((voter, index) => {
-                  const dotColor =
-                    colorByKey.get(voter.vote)?.dot ?? 'bg-neutral-500'
-                  const isVisible =
-                    selectedVote === null || voter.vote === selectedVote
-                  const isLastVisible =
-                    isVisible &&
-                    !sortedVoters
-                      .slice(index + 1)
-                      .some(
-                        (v) =>
-                          selectedVote === null || v.vote === selectedVote
-                      )
+                {sortedVoters
+                  .filter((v) => selectedVote === null || v.vote === selectedVote)
+                  .map((voter, index, filtered) => {
+                    const dotColor =
+                      colorByKey.get(voter.vote)?.dot ?? 'bg-neutral-500'
+                    const isLast = index === filtered.length - 1
 
-                  return (
-                    <div
-                      key={`${voter.accountAddress}-${voter.vote}`}
-                      className={`flex items-center justify-between text-sm pb-2 ${isVisible ? 'opacity-100' : 'hidden'} ${isLastVisible ? '' : 'border-b border-border/50'}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`size-2 rounded-full ${dotColor}`}
-                        />
-                        <AddressLink
-                          address={voter.accountAddress}
-                          prefixLength={8}
-                          suffixLength={4}
-                          className="font-mono text-xs text-muted-foreground"
-                        />
+                    return (
+                      <div
+                        key={`${voter.accountAddress}-${voter.vote}`}
+                        className={`flex items-center justify-between text-sm pb-2 ${isLast ? '' : 'border-b border-border/50'}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`size-2 rounded-full ${dotColor}`}
+                          />
+                          <AddressLink
+                            address={voter.accountAddress}
+                            prefixLength={8}
+                            suffixLength={4}
+                            className="font-mono text-xs text-muted-foreground"
+                          />
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-muted-foreground">
+                            {formatXrd(Number(voter.votePower))} XRD
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs text-muted-foreground">
-                          {formatXrd(Number(voter.votePower))} XRD
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
               </div>
             )}
           </div>

@@ -90,24 +90,32 @@ function PromoteBadge({
   const [promoteResult, promote] = useAtom(promoteToProposalAtom)
 
   const isSubmitting = promoteResult.waiting
+  const hasError = Result.builder(promoteResult)
+    .onFailure(() => true)
+    .orNull() ?? false
 
   const handlePromote = useCallback(() => {
     promote(temperatureCheckId)
   }, [promote, temperatureCheckId])
 
   return (
-    <button
-      type="button"
-      onClick={handlePromote}
-      disabled={isSubmitting}
-      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/60 transition-colors cursor-pointer disabled:opacity-50"
-    >
-      {isSubmitting ? (
-        <LoaderIcon className="size-3 animate-spin" />
-      ) : (
-        <ArrowUpRight className="size-3" />
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handlePromote}
+        disabled={isSubmitting}
+        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/60 transition-colors cursor-pointer disabled:opacity-50"
+      >
+        {isSubmitting ? (
+          <LoaderIcon className="size-3 animate-spin" />
+        ) : (
+          <ArrowUpRight className="size-3" />
+        )}
+        Promote to GP
+      </button>
+      {hasError && (
+        <span className="text-xs text-destructive">Promotion failed</span>
       )}
-      Promote to GP
-    </button>
+    </div>
   )
 }

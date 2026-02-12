@@ -10,17 +10,13 @@ import { DetailPageLayout } from '@/components/detail/DetailPageLayout'
 import { QuorumBadge } from '@/components/detail/QuorumBadge'
 import { VoteResultsSection } from '@/components/detail/VoteResultsSection'
 import { InlineCode } from '@/components/ui/typography'
+import { TC_VOTE_OPTIONS } from '@/lib/voteColors'
 import { getItemStatus } from '@/routes/-index/components/StatusBadge'
 import { PromoteToProposal } from './components/PromoteToProposal'
 import { SidebarContent } from './components/SidebarContent'
 import { VotingSection } from './components/VotingSection'
 
 type TemperatureCheck = typeof TemperatureCheckSchema.Type
-
-const TC_VOTE_OPTIONS = [
-  { id: 0, label: 'For' },
-  { id: 1, label: 'Against' }
-] as const
 
 export function Page({ id }: { id: TemperatureCheckId }) {
   const temperatureCheck = useAtomValue(getTemperatureCheckByIdAtom(id))

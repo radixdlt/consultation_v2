@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
 import { cn } from '@/lib/utils'
 import { getProposalVoteColor } from '@/lib/voteColors'
-import type { ProposalVotedAccount, VoteOption } from '../types'
+import type { VoteOption } from '@/lib/voteColors'
+import type { ProposalVotedAccount } from '../types'
 
 type OptionButtonProps = {
   label: string

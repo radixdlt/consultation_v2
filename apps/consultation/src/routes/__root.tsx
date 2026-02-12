@@ -15,8 +15,7 @@ import appCss from '../styles.css?url'
 const themeScript = `
   (function() {
     const stored = localStorage.getItem('vite-ui-theme');
-    const theme = stored === 'dark' || stored === 'light' ? stored :
-      (stored === 'system' || !stored) ? 'dark' : 'dark';
+    const theme = stored === 'dark' || stored === 'light' ? stored : 'dark';
     document.documentElement.classList.add(theme);
   })();
 `

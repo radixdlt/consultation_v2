@@ -3,15 +3,11 @@ import type { TemperatureCheckId } from 'shared/governance/brandedTypes'
 import type { TemperatureCheckSchema } from 'shared/governance/schemas'
 import { AccountVotesSection } from '@/components/detail/AccountVotesSection'
 import { VoteResultsSection } from '@/components/detail/VoteResultsSection'
+import { TC_VOTE_OPTIONS } from '@/lib/voteColors'
 import { VotingSection } from './VotingSection'
 import type { VotedAccount } from '../types'
 
 type TemperatureCheck = typeof TemperatureCheckSchema.Type
-
-const TC_VOTE_OPTIONS = [
-  { id: 0, label: 'For' },
-  { id: 1, label: 'Against' }
-] as const
 
 type SidebarContentProps = {
   temperatureCheck: TemperatureCheck

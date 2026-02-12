@@ -22,8 +22,10 @@ export function QuorumBadge({ entityType, entityId, quorum }: QuorumBadgeProps) 
         0
       )
       const quorumTarget = Number(quorum)
-      const rawPercentage = quorumTarget === 0 ? 100 : (totalVotePower / quorumTarget) * 100
-      const quorumMet = totalVotePower >= quorumTarget
+      const rawPercentage = !Number.isFinite(quorumTarget) || quorumTarget <= 0
+        ? 0
+        : (totalVotePower / quorumTarget) * 100
+      const quorumMet = Number.isFinite(quorumTarget) && quorumTarget > 0 && totalVotePower >= quorumTarget
 
       return (
         <span

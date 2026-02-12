@@ -24,7 +24,16 @@ export function QuorumProgress({
   return Result.builder(voteResultsResult)
     .onInitial(() => <QuorumProgressSkeleton />)
     .onFailure(() => (
-      <QuorumProgressDisplay quorumProgress={0} totalPower={0} isActive={isActive} />
+      <div className="flex flex-row sm:flex-col gap-8 sm:gap-4">
+        <div className="flex-1 sm:flex-none">
+          <div className="text-xs text-neutral-500 uppercase mb-1">Quorum Progress</div>
+          <div className="text-sm text-muted-foreground">--</div>
+        </div>
+        <div>
+          <div className="text-xs text-neutral-500 uppercase mb-1">Votes</div>
+          <div className="text-sm text-muted-foreground">--</div>
+        </div>
+      </div>
     ))
     .onSuccess((results) => {
       const totalPower = results.reduce(
@@ -32,7 +41,9 @@ export function QuorumProgress({
         0
       )
       const quorumTarget = Number(quorum)
-      const quorumProgress = quorumTarget === 0 ? 100 : (totalPower / quorumTarget) * 100
+      const quorumProgress = !Number.isFinite(quorumTarget) || quorumTarget <= 0
+        ? 0
+        : (totalPower / quorumTarget) * 100
 
       return (
         <QuorumProgressDisplay

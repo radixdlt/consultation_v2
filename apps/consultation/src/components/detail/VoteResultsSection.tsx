@@ -3,9 +3,8 @@ import type { EntityId, EntityType } from 'shared/governance/brandedTypes'
 import { voteResultsAtom, voteUpdatesAtom } from '@/atom/voteResultsAtom'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatXrd } from '@/lib/utils'
-import { getProposalVoteColor, getTcVoteColor } from '@/lib/voteColors'
-
-type VoteOption = { readonly id: number; readonly label: string }
+import type { VoteOption } from '@/lib/voteColors'
+import { resolveVoteOptions } from '@/lib/voteColors'
 
 type VoteResultsSectionProps = {
   entityType: EntityType
@@ -22,8 +21,6 @@ export function VoteResultsSection({
   const voteResultsResult = useAtomValue(
     voteResultsAtom(entityType)(entityId)
   )
-
-  const isTc = entityType === 'temperature_check'
 
   return Result.builder(voteResultsResult)
     .onInitial(() => (
@@ -59,16 +56,10 @@ export function VoteResultsSection({
         0
       )
 
-      const voteKey = (opt: VoteOption) =>
-        isTc ? opt.label : String(opt.id)
-
-      const allOptions = voteOptions.map((opt, index) => ({
-        key: voteKey(opt),
-        label: opt.label,
-        power: resultMap.get(voteKey(opt)) ?? 0,
-        color: isTc
-          ? getTcVoteColor(opt.label)
-          : getProposalVoteColor(index)
+      const resolved = resolveVoteOptions(entityType, voteOptions)
+      const allOptions = resolved.map((opt) => ({
+        ...opt,
+        power: resultMap.get(opt.key) ?? 0
       }))
 
       return (

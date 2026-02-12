@@ -95,6 +95,10 @@ export function TemperatureCheckForm({
   // Track if onSuccess has been called to prevent duplicate calls
   const hasCalledSuccess = useRef(false)
 
+  const makeError = Result.builder(makeResult)
+    .onFailure(() => true)
+    .orNull() ?? false
+
   // Call onSuccess when the atom completes successfully
   useEffect(() => {
     if (hasCalledSuccess.current || !onSuccess) return
@@ -264,6 +268,12 @@ export function TemperatureCheckForm({
           <VoteOptionsField form={form} maxOptions={maxVoteOptions} />
         </CardContent>
       </Card>
+
+      {makeError && (
+        <p className="text-sm text-destructive text-center">
+          Failed to create temperature check. Please try again.
+        </p>
+      )}
 
       {/* Submit */}
       <CardFooter className="p-0">

@@ -23,16 +23,26 @@ export const MarkdownUploadField = withForm({
     const descriptionId = `${formId}-description`
     const descriptionFileId = `${formId}-description-file`
 
+    const [fileError, setFileError] = useState<string | null>(null)
+
     const handleFileUpload = useCallback(
       (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (!file) return
 
+        setFileError(null)
         const reader = new FileReader()
         reader.onload = (e) => {
-          const content = e.target?.result as string
+          const content = e.target?.result
+          if (typeof content !== 'string') return
           form.setFieldValue('description', content)
           setUploadedFile({ name: file.name, size: file.size })
+        }
+        reader.onerror = () => {
+          setFileError(`Failed to read file: ${file.name}`)
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
         }
         reader.readAsText(file)
       },
@@ -95,14 +105,10 @@ export const MarkdownUploadField = withForm({
                   </Button>
                 </div>
               ) : (
-                <div
+                <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) =>
-                    e.key === 'Enter' && fileInputRef.current?.click()
-                  }
-                  tabIndex={0}
-                  role="button"
-                  className="flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed border-border hover:border-muted-foreground cursor-pointer transition-colors"
+                  className="flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed border-border hover:border-muted-foreground cursor-pointer transition-colors w-full"
                 >
                   <UploadIcon className="size-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
@@ -112,7 +118,11 @@ export const MarkdownUploadField = withForm({
                   <p className="text-xs text-muted-foreground">
                     Full proposal details in Markdown format
                   </p>
-                </div>
+                </button>
+              )}
+
+              {fileError && (
+                <p className="text-sm text-destructive">{fileError}</p>
               )}
 
               <FieldDescription>

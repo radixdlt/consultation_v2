@@ -1,3 +1,5 @@
+export type VoteOption = { readonly id: number; readonly label: string }
+
 export type VoteColor = {
   bar: string
   dot: string
@@ -5,6 +7,11 @@ export type VoteColor = {
   filterInactive: string
   selected: string
 }
+
+export const TC_VOTE_OPTIONS = [
+  { id: 0, label: 'For' },
+  { id: 1, label: 'Against' }
+] as const
 
 const PALETTE: VoteColor[] = [
   // 0 - Green
@@ -99,15 +106,43 @@ const PALETTE: VoteColor[] = [
   }
 ]
 
+const FALLBACK_COLOR: VoteColor = {
+  bar: 'bg-neutral-400 dark:bg-neutral-500',
+  dot: 'bg-neutral-400',
+  filterActive: 'bg-neutral-600 text-white border-transparent',
+  filterInactive:
+    'bg-neutral-50 text-neutral-700 border-neutral-300 hover:opacity-80 dark:bg-neutral-900/30 dark:text-neutral-300 dark:border-neutral-700',
+  selected: 'bg-neutral-600 text-white border-neutral-600'
+}
+
 const TC_COLOR_MAP: Record<string, number> = {
   For: 0,
   Against: 1
 }
 
 export function getTcVoteColor(label: string): VoteColor {
-  return PALETTE[TC_COLOR_MAP[label] ?? 0]
+  const index = TC_COLOR_MAP[label]
+  return index !== undefined ? PALETTE[index] : FALLBACK_COLOR
 }
 
 export function getProposalVoteColor(index: number): VoteColor {
   return PALETTE[index % PALETTE.length]
+}
+
+export type ResolvedVoteOption = {
+  key: string
+  label: string
+  color: VoteColor
+}
+
+export function resolveVoteOptions(
+  entityType: 'temperature_check' | 'proposal',
+  voteOptions: readonly VoteOption[]
+): ResolvedVoteOption[] {
+  const isTc = entityType === 'temperature_check'
+  return voteOptions.map((opt, index) => ({
+    key: isTc ? opt.label : String(opt.id),
+    label: opt.label,
+    color: isTc ? getTcVoteColor(opt.label) : getProposalVoteColor(index)
+  }))
 }

@@ -2,10 +2,8 @@ import { Calendar, ExternalLink, LinkIcon, User } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { AddressLink } from '@/components/AddressLink'
 import { formatDateTime } from '@/lib/utils'
-import {
-  type ItemStatus,
-  StatusBadge
-} from '@/routes/-index/components/StatusBadge'
+import type { ItemStatus } from '@/routes/-index/components/StatusBadge'
+import { StatusBadge } from '@/routes/-index/components/StatusBadge'
 
 type DetailPageHeaderProps = {
   status: ItemStatus
