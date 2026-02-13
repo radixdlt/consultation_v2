@@ -37,7 +37,7 @@ export function TemperatureChecksList({
       return (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4">
-            {data.items.map((tc: TemperatureCheck) => (
+            {data.items.filter((tc) => !tc.hidden).map((tc: TemperatureCheck) => (
               <ItemCard
                 key={tc.id}
                 id={tc.id}

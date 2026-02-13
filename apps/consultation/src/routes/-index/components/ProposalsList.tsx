@@ -32,7 +32,7 @@ export function ProposalsList({ sortOrder }: ProposalsListProps) {
       return (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4">
-            {data.items.map((proposal: Proposal) => (
+            {data.items.filter((p) => !p.hidden).map((proposal: Proposal) => (
               <ItemCard
                 key={proposal.id}
                 id={proposal.id}
