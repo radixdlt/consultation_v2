@@ -5,7 +5,7 @@ import {
   voteCalculationResults,
   voteCalculationState
 } from 'db/src/schema'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { Array as A, Effect, Option, pipe } from 'effect'
 import { ORM } from '../db/orm'
 
@@ -138,15 +138,23 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           )
           .pipe(Effect.asVoid, Effect.orDie)
 
+      const resetAllCalculating = () =>
+        db
+          .update(voteCalculationState)
+          .set({ isCalculating: false })
+          .where(eq(voteCalculationState.isCalculating, true))
+          .pipe(Effect.asVoid, Effect.orDie)
+
       const getResultsByEntity = (type: string, entityId: number) =>
         db
           .select({
             vote: voteCalculationResults.vote,
-            votePower: voteCalculationResults.votePower
+            votePower: voteCalculationResults.votePower,
+            isCalculating: voteCalculationState.isCalculating
           })
-          .from(voteCalculationResults)
-          .innerJoin(
-            voteCalculationState,
+          .from(voteCalculationState)
+          .leftJoin(
+            voteCalculationResults,
             eq(voteCalculationResults.stateId, voteCalculationState.id)
           )
           .where(
@@ -155,7 +163,21 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
               eq(voteCalculationState.entityId, entityId)
             )
           )
-          .pipe(Effect.orDie)
+          .pipe(
+            Effect.map((rows) => ({
+              results: rows
+                .filter(
+                  (r): r is typeof r & { vote: string; votePower: string } =>
+                    r.vote !== null
+                )
+                .map((r) => ({
+                  vote: r.vote,
+                  votePower: r.votePower
+                })),
+              isCalculating: rows[0]?.isCalculating ?? false
+            })),
+            Effect.orDie
+          )
 
       const commitVoteResults = (params: {
         stateId: number
@@ -229,12 +251,57 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
             Effect.orDie
           )
 
+      const ensureAndMarkCalculating = (
+        entities: ReadonlyArray<{
+          type: 'temperature_check' | 'proposal'
+          entityId: number
+        }>
+      ) =>
+        db
+          .insert(voteCalculationState)
+          .values(
+            entities.map((e) => ({
+              type: e.type,
+              entityId: e.entityId,
+              isCalculating: true
+            }))
+          )
+          .onConflictDoUpdate({
+            target: [voteCalculationState.type, voteCalculationState.entityId],
+            set: { isCalculating: true }
+          })
+          .pipe(Effect.asVoid, Effect.orDie)
+
+      const clearCalculatingBulk = (
+        entities: ReadonlyArray<{
+          type: string
+          entityId: number
+        }>
+      ) =>
+        db
+          .update(voteCalculationState)
+          .set({ isCalculating: false })
+          .where(
+            or(
+              ...entities.map((e) =>
+                and(
+                  eq(voteCalculationState.type, e.type),
+                  eq(voteCalculationState.entityId, e.entityId)
+                )
+              )
+            )
+          )
+          .pipe(Effect.asVoid, Effect.orDie)
+
       return {
         getOrCreateStateId,
         getLastVoteCount,
         commitVoteResults,
         getResultsByEntity,
-        getAccountVotesByEntity
+        getAccountVotesByEntity,
+        resetAllCalculating,
+        ensureAndMarkCalculating,
+        clearCalculatingBulk
       } as const
     })
   }

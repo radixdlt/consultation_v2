@@ -115,7 +115,7 @@ const AppLayer = BaseServicesLayer.pipe(
 NodeRuntime.runMain(
   Effect.gen(function* () {
     yield* Effect.log('Vote collector starting migrations')
-    // Phase 0: Run DB migrations (outside AppLayer so default env ConfigProvider is used)
+    // Phase 0: Run DB migrations
     const migrate = yield* DatabaseMigrations
     yield* migrate()
 
@@ -124,12 +124,21 @@ NodeRuntime.runMain(
     const reconcile = yield* VoteReconciliation
     const startingStateVersion = yield* reconcile()
 
-    // Phase 2: Run consumer + transaction listener concurrently (fail-fast on either crash)
-    const runConsumer = yield* VoteCalculationWorker
-    const listen = yield* TransactionListener
+    // Phase 2: Run consumer + listener concurrently (fail-fast on either crash)
+    const transactionStreamConsumer = yield* VoteCalculationWorker
+    const transactionListener = yield* TransactionListener
 
-    yield* Effect.all([runConsumer(), listen(startingStateVersion)], {
-      concurrency: 2
-    })
+    yield* Effect.log(
+      'Vote collector starting transaction stream consumer and listener',
+      {
+        startingStateVersion
+      }
+    )
+    yield* Effect.all(
+      [transactionStreamConsumer(), transactionListener(startingStateVersion)],
+      {
+        concurrency: 2
+      }
+    )
   }).pipe(Effect.provide([DatabaseMigrations.Default, AppLayer]))
 )

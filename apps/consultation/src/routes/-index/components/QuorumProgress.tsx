@@ -1,6 +1,6 @@
 import { Result, useAtomValue } from '@effect-atom/atom-react'
 import type { EntityId, EntityType } from 'shared/governance/brandedTypes'
-import { voteResultsAtom } from '@/atom/voteResultsAtom'
+import { isCalculatingAtom, voteResultsAtom } from '@/atom/voteResultsAtom'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatXrd } from '@/lib/utils'
 
@@ -20,6 +20,7 @@ export function QuorumProgress({
   const voteResultsResult = useAtomValue(
     voteResultsAtom(entityType)(entityId)
   )
+  const isCalculating = useAtomValue(isCalculatingAtom(entityType)(entityId))
 
   return Result.builder(voteResultsResult)
     .onInitial(() => <QuorumProgressSkeleton />)
@@ -49,6 +50,7 @@ export function QuorumProgress({
           quorumProgress={quorumProgress}
           totalPower={totalPower}
           isActive={isActive}
+          isCalculating={isCalculating}
         />
       )
     })
@@ -59,6 +61,7 @@ type QuorumProgressDisplayProps = {
   quorumProgress: number
   totalPower: number
   isActive?: boolean
+  isCalculating?: boolean
 }
 
 function QuorumProgressSkeleton() {
@@ -82,17 +85,23 @@ function QuorumProgressSkeleton() {
 function QuorumProgressDisplay({
   quorumProgress,
   totalPower,
-  isActive
+  isActive,
+  isCalculating
 }: QuorumProgressDisplayProps) {
   const quorumProgressCapped = Math.min(quorumProgress, 100)
   const isHighProgress = quorumProgress >= 100
 
   return (
-    <div className="flex flex-row sm:flex-col gap-8 sm:gap-4">
+    <div className={`flex flex-row sm:flex-col gap-8 sm:gap-4${isCalculating ? ' animate-pulse' : ''}`}>
       {/* Quorum Progress */}
       <div className="flex-1 sm:flex-none">
         <div className="text-xs text-neutral-500 uppercase mb-1">
           Quorum Progress
+          {isCalculating && (
+            <span className="ml-2 normal-case text-muted-foreground">
+              Recalculating…
+            </span>
+          )}
         </div>
         <div
           className={`text-lg font-semibold ${isHighProgress ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'}`}

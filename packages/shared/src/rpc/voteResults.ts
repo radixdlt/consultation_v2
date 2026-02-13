@@ -14,12 +14,17 @@ export const AccountVoteSchema = Schema.Struct({
   votePower: Schema.String
 })
 
+export const GetVoteResultsResponse = Schema.Struct({
+  results: Schema.Array(VoteResultSchema),
+  isCalculating: Schema.Boolean
+})
+
 export const GetVoteResults = Rpc.make('GetVoteResults', {
   payload: {
     type: EntityType,
     entityId: EntityId
   },
-  success: Schema.Array(VoteResultSchema)
+  success: GetVoteResultsResponse
 })
 
 export const GetAccountVotes = Rpc.make('GetAccountVotes', {

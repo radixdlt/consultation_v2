@@ -1,0 +1,188 @@
+{
+  "id": "985505c0-b543-4eee-904b-6a03674519eb",
+  "prevId": "662d9d19-1c63-4b98-b0ff-8510704d303e",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.vote_calculation_account_votes": {
+      "name": "vote_calculation_account_votes",
+      "schema": "",
+      "columns": {
+        "state_id": {
+          "name": "state_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_address": {
+          "name": "account_address",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vote": {
+          "name": "vote",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vote_power": {
+          "name": "vote_power",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "vote_calculation_account_votes_state_id_vote_calculation_state_id_fk": {
+          "name": "vote_calculation_account_votes_state_id_vote_calculation_state_id_fk",
+          "tableFrom": "vote_calculation_account_votes",
+          "tableTo": "vote_calculation_state",
+          "columnsFrom": [
+            "state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "vote_calculation_account_votes_state_id_account_address_vote_pk": {
+          "name": "vote_calculation_account_votes_state_id_account_address_vote_pk",
+          "columns": [
+            "state_id",
+            "account_address",
+            "vote"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.vote_calculation_results": {
+      "name": "vote_calculation_results",
+      "schema": "",
+      "columns": {
+        "state_id": {
+          "name": "state_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vote": {
+          "name": "vote",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vote_power": {
+          "name": "vote_power",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "vote_calculation_results_state_id_vote_calculation_state_id_fk": {
+          "name": "vote_calculation_results_state_id_vote_calculation_state_id_fk",
+          "tableFrom": "vote_calculation_results",
+          "tableTo": "vote_calculation_state",
+          "columnsFrom": [
+            "state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "vote_calculation_results_state_id_vote_pk": {
+          "name": "vote_calculation_results_state_id_vote_pk",
+          "columns": [
+            "state_id",
+            "vote"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.vote_calculation_state": {
+      "name": "vote_calculation_state",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_vote_count": {
+          "name": "last_vote_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "is_calculating": {
+          "name": "is_calculating",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "vote_calculation_state_type_entity_id_unique": {
+          "name": "vote_calculation_state_type_entity_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "type",
+            "entity_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

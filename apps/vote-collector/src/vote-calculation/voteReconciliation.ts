@@ -88,6 +88,9 @@ export class VoteReconciliation extends Effect.Service<VoteReconciliation>()(
 
       return Effect.fn('VoteReconciliation.run')(
         function* () {
+          yield* repo.resetAllCalculating()
+          yield* Effect.log('Reset stale isCalculating flags')
+
           const govState = yield* governance.getGovernanceState()
           const currentState = yield* ledgerState({})
 

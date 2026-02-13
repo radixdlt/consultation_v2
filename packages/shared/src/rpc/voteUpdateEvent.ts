@@ -5,5 +5,6 @@ export class VoteUpdateEvent extends Schema.Class<VoteUpdateEvent>(
   'VoteUpdateEvent'
 )({
   type: EntityType,
-  entityId: EntityId
+  entityId: EntityId,
+  isCalculating: Schema.Boolean
 }) {}

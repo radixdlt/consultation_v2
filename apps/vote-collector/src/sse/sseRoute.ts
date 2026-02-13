@@ -14,7 +14,7 @@ export const SseRouteLive = Layer.scopedDiscard(
         const events = Stream.fromPubSub(pubsub).pipe(
           Stream.map(
             (event) =>
-              `event: vote-update\ndata: ${JSON.stringify({ type: event.type, entityId: event.entityId })}\n\n`
+              `event: vote-update\ndata: ${JSON.stringify({ type: event.type, entityId: event.entityId, isCalculating: event.isCalculating })}\n\n`
           )
         )
 

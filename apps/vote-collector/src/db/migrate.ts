@@ -41,7 +41,11 @@ export class DatabaseMigrations extends Effect.Service<DatabaseMigrations>()(
           Effect.sync(() => new pg.Pool({ connectionString, ssl })),
           (pool) =>
             Effect.promise(() => migrate(drizzle(pool), { migrationsFolder })),
-          (pool) => Effect.promise(() => pool.end())
+          (pool) =>
+            Effect.gen(function* () {
+              yield* Effect.log('Closing database connection pool')
+              return yield* Effect.promise(() => pool.end())
+            })
         )
         yield* Effect.log('Migrations complete')
       })
