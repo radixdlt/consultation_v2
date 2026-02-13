@@ -32,6 +32,7 @@ export const TemperatureCheckSchema = Schema.asSchema(
       voters: Schema.String,
       votes: Schema.String,
       vote_count: Schema.Number,
+      revote_count: Schema.Number,
       vote_options: Schema.Array(
         Schema.Struct({
           id: Schema.Tuple(Schema.Number),
@@ -46,7 +47,8 @@ export const TemperatureCheckSchema = Schema.asSchema(
         variant: Schema.String,
         value: Schema.Unknown
       }),
-      author: Schema.String
+      author: Schema.String,
+      hidden: Schema.Boolean
     }),
     Schema.Struct({
       id: Schema.Number,
@@ -56,6 +58,7 @@ export const TemperatureCheckSchema = Schema.asSchema(
       voters: KeyValueStoreAddress,
       votes: KeyValueStoreAddress,
       voteCount: Schema.Number,
+      revoteCount: Schema.Number,
       voteOptions: Schema.Array(
         Schema.Struct({
           id: Schema.Number,
@@ -67,7 +70,8 @@ export const TemperatureCheckSchema = Schema.asSchema(
       start: Schema.DateFromSelf,
       deadline: Schema.DateFromSelf,
       elevatedProposalId: Schema.OptionFromSelf(ProposalId),
-      author: AccountAddress
+      author: AccountAddress,
+      hidden: Schema.Boolean
     }),
     {
       decode: (fromA) => ({
@@ -78,6 +82,7 @@ export const TemperatureCheckSchema = Schema.asSchema(
         voters: KeyValueStoreAddress.make(fromA.voters),
         votes: KeyValueStoreAddress.make(fromA.votes),
         voteCount: fromA.vote_count,
+        revoteCount: fromA.revote_count,
         voteOptions: fromA.vote_options.map((option) => ({
           id: option.id[0],
           label: option.label
@@ -92,7 +97,8 @@ export const TemperatureCheckSchema = Schema.asSchema(
                 (fromA.elevated_proposal_id.value as [number])[0] as ProposalId
               )
             : Option.none(),
-        author: AccountAddress.make(fromA.author)
+        author: AccountAddress.make(fromA.author),
+        hidden: fromA.hidden
       }),
       encode: (values) => ({
         id: values.id,
@@ -102,6 +108,7 @@ export const TemperatureCheckSchema = Schema.asSchema(
         voters: values.voters,
         votes: values.votes,
         vote_count: values.voteCount,
+        revote_count: values.revoteCount,
         vote_options: values.voteOptions.map((option) => ({
           id: [option.id] as const,
           label: option.label
@@ -114,7 +121,8 @@ export const TemperatureCheckSchema = Schema.asSchema(
           onNone: () => ({ variant: 'None' as const, value: {} }),
           onSome: (id) => ({ variant: 'Some' as const, value: [id] })
         }),
-        author: values.author
+        author: values.author,
+        hidden: values.hidden
       }),
       strict: true
     }
@@ -133,6 +141,7 @@ export const ProposalSchema = Schema.asSchema(
       voters: Schema.String,
       votes: Schema.String,
       vote_count: Schema.Number,
+      revote_count: Schema.Number,
       vote_options: Schema.Array(
         Schema.Struct({
           id: Schema.Tuple(Schema.Number),
@@ -154,7 +163,8 @@ export const ProposalSchema = Schema.asSchema(
       start: Schema.Number,
       deadline: Schema.Number,
       temperature_check_id: Schema.Number,
-      author: Schema.String
+      author: Schema.String,
+      hidden: Schema.Boolean
     }),
     Schema.Struct({
       id: Schema.Number,
@@ -164,6 +174,7 @@ export const ProposalSchema = Schema.asSchema(
       voters: KeyValueStoreAddress,
       votes: KeyValueStoreAddress,
       voteCount: Schema.Number,
+      revoteCount: Schema.Number,
       voteOptions: Schema.Array(
         Schema.Struct({
           id: Schema.Number,
@@ -176,7 +187,8 @@ export const ProposalSchema = Schema.asSchema(
       start: Schema.DateFromSelf,
       deadline: Schema.DateFromSelf,
       temperatureCheckId: TemperatureCheckId,
-      author: AccountAddress
+      author: AccountAddress,
+      hidden: Schema.Boolean
     }),
     {
       decode: (fromA) => ({
@@ -187,6 +199,7 @@ export const ProposalSchema = Schema.asSchema(
         voters: KeyValueStoreAddress.make(fromA.voters),
         votes: KeyValueStoreAddress.make(fromA.votes),
         voteCount: fromA.vote_count,
+        revoteCount: fromA.revote_count,
         voteOptions: fromA.vote_options.map((option) => ({
           id: option.id[0],
           label: option.label
@@ -200,7 +213,8 @@ export const ProposalSchema = Schema.asSchema(
         start: new Date(fromA.start * 1000),
         deadline: new Date(fromA.deadline * 1000),
         temperatureCheckId: fromA.temperature_check_id as TemperatureCheckId,
-        author: AccountAddress.make(fromA.author)
+        author: AccountAddress.make(fromA.author),
+        hidden: fromA.hidden
       }),
       encode: (values) => ({
         id: values.id,
@@ -210,6 +224,7 @@ export const ProposalSchema = Schema.asSchema(
         voters: values.voters,
         votes: values.votes,
         vote_count: values.voteCount,
+        revote_count: values.revoteCount,
         vote_options: values.voteOptions.map((option) => ({
           id: [option.id] as const,
           label: option.label
@@ -226,7 +241,8 @@ export const ProposalSchema = Schema.asSchema(
         start: Math.floor(values.start.getTime() / 1000),
         deadline: Math.floor(values.deadline.getTime() / 1000),
         temperature_check_id: values.temperatureCheckId,
-        author: values.author
+        author: values.author,
+        hidden: values.hidden
       }),
       strict: true
     }
@@ -336,6 +352,10 @@ export const TemperatureCheckVoteRecord = Schema.asSchema(
             s.enum([
               { variant: 'For', schema: s.structNullable({}) },
               { variant: 'Against', schema: s.structNullable({}) }
+            ]),
+            s.enum([
+              { variant: 'None', schema: s.structNullable({}) },
+              { variant: 'Some', schema: s.tuple([s.number()]) }
             ])
           ])
         ).pipe(
@@ -395,7 +415,14 @@ export const ProposalVoteRecord = Schema.asSchema(
       decode: (value, _, ast) =>
         parseSbor(
           value,
-          s.tuple([s.address(), s.array(s.tuple([s.number()]))])
+          s.tuple([
+            s.address(),
+            s.array(s.tuple([s.number()])),
+            s.enum([
+              { variant: 'None', schema: s.structNullable({}) },
+              { variant: 'Some', schema: s.tuple([s.number()]) }
+            ])
+          ])
         ).pipe(
           Effect.map(([address, options]) => ({
             accountAddress: AccountAddress.make(address),
