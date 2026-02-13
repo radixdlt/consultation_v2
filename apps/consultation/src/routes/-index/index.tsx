@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import type { SortOrder } from '@/atom/proposalsAtom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { H1, P } from '@/components/ui/typography'
@@ -23,7 +24,13 @@ export const Page: React.FC = () => {
         <H1>Radix Governance</H1>
         <P className="mt-2 text-neutral-500 dark:text-neutral-400">
           Participate in community governance through temperature checks and
-          proposals.
+          proposals.{' '}
+          <Link
+            to="/about"
+            className="text-neutral-700 dark:text-neutral-300 underline underline-offset-4 hover:text-neutral-900 dark:hover:text-white"
+          >
+            Learn how governance works
+          </Link>
         </P>
       </div>
 

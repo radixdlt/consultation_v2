@@ -748,6 +748,36 @@ CALL_METHOD
           )
         })
 
+      const getGovernanceParameters = () =>
+        getComponentState().pipe(
+          Effect.map((state) => state.governance_parameters)
+        )
+
+      const makeUpdateGovernanceParametersManifest = (input: {
+        accountAddress: AccountAddress
+        temperatureCheckDays: number
+        temperatureCheckQuorum: string
+        temperatureCheckApprovalThreshold: string
+        proposalLengthDays: number
+        proposalQuorum: string
+        proposalApprovalThreshold: string
+      }) =>
+        Effect.succeed(
+          TransactionManifestString.make(`
+CALL_METHOD
+  Address("${input.accountAddress}")
+  "create_proof_of_amount"
+  Address("${config.adminBadgeAddress}")
+  Decimal("1")
+;
+CALL_METHOD
+  Address("${config.componentAddress}")
+  "update_governance_parameters"
+  Tuple(${input.temperatureCheckDays}u16, Decimal("${input.temperatureCheckQuorum}"), Decimal("${input.temperatureCheckApprovalThreshold}"), ${input.proposalLengthDays}u16, Decimal("${input.proposalQuorum}"), Decimal("${input.proposalApprovalThreshold}"))
+;
+          `)
+        )
+
       const makeProposalVoteManifest = (input: MakeProposalVoteInput) =>
         Effect.gen(function* () {
           const parsedInput = yield* Schema.decodeUnknown(
@@ -782,6 +812,8 @@ CALL_METHOD
         makeTemperatureCheckVoteManifest,
         getTemperatureCheckVotesByAccounts,
         getGovernanceState,
+        getGovernanceParameters,
+        makeUpdateGovernanceParametersManifest,
         getProposalById,
         getPaginatedTemperatureChecks,
         getPaginatedProposals,

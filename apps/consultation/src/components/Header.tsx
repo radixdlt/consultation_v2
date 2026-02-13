@@ -37,6 +37,9 @@ export default function Header() {
               <DropdownMenuItem asChild>
                 <Link to="/tc/new">New Proposal</Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/about">About</Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -58,6 +61,9 @@ export default function Header() {
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/tc/new">New Proposal</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/about">About</Link>
             </Button>
           </nav>
         </div>
