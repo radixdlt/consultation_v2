@@ -169,7 +169,7 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
         })
 
         // Return current totals
-        const totals = yield* repo.getResultsByEntity(
+        const { results: totals } = yield* repo.getResultsByEntity(
           payload.type,
           payload.entityId
         )

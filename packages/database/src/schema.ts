@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   numeric,
   pgTable,
@@ -14,7 +15,8 @@ export const voteCalculationState = pgTable(
     id: serial('id').primaryKey(),
     type: varchar('type', { length: 50 }).notNull(),
     entityId: integer('entity_id').notNull(),
-    lastVoteCount: integer('last_vote_count').notNull().default(0)
+    lastVoteCount: integer('last_vote_count').notNull().default(0),
+    isCalculating: boolean('is_calculating').notNull().default(false)
   },
   (table) => [unique().on(table.type, table.entityId)]
 )
