@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { Proposal } from 'shared/governance/schemas'
 import { paginatedProposalsAtom, type SortOrder } from '@/atom/proposalsAtom'
 import { InlineCode } from '@/components/ui/typography'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { CardSkeletonList } from './CardSkeleton'
 import { EmptyState } from './EmptyState'
 import { ItemCard } from './ItemCard'
@@ -16,6 +17,7 @@ type ProposalsListProps = {
 export function ProposalsList({ sortOrder }: ProposalsListProps) {
   const [page, setPage] = useState(1)
   const result = useAtomValue(paginatedProposalsAtom(page)(sortOrder))
+  const isAdmin = useIsAdmin()
 
   // Reset to page 1 when sort order changes
   useEffect(() => {
@@ -25,14 +27,16 @@ export function ProposalsList({ sortOrder }: ProposalsListProps) {
   return Result.builder(result)
     .onInitial(() => <CardSkeletonList />)
     .onSuccess((data) => {
-      if (data.items.length === 0 && data.page === 1) {
+      const visibleItems = data.items.filter((p) => isAdmin || !p.hidden)
+
+      if (visibleItems.length === 0 && data.page === 1) {
         return <EmptyState type="proposal" />
       }
 
       return (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4">
-            {data.items.map((proposal: Proposal) => (
+            {visibleItems.map((proposal: Proposal) => (
               <ItemCard
                 key={proposal.id}
                 id={proposal.id}
@@ -43,6 +47,7 @@ export function ProposalsList({ sortOrder }: ProposalsListProps) {
                 deadline={proposal.deadline}
                 quorum={Number(proposal.quorum)}
                 linkPrefix="/proposal"
+                hidden={proposal.hidden}
               />
             ))}
           </div>
