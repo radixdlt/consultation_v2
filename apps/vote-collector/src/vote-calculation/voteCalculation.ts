@@ -1,11 +1,11 @@
 import { GetLedgerStateService } from '@radix-effects/gateway'
-import { StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, flow, pipe, Record as R } from 'effect'
 import { GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
 import type { VoteCalculationPayload } from './types'
 import { VoteCalculationRepo } from './voteCalculationRepo'
+import { StateVersion } from '@radix-effects/shared'
 
 export class VoteCalculation extends Effect.Service<VoteCalculation>()(
   'VoteCalculation',
