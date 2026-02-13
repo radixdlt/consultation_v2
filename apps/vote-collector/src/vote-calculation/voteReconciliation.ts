@@ -100,24 +100,29 @@ export class VoteReconciliation extends Effect.Service<VoteReconciliation>()(
             stateVersion: currentState.state_version
           })
 
-          const temperatureCheckIds = A.range(
-            0,
-            govState.temperatureCheckCount - 1
-          ).map((i) => TemperatureCheckId.make(i))
+          if (govState.temperatureCheckCount > 0) {
+            const temperatureCheckIds = A.range(
+              0,
+              govState.temperatureCheckCount - 1
+            ).map((i) => TemperatureCheckId.make(i))
 
-          yield* Effect.forEach(temperatureCheckIds, reconcileOne, {
-            concurrency: 5,
-            discard: true
-          })
+            yield* Effect.forEach(temperatureCheckIds, reconcileOne, {
+              concurrency: 5,
+              discard: true
+            })
+          }
 
-          const proposalIds = A.range(0, govState.proposalCount - 1).map((i) =>
-            ProposalId.make(i)
-          )
+          if (govState.proposalCount > 0) {
+            const proposalIds = A.range(
+              0,
+              govState.proposalCount - 1
+            ).map((i) => ProposalId.make(i))
 
-          yield* Effect.forEach(proposalIds, reconcileOneProposal, {
-            concurrency: 5,
-            discard: true
-          })
+            yield* Effect.forEach(proposalIds, reconcileOneProposal, {
+              concurrency: 5,
+              discard: true
+            })
+          }
 
           yield* Effect.log('Startup reconciliation complete')
 
