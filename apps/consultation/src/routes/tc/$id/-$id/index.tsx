@@ -65,6 +65,7 @@ function PageContent({ tc, id }: { tc: TemperatureCheck; id: TemperatureCheckId 
       shortDescription={tc.shortDescription}
       description={tc.description}
       filename={`tc-${tc.id}-details.md`}
+      proposalVoteOptions={tc.voteOptions}
     />
   )
 

@@ -39,48 +39,50 @@ export function DetailPageHeader({
         </span>
         {quorumBadge && <div className="ml-auto">{quorumBadge}</div>}
       </div>
+      {/* Title group */}
       <h1 className="text-3xl md:text-4xl font-light text-foreground leading-tight">
         {title}
       </h1>
-      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground font-mono">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
         <span>
           {typeBadge} #{id}
         </span>
         {originBadge}
       </div>
-      <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
-        <Calendar className="size-4 mt-0.5" />
-        <span className="font-mono">
-          <span>{formatDateTime(start)}</span>
-          <span className="mx-1">–</span>
-          <br className="sm:hidden" />
-          <span>{formatDateTime(deadline)}</span>
+
+      {/* Metadata rows - consistent styling */}
+      <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="w-4 shrink-0 flex justify-center"><Calendar className="size-4" /></span>
+        <span>
+          {formatDateTime(start)} – {formatDateTime(deadline)}
         </span>
       </div>
       {author && (
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-          <User className="size-4" />
+          <span className="w-4 shrink-0 flex justify-center"><User className="size-4" /></span>
           <AddressLink
             address={author}
-            className="font-mono text-xs text-muted-foreground"
+            className="text-sm text-muted-foreground"
           />
         </div>
       )}
       {links.length > 0 && (
-        <div className="mt-4 flex items-center gap-4">
-          {links.filter((link) => /^https?:\/\//i.test(link)).map((link) => (
-            <a
-              key={link}
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground hover:underline text-sm flex items-center gap-1 min-w-0"
-            >
-              <LinkIcon className="size-3 shrink-0" />
-              <span className="truncate">{link}</span>
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
-          ))}
+        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="w-4 shrink-0 flex justify-center"><LinkIcon className="size-4" /></span>
+          <div className="flex items-center gap-4">
+            {links.filter((link) => /^https?:\/\//i.test(link)).map((link) => (
+              <a
+                key={link}
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground hover:underline text-sm flex items-center gap-1 min-w-0"
+              >
+                <span className="truncate">{link}</span>
+                <ExternalLink className="size-3 shrink-0" />
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>

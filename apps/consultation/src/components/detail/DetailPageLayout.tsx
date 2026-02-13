@@ -29,8 +29,8 @@ export function DetailPageLayout({
           {details}
         </div>
 
-        {/* Right column - Sticky sidebar */}
-        <div className="lg:col-span-3 lg:sticky lg:top-20 lg:self-start">
+        {/* Right column - Sticky sidebar with independent scroll */}
+        <div className="lg:col-span-3 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
           {sidebar}
         </div>
       </div>

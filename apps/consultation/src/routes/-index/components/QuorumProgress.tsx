@@ -90,6 +90,7 @@ function QuorumProgressDisplay({
 }: QuorumProgressDisplayProps) {
   const quorumProgressCapped = Math.min(quorumProgress, 100)
   const isHighProgress = quorumProgress >= 100
+  const displayPercent = Math.min(Math.round(quorumProgress), 100)
 
   return (
     <div className={`flex flex-row sm:flex-col gap-8 sm:gap-4${isCalculating ? ' animate-pulse' : ''}`}>
@@ -106,7 +107,7 @@ function QuorumProgressDisplay({
         <div
           className={`text-lg font-semibold ${isHighProgress ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'}`}
         >
-          {Math.round(quorumProgress)}%
+          {displayPercent}%
         </div>
         <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-1.5 mt-2 overflow-hidden">
           <div
@@ -114,6 +115,11 @@ function QuorumProgressDisplay({
             style={{ width: `${quorumProgressCapped}%` }}
           />
         </div>
+        {quorumProgress > 100 && (
+          <div className="text-xs text-muted-foreground mt-1">
+            Total: {Math.round(quorumProgress)}%
+          </div>
+        )}
       </div>
 
       {/* Votes - beside quorum on mobile, below on desktop */}

@@ -144,12 +144,6 @@ export class AccountAlreadyVotedError extends Data.TaggedError(
   message: string
 }> {}
 
-export class AllAccountsAlreadyVotedError extends Data.TaggedError(
-  'AllAccountsAlreadyVotedError'
-)<{
-  message: string
-}> {}
-
 const componentErrorMessage = {
   accountAlreadyVoted: 'accountAlreadyVoted'
 } as const
@@ -211,34 +205,8 @@ export const voteOnTemperatureCheckBatchAtom = runtime.fn(
       },
       get
     ) {
-      const governanceComponent = yield* GovernanceComponent
-
-      // Get existing votes for the accounts
-      const existingVotes =
-        yield* governanceComponent.getTemperatureCheckVotesByAccounts({
-          keyValueStoreAddress: input.keyValueStoreAddress,
-          accounts: input.accounts.map((acc) =>
-            AccountAddress.make(acc.address)
-          )
-        })
-
-      const alreadyVotedAddresses = new Set<string>(
-        existingVotes.map((v) => v.address)
-      )
-
-      // Filter out accounts that have already voted
-      const accountsToVote = input.accounts.filter(
-        (acc) => !alreadyVotedAddresses.has(acc.address)
-      )
-
-      // If no accounts can vote, return error
-      if (accountsToVote.length === 0) {
-        const message =
-          input.accounts.length === 1
-            ? 'This account has already voted'
-            : 'All selected accounts have already voted'
-        return yield* new AllAccountsAlreadyVotedError({ message })
-      }
+      // No pre-filtering: accounts that already voted can change their vote
+      const accountsToVote = input.accounts
 
       const results: VoteResult[] = []
 
@@ -282,14 +250,7 @@ export const voteOnTemperatureCheckBatchAtom = runtime.fn(
         if (successes === 0) return 'All votes failed'
         return `${successes} submitted, ${failures} failed`
       },
-      whenFailure: ({ cause }) => {
-        if (cause._tag === 'Fail') {
-          if (cause.error instanceof AllAccountsAlreadyVotedError) {
-            return Option.some(cause.error.message)
-          }
-        }
-        return Option.some('Failed to submit votes')
-      }
+      whenFailure: () => Option.some('Failed to submit votes')
     })
   )
 )
