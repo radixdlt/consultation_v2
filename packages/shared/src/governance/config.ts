@@ -14,7 +14,7 @@ export class Config extends Context.Tag('@Governance/Config')<
 >() {
   static StokenetLive = Layer.succeed(this, {
     componentAddress: ComponentAddress.make(
-      'component_tdx_2_1cphm5hpqa6psjtlvh75s0qfwasvdwnvfujxhyzjclgv87nlsxwywyn'
+      'component_tdx_2_1cqnp3rptnwqjc4r7kzwkctec09jkdqa8v2rue580kw66fvt4ctpnmc'
     ),
     adminBadgeAddress: FungibleResourceAddress.make(
       'resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc'

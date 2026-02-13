@@ -33,6 +33,8 @@ mod governance {
             // Owner-only methods
             make_proposal => restrict_to: [owner];
             update_governance_parameters => restrict_to: [owner];
+            toggle_temperature_check_hidden => restrict_to: [owner];
+            toggle_proposal_hidden => restrict_to: [owner];
         }
     }
 
@@ -72,6 +74,8 @@ mod governance {
                     get_temperature_check_count => Free, updatable;
                     get_proposal_count => Free, updatable;
                     update_governance_parameters => Free, updatable;
+                    toggle_temperature_check_hidden => Free, updatable;
+                    toggle_proposal_hidden => Free, updatable;
                 }
             })
             .globalize()
@@ -163,6 +167,7 @@ mod governance {
                 voters: KeyValueStore::new(),
                 votes: KeyValueStore::new(),
                 vote_count: 0,
+                revote_count: 0,
                 approval_threshold: self
                     .governance_parameters
                     .temperature_check_approval_threshold,
@@ -170,6 +175,7 @@ mod governance {
                 deadline,
                 elevated_proposal_id: None,
                 author,
+                hidden: false,
             };
 
             let title = temperature_check.title.clone();
@@ -226,11 +232,13 @@ mod governance {
                 voters: KeyValueStore::new(),
                 votes: KeyValueStore::new(),
                 vote_count: 0,
+                revote_count: 0,
                 approval_threshold: self.governance_parameters.proposal_approval_threshold,
                 start: now,
                 deadline,
                 temperature_check_id,
                 author: tc.author,
+                hidden: false,
             };
 
             tc.elevated_proposal_id = Some(proposal_id);
@@ -281,17 +289,20 @@ mod governance {
                 "Voting has ended"
             );
 
-            // Check the account has not already voted
-            assert!(
-                tc.voters.get(&account).is_none(),
-                "Account has already voted on this temperature check"
-            );
+            // Check if the account has already voted (revote scenario)
+            let old_vote_id = tc.voters.get(&account).map(|e| e.vote_id);
+            let replacing_vote_id = if let Some(id) = old_vote_id {
+                tc.revote_count += 1;
+                Some(id)
+            } else {
+                None
+            };
 
             // Get the vote ID and increment the counter
             let vote_id = tc.vote_count;
             tc.vote_count += 1;
 
-            // Record the vote in both stores
+            // Record the vote in both stores (insert replaces existing entry for the account)
             tc.voters
                 .insert(account, TemperatureCheckVoterEntry { vote_id, vote });
             tc.votes.insert(
@@ -299,6 +310,7 @@ mod governance {
                 TemperatureCheckVoteRecord {
                     voter: account,
                     vote,
+                    replacing_vote_id,
                 },
             );
 
@@ -307,6 +319,7 @@ mod governance {
                 vote_id,
                 account,
                 vote,
+                replacing_vote_id,
             });
         }
 
@@ -381,17 +394,20 @@ mod governance {
                 );
             }
 
-            // Check the account has not already voted
-            assert!(
-                proposal.voters.get(&account).is_none(),
-                "Account has already voted on this proposal"
-            );
+            // Check if the account has already voted (revote scenario)
+            let old_vote_id = proposal.voters.get(&account).map(|e| e.vote_id);
+            let replacing_vote_id = if let Some(id) = old_vote_id {
+                proposal.revote_count += 1;
+                Some(id)
+            } else {
+                None
+            };
 
             // Get the vote ID and increment the counter
             let vote_id = proposal.vote_count;
             proposal.vote_count += 1;
 
-            // Record the vote in both stores
+            // Record the vote in both stores (insert replaces existing entry for the account)
             proposal.voters.insert(
                 account,
                 ProposalVoterEntry {
@@ -404,6 +420,7 @@ mod governance {
                 ProposalVoteRecord {
                     voter: account,
                     options: options.clone(),
+                    replacing_vote_id,
                 },
             );
 
@@ -412,6 +429,7 @@ mod governance {
                 vote_id,
                 account,
                 options,
+                replacing_vote_id,
             });
         }
 
@@ -435,6 +453,26 @@ mod governance {
             self.governance_parameters = new_params.clone();
 
             Runtime::emit_event(GovernanceParametersUpdatedEvent { new_params });
+        }
+
+        /// Toggles the hidden flag on a temperature check (owner only)
+        pub fn toggle_temperature_check_hidden(&mut self, temperature_check_id: u64) {
+            let mut tc = self
+                .temperature_checks
+                .get_mut(&temperature_check_id)
+                .expect("Temperature check not found");
+
+            tc.hidden = !tc.hidden;
+        }
+
+        /// Toggles the hidden flag on a proposal (owner only)
+        pub fn toggle_proposal_hidden(&mut self, proposal_id: u64) {
+            let mut proposal = self
+                .proposals
+                .get_mut(&proposal_id)
+                .expect("Proposal not found");
+
+            proposal.hidden = !proposal.hidden;
         }
     }
 }

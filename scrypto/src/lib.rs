@@ -19,6 +19,8 @@ pub enum TemperatureCheckVote {
 pub struct TemperatureCheckVoteRecord {
     pub voter: Global<Account>,
     pub vote: TemperatureCheckVote,
+    /// If this vote replaces a previous vote, this is the ID of the replaced vote
+    pub replacing_vote_id: Option<u64>,
 }
 
 /// Voter entry for temperature checks - combines vote_id with vote data
@@ -34,6 +36,8 @@ pub struct TemperatureCheckVoterEntry {
 pub struct ProposalVoteRecord {
     pub voter: Global<Account>,
     pub options: Vec<ProposalVoteOptionId>,
+    /// If this vote replaces a previous vote, this is the ID of the replaced vote
+    pub replacing_vote_id: Option<u64>,
 }
 
 /// Voter entry for proposals - combines vote_id with vote data
@@ -133,12 +137,16 @@ pub struct TemperatureCheck {
     pub votes: KeyValueStore<u64, TemperatureCheckVoteRecord>,
     /// Counter for votes, incremented with each new vote
     pub vote_count: u64,
+    /// Counter for revotes, so unique voters = vote_count - revote_count
+    pub revote_count: u64,
     pub approval_threshold: Decimal,
     pub start: Instant,
     pub deadline: Instant,
     pub elevated_proposal_id: Option<u64>,
     /// The account that created this temperature check
     pub author: Global<Account>,
+    /// Whether this temperature check is hidden from the front-end
+    pub hidden: bool,
 }
 
 /// Struct for a proposal (GP - Governance Proposal)
@@ -163,12 +171,16 @@ pub struct Proposal {
     pub votes: KeyValueStore<u64, ProposalVoteRecord>,
     /// Counter for votes, incremented with each new vote
     pub vote_count: u64,
+    /// Counter for revotes, so unique voters = vote_count - revote_count
+    pub revote_count: u64,
     pub approval_threshold: Decimal,
     pub start: Instant,
     pub deadline: Instant,
     pub temperature_check_id: u64,
     /// The account that created the original temperature check
     pub author: Global<Account>,
+    /// Whether this proposal is hidden from the front-end
+    pub hidden: bool,
 }
 
 // =============================================================================
@@ -203,6 +215,8 @@ pub struct TemperatureCheckVotedEvent {
     pub vote_id: u64,
     pub account: Global<Account>,
     pub vote: TemperatureCheckVote,
+    /// If this vote replaces a previous vote, this is the ID of the replaced vote
+    pub replacing_vote_id: Option<u64>,
 }
 
 /// Emitted when a temperature check is elevated to a proposal
@@ -222,6 +236,8 @@ pub struct ProposalVotedEvent {
     pub vote_id: u64,
     pub account: Global<Account>,
     pub options: Vec<ProposalVoteOptionId>,
+    /// If this vote replaces a previous vote, this is the ID of the replaced vote
+    pub replacing_vote_id: Option<u64>,
 }
 
 /// Emitted when governance parameters are updated
