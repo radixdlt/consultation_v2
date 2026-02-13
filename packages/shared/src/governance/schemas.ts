@@ -340,7 +340,8 @@ export const TemperatureCheckVoteRecord = Schema.asSchema(
     ProgrammaticScryptoSborValueSchema,
     Schema.Struct({
       accountAddress: AccountAddress,
-      vote: Schema.Literal('For', 'Against')
+      vote: Schema.Literal('For', 'Against'),
+      replacingVoteId: Schema.OptionFromSelf(Schema.Number)
     }),
     {
       strict: true,
@@ -359,9 +360,13 @@ export const TemperatureCheckVoteRecord = Schema.asSchema(
             ])
           ])
         ).pipe(
-          Effect.map(([address, vote]) => ({
+          Effect.map(([address, vote, replacingVoteId]) => ({
             accountAddress: AccountAddress.make(address),
-            vote: vote.variant as 'For' | 'Against'
+            vote: vote.variant as 'For' | 'Against',
+            replacingVoteId:
+              replacingVoteId.variant === 'Some'
+                ? Option.some(replacingVoteId.value[0])
+                : Option.none<number>()
           })),
           Effect.catchAll(() =>
             ParseResult.fail(
