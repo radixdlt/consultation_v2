@@ -4,16 +4,20 @@ import Markdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 
+type ProposalVoteOption = { readonly id: number; readonly label: string }
+
 type DetailPageDetailsProps = {
   shortDescription: string
   description?: string
   filename: string
+  proposalVoteOptions?: readonly ProposalVoteOption[]
 }
 
 export function DetailPageDetails({
   shortDescription,
   description,
-  filename
+  filename,
+  proposalVoteOptions
 }: DetailPageDetailsProps) {
   const handleDownload = useCallback(() => {
     if (!description) return
@@ -37,6 +41,28 @@ export function DetailPageDetails({
           {shortDescription}
         </p>
       </div>
+
+      {/* GP Vote Options (shown on TCs) */}
+      {proposalVoteOptions && proposalVoteOptions.length > 0 && (
+        <div className="mt-6">
+          <p className="text-xs text-muted-foreground mb-4">
+            These options will be available for voting if this TC is promoted to a Governance Proposal.
+          </p>
+          <div className="space-y-2">
+            {proposalVoteOptions.map((option, index) => (
+              <div
+                key={option.id}
+                className="flex items-center gap-3 p-3 border border-border bg-secondary/50 text-sm"
+              >
+                <span className="size-6 flex items-center justify-center text-xs font-bold text-muted-foreground bg-background border border-border">
+                  {index + 1}
+                </span>
+                <span className="font-medium text-foreground">{option.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Full Details (rendered markdown) */}
       {description && description !== shortDescription && (

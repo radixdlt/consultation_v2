@@ -25,7 +25,9 @@ export function AccountVotesSection({
   const [selectedVote, setSelectedVote] = useState<string | null>(null)
 
   const filterOptions = resolveVoteOptions(entityType, voteOptions)
-  const colorByKey = new Map(filterOptions.map((f) => [f.key, f.color]))
+  const letterByKey = new Map(
+    filterOptions.map((f, i) => [f.key, String.fromCharCode(65 + i)])
+  )
 
   return Result.builder(accountVotesResult)
     .onInitial(() => (
@@ -102,24 +104,24 @@ export function AccountVotesSection({
             >
               All
             </button>
-            {filterOptions.map((opt) => (
+            {filterOptions.map((opt, i) => (
               <button
                 key={opt.key}
                 type="button"
                 onClick={() => setSelectedVote(opt.key)}
                 className={`px-3 py-1 text-xs font-medium border transition-colors cursor-pointer ${
                   selectedVote === opt.key
-                    ? opt.color.filterActive
-                    : opt.color.filterInactive
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-transparent text-muted-foreground border-border hover:border-muted-foreground'
                 }`}
               >
-                {opt.label}
+                {String.fromCharCode(65 + i)}: {opt.label}
               </button>
             ))}
           </div>
 
           {/* Voters list */}
-          <div className="max-h-36 overflow-y-auto">
+          <div className="max-h-72 overflow-y-auto pr-2">
             {filteredCount === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No voters for this option yet.
@@ -129,8 +131,7 @@ export function AccountVotesSection({
                 {sortedVoters
                   .filter((v) => selectedVote === null || v.vote === selectedVote)
                   .map((voter, index, filtered) => {
-                    const dotColor =
-                      colorByKey.get(voter.vote)?.dot ?? 'bg-neutral-500'
+                    const letter = letterByKey.get(voter.vote) ?? '?'
                     const isLast = index === filtered.length - 1
 
                     return (
@@ -139,9 +140,9 @@ export function AccountVotesSection({
                         className={`flex items-center justify-between text-sm pb-2 ${isLast ? '' : 'border-b border-border/50'}`}
                       >
                         <div className="flex items-center gap-2">
-                          <span
-                            className={`size-2 rounded-full ${dotColor}`}
-                          />
+                          <span className="text-xs font-semibold text-muted-foreground font-mono w-4 shrink-0">
+                            {letter}
+                          </span>
                           <AddressLink
                             address={voter.accountAddress}
                             prefixLength={8}

@@ -30,7 +30,6 @@ code {
 
 ::-webkit-scrollbar-thumb {
   background: oklch(0.75 0 0);
-  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

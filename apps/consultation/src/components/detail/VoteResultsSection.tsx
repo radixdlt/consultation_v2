@@ -92,7 +92,7 @@ export function VoteResultsSection({
               return (
                 <div key={option.key}>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium text-foreground max-w-[55%]">
                       {option.label}
                     </span>
                     <span className="text-muted-foreground">
@@ -101,7 +101,7 @@ export function VoteResultsSection({
                   </div>
                   <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2">
                     <div
-                      className={`${option.color.bar} h-full transition-all`}
+                      className="bg-emerald-600 dark:bg-emerald-500 h-full transition-all"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>

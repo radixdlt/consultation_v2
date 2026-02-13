@@ -1,7 +1,7 @@
 import { Result, useAtom, useAtomValue } from '@effect-atom/atom-react'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
-import { ArrowRightLeft, Check, CheckCircle, LoaderIcon, Wallet } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRightLeft, Check, LoaderIcon, Wallet } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import type { ProposalId } from 'shared/governance/brandedTypes'
 import type { Proposal } from 'shared/governance/schemas'
 import type { KeyValueStoreAddress } from 'shared/schemas'
@@ -11,14 +11,11 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useCurrentAccount } from '@/hooks/useCurrentAccount'
 import { cn } from '@/lib/utils'
-import { getProposalVoteColor } from '@/lib/voting'
-import type { VoteOption } from '@/lib/voting'
 import type { ProposalVotedAccount } from '../types'
 
 type OptionButtonProps = {
   label: string
   selected: boolean
-  selectedClass: string
   onClick?: () => void
   disabled?: boolean
 }
@@ -26,7 +23,6 @@ type OptionButtonProps = {
 function OptionButton({
   label,
   selected,
-  selectedClass,
   onClick,
   disabled
 }: OptionButtonProps) {
@@ -36,15 +32,20 @@ function OptionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'w-full text-left px-4 py-3 border transition-all duration-150 flex items-center justify-between cursor-pointer',
+        'w-full text-left px-4 py-3 border transition-all duration-200 flex items-center gap-3 cursor-pointer',
         selected
-          ? `${selectedClass} font-medium`
+          ? 'bg-neutral-900 text-white border-neutral-900 dark:bg-white dark:text-black dark:border-white'
           : 'border-border hover:border-muted-foreground hover:bg-secondary/50',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
+      <span className={cn(
+        'size-5 rounded-full border-2 flex items-center justify-center shrink-0',
+        selected ? 'border-current bg-white/20' : 'border-current'
+      )}>
+        {selected && <Check className="size-3" />}
+      </span>
       <span className="font-medium text-sm">{label}</span>
-      {selected && <Check className="size-4 shrink-0" />}
     </button>
   )
 }
@@ -72,6 +73,9 @@ export function VotingSection({
         return <DisconnectedVoting />
       }
 
+      let currentVoteOptions: readonly number[] | undefined
+      let unvotedCount = 0
+
       if (accountsVotesResult && currentAccount) {
         const votesData = Result.builder(accountsVotesResult)
           .onSuccess((votes) => ({
@@ -84,15 +88,8 @@ export function VotingSection({
           .onFailure(() => undefined)
           .render()
 
-        if (votesData?.currentVote) {
-          return (
-            <AlreadyVotedDisplay
-              currentVote={votesData.currentVote}
-              voteOptions={proposal.voteOptions}
-              unvotedCount={votesData.unvotedCount}
-            />
-          )
-        }
+        currentVoteOptions = votesData?.currentVote?.options
+        unvotedCount = votesData?.unvotedCount ?? 0
       }
 
       return (
@@ -101,6 +98,8 @@ export function VotingSection({
           proposal={proposal}
           keyValueStoreAddress={keyValueStoreAddress}
           accountList={accountList}
+          currentVoteOptions={currentVoteOptions}
+          unvotedCount={unvotedCount}
         />
       )
     })
@@ -124,78 +123,65 @@ function DisconnectedVoting() {
   )
 }
 
-type AlreadyVotedDisplayProps = {
-  currentVote: ProposalVotedAccount
-  voteOptions: readonly VoteOption[]
-  unvotedCount: number
-}
-
-function AlreadyVotedDisplay({ currentVote, voteOptions, unvotedCount }: AlreadyVotedDisplayProps) {
-  const votedOptionIds = new Set(currentVote.options)
-
-  return (
-    <div className="bg-secondary/50 border border-border p-6">
-      <h3 className="text-sm font-semibold text-foreground mb-4">
-        Your Vote
-      </h3>
-      <div className="flex flex-col gap-3">
-        {voteOptions.map((opt, index) => {
-          const isVoted = votedOptionIds.has(opt.id)
-          const color = getProposalVoteColor(index)
-          return (
-            <div
-              key={opt.id}
-              className={`w-full flex items-center justify-between px-4 py-3 text-sm border transition-all ${
-                isVoted
-                  ? `${color.selected} font-medium`
-                  : 'bg-muted border-border text-muted-foreground'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                {opt.label}
-              </span>
-              {isVoted && <CheckCircle className="size-4" />}
-            </div>
-          )
-        })}
-      </div>
-
-      {unvotedCount > 0 && (
-        <div className="flex items-start gap-2 mt-4 text-xs text-muted-foreground bg-secondary/80 border border-border p-2.5">
-          <ArrowRightLeft className="size-3.5 shrink-0 mt-0.5" />
-          <span>
-            {unvotedCount === 1
-              ? 'You have 1 connected account that hasn\'t voted yet. Switch accounts to cast their vote.'
-              : `You have ${unvotedCount} connected accounts that haven't voted yet. Switch accounts to cast their votes.`}
-          </span>
-        </div>
-      )}
-    </div>
-  )
-}
-
 type ConnectedVotingProps = {
   proposalId: ProposalId
   proposal: Proposal
   keyValueStoreAddress: KeyValueStoreAddress
   accountList: WalletDataStateAccount[]
+  currentVoteOptions?: readonly number[]
+  unvotedCount: number
 }
 
 function ConnectedVoting({
   proposalId,
   proposal,
   keyValueStoreAddress,
-  accountList
+  accountList,
+  currentVoteOptions,
+  unvotedCount
 }: ConnectedVotingProps) {
   const [voteResult, voteBatch] = useAtom(voteOnProposalBatchAtom)
-  const [selectedOptions, setSelectedOptions] = useState<Set<number>>(new Set())
-  const [voteAllAccounts, setVoteAllAccounts] = useState(
-    accountList.length >= 2
+  const [isEditing, setIsEditing] = useState(false)
+  const [selectedOptions, setSelectedOptions] = useState<Set<number>>(
+    new Set(currentVoteOptions ?? [])
   )
+  const [voteAllAccounts, setVoteAllAccounts] = useState(false)
   const currentAccount = useCurrentAccount()
 
+  useEffect(() => {
+    if (currentVoteOptions !== undefined && !isEditing) {
+      setSelectedOptions(new Set(currentVoteOptions))
+    }
+  }, [currentVoteOptions, isEditing])
+
+  const wasSubmittingRef = useRef(false)
   const isSubmitting = voteResult.waiting
+
+  useEffect(() => {
+    if (isSubmitting) {
+      wasSubmittingRef.current = true
+    } else if (wasSubmittingRef.current) {
+      wasSubmittingRef.current = false
+      // Only close edit form if submission succeeded with at least one successful vote
+      const succeeded = Result.builder(voteResult)
+        .onSuccess((results) => results.some((r) => r.success))
+        .onInitial(() => false)
+        .onFailure(() => false)
+        .render()
+      if (succeeded) {
+        setIsEditing(false)
+      }
+    }
+  }, [isSubmitting, voteResult])
+
   const maxSelections = proposal.maxSelections
+  const hasVoted = currentVoteOptions !== undefined
+  const showForm = !hasVoted || isEditing
+  const currentSet = new Set(currentVoteOptions ?? [])
+  const hasChanged = hasVoted && (
+    selectedOptions.size !== currentSet.size ||
+    [...selectedOptions].some((id) => !currentSet.has(id))
+  )
 
   const handleOptionToggle = (optionId: number) => {
     setSelectedOptions((prev) => {
@@ -231,58 +217,124 @@ function ConnectedVoting({
     })
   }
 
+  const canSubmit = hasVoted
+    ? hasChanged && !isSubmitting
+    : selectedOptions.size > 0 && !isSubmitting
+
   return (
     <div className="bg-secondary/50 border border-border p-6">
-      <h3 className="text-sm font-semibold text-foreground mb-4">
-        Cast your Vote
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-foreground">
+          {hasVoted ? 'Your Vote' : 'Cast your Vote'}
+        </h3>
+        {hasVoted && !isEditing && (
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            Change vote
+          </button>
+        )}
+        {isEditing && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditing(false)
+              setSelectedOptions(new Set(currentVoteOptions ?? []))
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
 
-      {maxSelections > 1 && (
+      {showForm && maxSelections > 1 && (
         <p className="text-sm text-muted-foreground mb-4">
           Select up to {maxSelections} options
         </p>
       )}
 
-      <div className="flex flex-col gap-3 mb-4">
-        {proposal.voteOptions.map((option, index) => (
-          <OptionButton
-            key={option.id}
-            label={option.label}
-            selected={selectedOptions.has(option.id)}
-            selectedClass={getProposalVoteColor(index).selected}
-            onClick={() => handleOptionToggle(option.id)}
-            disabled={isSubmitting}
-          />
-        ))}
+      <div className="flex flex-col gap-3">
+        {proposal.voteOptions.map((opt) => {
+          const isSelected = selectedOptions.has(opt.id)
+          if (showForm) {
+            return (
+              <OptionButton
+                key={opt.id}
+                label={opt.label}
+                selected={isSelected}
+                onClick={() => handleOptionToggle(opt.id)}
+                disabled={isSubmitting}
+              />
+            )
+          }
+
+          return (
+            <div
+              key={opt.id}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm border transition-all ${
+                isSelected
+                  ? 'bg-neutral-900 text-white border-neutral-900 dark:bg-white dark:text-black dark:border-white font-medium'
+                  : 'bg-muted border-border text-muted-foreground'
+              }`}
+            >
+              <span className={cn(
+                'size-5 rounded-full border-2 flex items-center justify-center shrink-0',
+                isSelected ? 'border-current bg-white/20' : 'border-current'
+              )}>
+                {isSelected && <Check className="size-3" />}
+              </span>
+              <span className="font-medium text-sm">{opt.label}</span>
+            </div>
+          )
+        })}
       </div>
 
-      {accountList.length >= 2 && (
-        <div className="flex items-center space-x-2 mb-4">
-          <Checkbox
-            id="vote-all-proposal"
-            checked={voteAllAccounts}
-            onCheckedChange={(checked) => setVoteAllAccounts(checked === true)}
-            disabled={isSubmitting}
-          />
-          <label htmlFor="vote-all-proposal" className="text-sm">
-            Use all connected accounts ({accountList.length})
-          </label>
-        </div>
+      {showForm && (
+        <>
+          {/* Hidden on mobile: deep linking opens the wallet app, breaking multi-account flow */}
+          {accountList.length >= 2 && (
+            <div className="hidden lg:flex items-center space-x-2 mt-4">
+              <Checkbox
+                id="vote-all-proposal"
+                checked={voteAllAccounts}
+                onCheckedChange={(checked) => setVoteAllAccounts(checked === true)}
+                disabled={isSubmitting}
+              />
+              <label htmlFor="vote-all-proposal" className="text-sm">
+                Use all connected accounts ({accountList.length})
+              </label>
+            </div>
+          )}
+
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className={cn(
+              'w-full mt-4',
+              canSubmit &&
+                'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500 border-transparent'
+            )}
+          >
+            {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
+            {hasVoted ? 'Change Vote' : 'Sign Transaction'}
+          </Button>
+        </>
       )}
 
-      <Button
-        type="button"
-        onClick={handleSubmit}
-        disabled={isSubmitting || selectedOptions.size === 0}
-        className={cn(
-          'w-full',
-          selectedOptions.size > 0 &&
-            'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500 border-transparent'
-        )}
-      >
-        {isSubmitting && <LoaderIcon className="size-4 animate-spin" />}
-        Sign Transaction
-      </Button>
+      {hasVoted && unvotedCount > 0 && !isEditing && (
+        <div className="flex items-start gap-2 mt-4 text-xs text-muted-foreground bg-secondary/80 border border-border p-2.5">
+          <ArrowRightLeft className="size-3.5 shrink-0 mt-0.5" />
+          <span>
+            {unvotedCount === 1
+              ? 'You have 1 connected account that hasn\'t voted yet. Switch accounts to cast their vote.'
+              : `You have ${unvotedCount} connected accounts that haven't voted yet. Switch accounts to cast their votes.`}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
