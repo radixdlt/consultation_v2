@@ -33,9 +33,8 @@ export const voteCalculationResults = pgTable(
   (table) => [primaryKey({ columns: [table.stateId, table.vote] })]
 )
 
-// NOTE: The composite PK (stateId, accountAddress, vote) means that if we ever
-// enable vote changes, an account switching choices would leave a stale row for
-// the old choice. Revisit the PK or add a DELETE step when supporting vote changes.
+// Revote support: old rows are deleted before inserting new ones within the same
+// transaction in commitVoteResults, so the composite PK works correctly.
 export const voteCalculationAccountVotes = pgTable(
   'vote_calculation_account_votes',
   {
