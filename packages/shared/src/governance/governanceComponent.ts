@@ -355,13 +355,15 @@ CALL_METHOD
             Effect.flatMap(
               Effect.forEach(
                 Effect.fnUntraced(function* (item) {
-                  const { accountAddress, vote } = yield* Schema.decodeUnknown(
-                    TemperatureCheckVoteRecord
-                  )(item.value.programmatic_json)
+                  const { accountAddress, vote, replacingVoteId } =
+                    yield* Schema.decodeUnknown(TemperatureCheckVoteRecord)(
+                      item.value.programmatic_json
+                    )
 
                   return {
                     accountAddress,
-                    vote
+                    vote,
+                    replacingVoteId
                   }
                 }),
                 { concurrency: 10 }
@@ -396,14 +398,15 @@ CALL_METHOD
             Effect.flatMap(
               Effect.forEach(
                 Effect.fnUntraced(function* (item) {
-                  const { accountAddress, options } =
+                  const { accountAddress, options, replacingVoteId } =
                     yield* Schema.decodeUnknown(ProposalVoteRecord)(
                       item.value.programmatic_json
                     )
 
                   return {
                     accountAddress,
-                    options
+                    options,
+                    replacingVoteId
                   }
                 }),
                 { concurrency: 10 }

@@ -413,7 +413,8 @@ export const ProposalVoteRecord = Schema.asSchema(
     ProgrammaticScryptoSborValueSchema,
     Schema.Struct({
       accountAddress: AccountAddress,
-      options: Schema.Array(Schema.Number)
+      options: Schema.Array(Schema.Number),
+      replacingVoteId: Schema.OptionFromSelf(Schema.Number)
     }),
     {
       strict: true,
@@ -429,9 +430,13 @@ export const ProposalVoteRecord = Schema.asSchema(
             ])
           ])
         ).pipe(
-          Effect.map(([address, options]) => ({
+          Effect.map(([address, options, replacingVoteId]) => ({
             accountAddress: AccountAddress.make(address),
-            options: options.map((option) => option[0])
+            options: options.map((option) => option[0]),
+            replacingVoteId:
+              replacingVoteId.variant === 'Some'
+                ? Option.some(replacingVoteId.value[0])
+                : Option.none<number>()
           })),
           Effect.catchAll(() =>
             ParseResult.fail(
