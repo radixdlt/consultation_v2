@@ -142,9 +142,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
         stateId: number,
         oldVotes: A.NonEmptyReadonlyArray<{ vote: string; votePower: string }>
       ) => {
-        const byVote = Object.entries(
-          A.groupBy(oldVotes, ({ vote }) => vote)
-        )
+        const byVote = Object.entries(A.groupBy(oldVotes, ({ vote }) => vote))
 
         const caseExpr = sql`CASE ${sql.join(
           byVote.map(

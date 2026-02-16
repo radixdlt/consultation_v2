@@ -1,4 +1,5 @@
 import { GetLedgerStateService } from '@radix-effects/gateway'
+import { StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, flow, pipe, Record as R } from 'effect'
 import { GovernanceComponent } from 'shared/governance/index'
