@@ -23,7 +23,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
       const db = yield* ORM
       const sqlClient = yield* SqlClient
 
-      const getOrCreateStateId = (
+      const getOrCreateState = (
         type: 'temperature_check' | 'proposal',
         entityId: number
       ) =>
@@ -36,42 +36,26 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
               lastVoteCount: sql`${voteCalculationState.lastVoteCount}`
             }
           })
-          .returning({ id: voteCalculationState.id })
+          .returning({
+            id: voteCalculationState.id,
+            lastVoteCount: voteCalculationState.lastVoteCount
+          })
           .pipe(
             Effect.flatMap((rows) =>
               pipe(
                 rows,
                 A.head,
-                Option.map((r) => r.id),
                 Option.match({
                   onNone: () =>
                     Effect.die(
-                      'Expected id when upserting vote calculation state'
+                      'Expected row when upserting vote calculation state'
                     ),
-                  onSome: (id) => Effect.succeed(id)
+                  onSome: (row) =>
+                    Effect.succeed({
+                      id: row.id,
+                      lastVoteCount: row.lastVoteCount
+                    })
                 })
-              )
-            ),
-            Effect.orDie
-          )
-
-      const getLastVoteCount = (type: string, entityId: number) =>
-        db
-          .select({ lastVoteCount: voteCalculationState.lastVoteCount })
-          .from(voteCalculationState)
-          .where(
-            and(
-              eq(voteCalculationState.type, type),
-              eq(voteCalculationState.entityId, entityId)
-            )
-          )
-          .pipe(
-            Effect.map((rows) =>
-              pipe(
-                rows,
-                A.head,
-                Option.map((r) => r.lastVoteCount),
-                Option.getOrElse(() => 0)
               )
             ),
             Effect.orDie
@@ -345,8 +329,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           )
 
       return {
-        getOrCreateStateId,
-        getLastVoteCount,
+        getOrCreateState,
         commitVoteResults,
         getResultsByEntity,
         getAccountVotesByEntity,

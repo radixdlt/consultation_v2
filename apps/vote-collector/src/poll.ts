@@ -3,7 +3,7 @@ import { StateVersion } from '@radix-effects/shared'
 import { Array as A, Effect, Order, Option, pipe } from 'effect'
 import { Config as GovernanceConfig } from 'shared/governance/config'
 import { LedgerCursor } from './ledgerCursor'
-import { GovernanceEventProcessor } from './streamer/governanceEvents'
+import { GovernanceEventProcessor } from './governanceEvents'
 import type { VoteCalculationPayload } from './vote-calculation/types'
 import { VoteCalculation } from './vote-calculation/voteCalculation'
 
@@ -99,8 +99,7 @@ export class PollService extends Effect.Service<PollService>()('PollService', {
           for (const result of successes) {
             yield* Effect.log('Vote calculation complete', {
               type: result.type,
-              entityId: result.entityId,
-              results: result.results
+              entityId: result.entityId
             })
           }
 

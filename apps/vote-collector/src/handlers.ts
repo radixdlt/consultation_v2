@@ -13,12 +13,16 @@ import {
   Schema
 } from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
-import { Config, EntityType, GovernanceComponent } from 'shared/governance/index'
+import {
+  Config,
+  EntityType,
+  GovernanceComponent
+} from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
 import { PollService } from './poll'
-import { GovernanceEventProcessor } from './streamer/governanceEvents'
+import { GovernanceEventProcessor } from './governanceEvents'
 import { VoteCalculation } from './vote-calculation/voteCalculation'
 import { VoteCalculationRepo } from './vote-calculation/voteCalculationRepo'
 
@@ -75,12 +79,17 @@ const withQueryParams = <A, I>(
   handler: (params: A) => Effect.Effect<unknown, never, any>
 ): Promise<APIGatewayProxyResultV2> =>
   Effect.runPromise(
-    Schema.decodeUnknown(schema)(event.queryStringParameters ?? {}, { errors: "all" }).pipe(
+    Schema.decodeUnknown(schema)(event.queryStringParameters ?? {}, {
+      errors: 'all'
+    }).pipe(
       Effect.mapError(
         (e) =>
           ({
             statusCode: 400,
-            body: JSON.stringify({ error: 'Invalid query parameters', details: ParseResult.ArrayFormatter.formatErrorSync(e) })
+            body: JSON.stringify({
+              error: 'Invalid query parameters',
+              details: ParseResult.ArrayFormatter.formatErrorSync(e)
+            })
           }) as APIGatewayProxyResultV2
       ),
       Effect.flatMap(handler),
@@ -93,12 +102,11 @@ const withQueryParams = <A, I>(
           }) as APIGatewayProxyResultV2
       ),
       Effect.catchAll(Effect.succeed),
-      Effect.catchAllDefect(
-        () =>
-          Effect.succeed({
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Internal server error' })
-          } as APIGatewayProxyResultV2)
+      Effect.catchAllDefect(() =>
+        Effect.succeed({
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Internal server error' })
+        } as APIGatewayProxyResultV2)
       ),
       Effect.provide(AppLayer)
     ) as Effect.Effect<APIGatewayProxyResultV2>

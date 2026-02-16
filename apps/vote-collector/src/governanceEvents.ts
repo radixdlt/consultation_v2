@@ -6,7 +6,7 @@ import type {
 import { Array as A, Effect, Option } from 'effect'
 import { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
 import { GovernanceComponent } from 'shared/governance/index'
-import type { VoteCalculationPayload } from '../vote-calculation/types'
+import type { VoteCalculationPayload } from './vote-calculation/types'
 
 type Payload = typeof VoteCalculationPayload.Type
 
@@ -17,9 +17,7 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
     effect: Effect.gen(function* () {
       const governance = yield* GovernanceComponent
 
-      const handleTemperatureCheckVoted = (
-        event: DetailedEventsItem
-      ) =>
+      const handleTemperatureCheckVoted = (event: DetailedEventsItem) =>
         Effect.gen(function* () {
           const data = event.payload
             .programmatic_json as ProgrammaticScryptoSborValue
@@ -42,9 +40,7 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
           })
         }).pipe(Effect.orDie)
 
-      const handleProposalVoted = (
-        event: DetailedEventsItem
-      ) =>
+      const handleProposalVoted = (event: DetailedEventsItem) =>
         Effect.gen(function* () {
           const data = event.payload
             .programmatic_json as ProgrammaticScryptoSborValue
