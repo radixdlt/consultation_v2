@@ -5,9 +5,10 @@ import {
   voteCalculationResults,
   voteCalculationState
 } from 'db/src/schema'
-import { and, desc, eq, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import { Array as A, Effect, Option, pipe } from 'effect'
 import { ORM } from '../db/orm'
+import { EntityId, EntityType } from 'shared/governance/brandedTypes'
 
 export type AccountVoteRecord = {
   readonly accountAddress: AccountAddress
@@ -76,48 +77,148 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
             Effect.orDie
           )
 
-      const upsertVotePower = (params: {
-        stateId: number
-        vote: string
-        votePower: string
-      }) =>
-        db
-          .insert(voteCalculationResults)
-          .values({
-            stateId: params.stateId,
-            vote: params.vote,
-            votePower: params.votePower
-          })
-          .onConflictDoUpdate({
-            target: [
-              voteCalculationResults.stateId,
-              voteCalculationResults.vote
-            ],
-            set: {
-              votePower: sql`${voteCalculationResults.votePower} + ${params.votePower}`
-            }
-          })
-          .pipe(Effect.asVoid, Effect.orDie)
+      const getAccountVotesByAddresses = (
+        stateId: number,
+        accountAddresses: ReadonlyArray<string>
+      ) =>
+        A.isEmptyReadonlyArray(accountAddresses)
+          ? Effect.succeed(
+              A.empty<{
+                accountAddress: AccountAddress
+                vote: string
+                votePower: string
+              }>()
+            )
+          : db
+              .select({
+                accountAddress: voteCalculationAccountVotes.accountAddress,
+                vote: voteCalculationAccountVotes.vote,
+                votePower: voteCalculationAccountVotes.votePower
+              })
+              .from(voteCalculationAccountVotes)
+              .where(
+                and(
+                  eq(voteCalculationAccountVotes.stateId, stateId),
+                  inArray(
+                    voteCalculationAccountVotes.accountAddress,
+                    accountAddresses as string[]
+                  )
+                )
+              )
+              .pipe(
+                Effect.map(
+                  A.map((r) => ({
+                    ...r,
+                    accountAddress: AccountAddress.make(r.accountAddress)
+                  }))
+                ),
+                Effect.orDie
+              )
 
-      const upsertAccountVote = (params: AccountVoteRecord & {
-        stateId: number
-      }) =>
+      const deleteAccountVotesByAddresses = (
+        stateId: number,
+        accountAddresses: ReadonlyArray<AccountAddress>
+      ) =>
+        A.isEmptyReadonlyArray(accountAddresses)
+          ? Effect.void
+          : db
+              .delete(voteCalculationAccountVotes)
+              .where(
+                and(
+                  eq(voteCalculationAccountVotes.stateId, stateId),
+                  inArray(
+                    voteCalculationAccountVotes.accountAddress,
+                    accountAddresses
+                  )
+                )
+              )
+              .pipe(Effect.asVoid, Effect.orDie)
+
+      /** Subtracts old vote power from aggregated results when accounts revote.
+       *  Groups old votes by vote option and builds a single UPDATE with a CASE
+       *  expression that sums each option's vote powers, then subtracts the
+       *  per-option totals from the corresponding result rows. */
+      const subtractOldVotePower = (
+        stateId: number,
+        oldVotes: A.NonEmptyReadonlyArray<{ vote: string; votePower: string }>
+      ) => {
+        const byVote = Object.entries(
+          A.groupBy(oldVotes, ({ vote }) => vote)
+        )
+
+        const caseExpr = sql`CASE ${sql.join(
+          byVote.map(
+            ([vote, items]) =>
+              sql`WHEN ${voteCalculationResults.vote} = ${vote}
+                  THEN ${sql.join(
+                    items.map(({ votePower }) => sql`${votePower}::numeric`),
+                    sql` + `
+                  )}`
+          ),
+          sql` `
+        )} END`
+
+        return db
+          .update(voteCalculationResults)
+          .set({
+            votePower: sql`${voteCalculationResults.votePower} - (${caseExpr})`
+          })
+          .where(
+            and(
+              eq(voteCalculationResults.stateId, stateId),
+              inArray(
+                voteCalculationResults.vote,
+                byVote.map(([vote]) => vote)
+              )
+            )
+          )
+          .pipe(Effect.asVoid, Effect.orDie)
+      }
+
+      const upsertAccountVotes = (
+        stateId: number,
+        accountVotes: A.NonEmptyReadonlyArray<AccountVoteRecord>
+      ) =>
         db
           .insert(voteCalculationAccountVotes)
-          .values({
-            stateId: params.stateId,
-            accountAddress: params.accountAddress,
-            vote: params.vote,
-            votePower: params.votePower
-          })
+          .values(
+            accountVotes.map((v) => ({
+              stateId,
+              accountAddress: v.accountAddress,
+              vote: v.vote,
+              votePower: v.votePower
+            }))
+          )
           .onConflictDoUpdate({
             target: [
               voteCalculationAccountVotes.stateId,
               voteCalculationAccountVotes.accountAddress,
               voteCalculationAccountVotes.vote
             ],
+            set: { votePower: sql`excluded.vote_power` }
+          })
+          .pipe(Effect.asVoid, Effect.orDie)
+
+      const upsertVoteResults = (
+        stateId: number,
+        results: A.NonEmptyReadonlyArray<{ vote: string; votePower: string }>
+      ) =>
+        db
+          .insert(voteCalculationResults)
+          .values(
+            results.map((r) => ({
+              stateId,
+              vote: r.vote,
+              votePower: r.votePower
+            }))
+          )
+          .onConflictDoUpdate({
+            target: [
+              voteCalculationResults.stateId,
+              voteCalculationResults.vote
+            ],
             set: {
-              votePower: params.votePower
+              votePower: sql`${voteCalculationResults.votePower} + excluded.vote_power`
             }
           })
           .pipe(Effect.asVoid, Effect.orDie)
@@ -181,38 +282,42 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
 
       const commitVoteResults = (params: {
         stateId: number
-        type: string
-        entityId: number
+        type: EntityType
+        entityId: EntityId
         lastVoteCount: number
         results: ReadonlyArray<{ vote: string; votePower: string }>
         accountVotes: ReadonlyArray<AccountVoteRecord>
+        revoteRemovals: ReadonlyArray<{
+          accountAddress: AccountAddress
+          oldVotes: ReadonlyArray<{ vote: string; votePower: string }>
+        }>
       }) =>
-        // TODO: consider batch INSERT ... ON CONFLICT if vote batches grow large
         sqlClient.withTransaction(
-          Effect.forEach(
-            params.accountVotes,
-            ({ accountAddress, vote, votePower }) =>
-              upsertAccountVote({
-                stateId: params.stateId,
-                accountAddress,
-                vote,
-                votePower
-              })
-          ).pipe(
-            Effect.andThen(
-              Effect.forEach(params.results, ({ vote, votePower }) =>
-                upsertVotePower({ stateId: params.stateId, vote, votePower })
-              )
-            ),
-            Effect.andThen(
-              updateLastVoteCount(
-                params.type,
-                params.entityId,
-                params.lastVoteCount
-              )
-            ),
-            Effect.asVoid
-          )
+          Effect.gen(function* () {
+            // Phase 1: Remove old revote data. Only deletes if there are revote removals.
+            yield* deleteAccountVotesByAddresses(
+              params.stateId,
+              params.revoteRemovals.map((r) => r.accountAddress)
+            )
+            const oldVotes = params.revoteRemovals.flatMap((r) => r.oldVotes)
+            if (A.isNonEmptyReadonlyArray(oldVotes)) {
+              yield* subtractOldVotePower(params.stateId, oldVotes)
+            }
+
+            // Phase 2: Insert new data
+            if (A.isNonEmptyReadonlyArray(params.accountVotes)) {
+              yield* upsertAccountVotes(params.stateId, params.accountVotes)
+            }
+
+            if (A.isNonEmptyReadonlyArray(params.results)) {
+              yield* upsertVoteResults(params.stateId, params.results)
+            }
+            yield* updateLastVoteCount(
+              params.type,
+              params.entityId,
+              params.lastVoteCount
+            )
+          })
         )
 
       // TODO: expose limit/offset through the RPC layer in a future version
@@ -299,6 +404,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
         commitVoteResults,
         getResultsByEntity,
         getAccountVotesByEntity,
+        getAccountVotesByAddresses,
         resetAllCalculating,
         ensureAndMarkCalculating,
         clearCalculatingBulk
