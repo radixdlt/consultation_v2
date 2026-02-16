@@ -16,6 +16,7 @@ Central index of context files for AI agents and coding assistants working with 
 | [effect-atom](./context/effect-atom.md) | State Management | Reactive atoms, Result type, React hooks |
 | [sql-drizzle](./context/sql-drizzle.md) | Database ORM | Drizzle + Effect, remote proxy, transactions |
 | [radix-Gateway](./context/radix-Gateway.md) | Radix Ledger | Gateway API client, tagged errors, pagination, SBOR schema, ROLA |
+| [sst-Lambda](./context/sst-Lambda.md) | Serverless Deploy | SST v3 Function component, esbuild bundling, IAM, resource linking, dev mode |
 
 
 ---
@@ -381,6 +382,42 @@ Central index of context files for AI agents and coding assistants working with 
 
 ---
 
+## SST Lambda (sst.aws.Function)
+
+> SST v3's Pulumi-based Lambda abstraction — bundling, IAM, resource linking, dev mode
+
+**File:** [sst-Lambda.md](./context/sst-Lambda.md)
+
+| Section | Description |
+|---------|-------------|
+| [Overview](./context/sst-Lambda.md#overview) | Multi-runtime bundling, IAM, linking, layers, dev mode |
+| [Source Map](./context/sst-Lambda.md#source-map) | Key source files and their roles |
+| [FunctionArgs Interface](./context/sst-Lambda.md#functionargs-interface) | All Lambda configuration options |
+| [Resources Created](./context/sst-Lambda.md#resources-created) | CloudWatch, IAM role, Lambda function, log subscriber |
+| [Bundling (esbuild)](./context/sst-Lambda.md#bundling-esbuild) | Treeshaking, externals, sourcemaps, loader config |
+| [IAM & Permissions](./context/sst-Lambda.md#iam--permissions) | Auto-generated role, linked permissions, custom policies |
+| [Resource Linking](./context/sst-Lambda.md#resource-linking) | Type-safe env var injection, `Resource.MyBucket.name` pattern |
+| [Runtime SDK](./context/sst-Lambda.md#runtime-sdk) | `sst/resource`, `sst/aws/function`, handler wrappers |
+| [Node.js Runtime](./context/sst-Lambda.md#nodejs-runtime) | Node 22, esbuild config, banner/install, splitting |
+| [Dev Mode Architecture](./context/sst-Lambda.md#dev-mode-architecture) | IoT bridge, local execution, live debugging |
+| [Lambda Subscribers](./context/sst-Lambda.md#lambda-subscribers) | Event-driven patterns, SNS/SQS/Kinesis/DynamoDB/Bucket |
+| [Transform System](./context/sst-Lambda.md#transform-system) | Override any Pulumi prop via `transform` |
+| [Dev vs Production](./context/sst-Lambda.md#dev-vs-production) | Behavior differences between dev and deploy |
+| [Key Patterns](./context/sst-Lambda.md#key-patterns) | Streaming, layers, VPC, architecture, warm pools |
+
+### SST Lambda Subsections
+
+| Topic | Section |
+|-------|---------|
+| esbuild treeshaking & externals | [Bundling (esbuild)](./context/sst-Lambda.md#bundling-esbuild) |
+| Linked resource env vars | [Resource Linking](./context/sst-Lambda.md#resource-linking) |
+| IoT-based dev mode | [Dev Mode Architecture](./context/sst-Lambda.md#dev-mode-architecture) |
+| Handler wrapper + streaming | [Runtime SDK](./context/sst-Lambda.md#runtime-sdk) |
+| SNS/SQS/Kinesis subscribers | [Lambda Subscribers](./context/sst-Lambda.md#lambda-subscribers) |
+| Pulumi transform overrides | [Transform System](./context/sst-Lambda.md#transform-system) |
+
+---
+
 ## Cross-Reference: Common Tasks
 
 | Task | Primary Context | Related Sections |
@@ -421,6 +458,12 @@ Central index of context files for AI agents and coding assistants working with 
 | Stream data via RPC | [effect-Rpc](./context/effect-Rpc.md#rpcschema) | [Streaming as First-Class](./context/effect-Rpc.md#5-streaming-as-first-class) |
 | Choose RPC serialization format | [effect-Rpc](./context/effect-Rpc.md#rpcserialization) | [Serialization Decision Guide](./context/effect-Rpc.md#serialization-decision-guide) |
 | Test RPCs in-memory | [effect-Rpc](./context/effect-Rpc.md#rpctest) | [End-to-End Example](./context/effect-Rpc.md#end-to-end-example) |
+| Deploy Lambda function (SST) | [sst-Lambda](./context/sst-Lambda.md#overview) | [FunctionArgs](./context/sst-Lambda.md#functionargs-interface) |
+| Configure esbuild bundling | [sst-Lambda](./context/sst-Lambda.md#bundling-esbuild) | [Node.js Runtime](./context/sst-Lambda.md#nodejs-runtime) |
+| Link resources to Lambda | [sst-Lambda](./context/sst-Lambda.md#resource-linking) | [Runtime SDK](./context/sst-Lambda.md#runtime-sdk) |
+| Set up Lambda dev mode | [sst-Lambda](./context/sst-Lambda.md#dev-mode-architecture) | [Dev vs Production](./context/sst-Lambda.md#dev-vs-production) |
+| Subscribe Lambda to events | [sst-Lambda](./context/sst-Lambda.md#lambda-subscribers) | [Key Patterns](./context/sst-Lambda.md#key-patterns) |
+| Configure Lambda IAM permissions | [sst-Lambda](./context/sst-Lambda.md#iam--permissions) | [Resource Linking](./context/sst-Lambda.md#resource-linking) |
 
 
 ---

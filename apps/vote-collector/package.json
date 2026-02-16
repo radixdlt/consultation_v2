@@ -2,11 +2,16 @@
 	"name": "vote-collector",
 	"type": "module",
 	"scripts": {
-		"dev": "tsx watch src/index.ts",
-		"dev:inspect": "tsx --inspect-brk src/index.ts",
 		"build": "tsdown",
+		"check-types": "tsc --noEmit",
+		"dev:inspect": "tsx --inspect-brk src/index.ts",
 		"test": "vitest",
-		"check-types": "tsc --noEmit"
+		"dev": "sst dev --stage local",
+		"sst:deploy:dev": "sst deploy --stage development",
+		"sst:deploy:prod": "sst deploy --stage production",
+		"sst:remove:local": "sst remove --stage local",
+		"sst:remove:dev": "sst remove --stage development",
+		"sst:remove:prod": "sst remove --stage production"
 	},
 	"dependencies": {
 		"@effect/opentelemetry": "catalog:",
@@ -30,11 +35,13 @@
 	},
 	"devDependencies": {
 		"@effect/language-service": "catalog:",
-		"@types/pg": "^8.16.0",
 		"@effect/vitest": "catalog:",
 		"@testcontainers/postgresql": "^11.10.0",
+		"@types/aws-lambda": "8.10.160",
+		"@types/pg": "^8.16.0",
 		"tsdown": "catalog:",
 		"tsx": "catalog:",
-		"vitest": "catalog:"
+		"vitest": "catalog:",
+		"sst": "3.17.38"
 	}
 }

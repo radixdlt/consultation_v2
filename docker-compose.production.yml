@@ -1,18 +1,4 @@
 services:
-  vote-collector:
-    build:
-      context: .
-      dockerfile: dockerfiles/server.Dockerfile
-    ports:
-      - "3001:3001"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/consultation
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - default
-
   consultation:
     build:
       context: .

@@ -8,10 +8,7 @@ export const accountVotesAtom = Atom.family((type: EntityType) =>
     voteClientRuntime.atom(
       Effect.gen(function* () {
         const client = yield* VoteClient
-        return yield* client.GetAccountVotes({
-          type,
-          entityId
-        })
+        return yield* client.GetAccountVotes({ type, entityId })
       })
     )
   )

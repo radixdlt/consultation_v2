@@ -1,5 +1,5 @@
 import { GetLedgerStateService } from '@radix-effects/gateway'
-import { AccountAddress, StateVersion } from '@radix-effects/shared'
+import { StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, flow, pipe, Record as R } from 'effect'
 import { GovernanceComponent } from 'shared/governance/index'
@@ -137,7 +137,7 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
 
           const snapshotStateVersion = yield* ledgerState({
             at_ledger_state: { timestamp: new Date(payload.start) }
-          }).pipe(Effect.map((r) => r.state_version))
+          }).pipe(Effect.map((r) => StateVersion.make(r.state_version)))
 
           yield* Effect.log('Snapshot state version resolved', {
             snapshotStateVersion,
@@ -151,7 +151,7 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           )
           const result = yield* snapshot({
             addresses,
-            stateVersion: StateVersion.make(snapshotStateVersion)
+            stateVersion: snapshotStateVersion
           })
           return R.map(result, (balances) =>
             pipe(
