@@ -1,4 +1,3 @@
-import { GetLedgerStateService } from '@radix-effects/gateway'
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2
@@ -9,21 +8,15 @@ import {
   Effect,
   Layer,
   Logger,
-  ParseResult,
-  Schema
+  Schema,
+  ManagedRuntime,
+  ParseResult
 } from 'effect'
 import { StokenetGatewayApiClientLayer } from 'shared/gateway'
-import {
-  Config,
-  EntityType,
-  GovernanceComponent
-} from 'shared/governance/index'
-import { Snapshot } from 'shared/snapshot/snapshot'
+import { Config, EntityType } from 'shared/governance/index'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
 import { PollService } from './poll'
-import { GovernanceEventProcessor } from './governanceEvents'
-import { VoteCalculation } from './vote-calculation/voteCalculation'
 import { VoteCalculationRepo } from './vote-calculation/voteCalculationRepo'
 
 class UnsupportedNetworkIdError extends Data.TaggedError(
@@ -52,15 +45,7 @@ const GovernanceConfigLayer = Layer.unwrapEffect(
   })
 )
 
-const AppLayer = Layer.mergeAll(
-  GovernanceComponent.Default,
-  GovernanceEventProcessor.Default,
-  Snapshot.Default,
-  GetLedgerStateService.Default,
-  VoteCalculation.Default,
-  VoteCalculationRepo.Default,
-  PollService.Default
-).pipe(
+const CronJobHandlerLayer = PollService.Default.pipe(
   Layer.provide(ORM.Default),
   Layer.provideMerge(StokenetGatewayApiClientLayer),
   Layer.provideMerge(GovernanceConfigLayer),
@@ -68,68 +53,58 @@ const AppLayer = Layer.mergeAll(
   Layer.provideMerge(Logger.json)
 )
 
+const HttpHandlerLayer = VoteCalculationRepo.Default.pipe(
+  Layer.provide(ORM.Default),
+  Layer.provideMerge(PgClientLive),
+  Layer.provideMerge(Logger.json)
+)
+
+const CronRuntime = ManagedRuntime.make(CronJobHandlerLayer)
+const HttpRuntime = ManagedRuntime.make(HttpHandlerLayer)
+
 const QueryParams = Schema.Struct({
   type: EntityType,
   entityId: Schema.NumberFromString
 })
 
-const withQueryParams = <A, I>(
-  schema: Schema.Schema<A, I, never>,
-  event: APIGatewayProxyEventV2,
-  handler: (params: A) => Effect.Effect<unknown, never, any>
-): Promise<APIGatewayProxyResultV2> =>
-  Effect.runPromise(
-    Schema.decodeUnknown(schema)(event.queryStringParameters ?? {}, {
-      errors: 'all'
-    }).pipe(
-      Effect.mapError(
-        (e) =>
-          ({
-            statusCode: 400,
-            body: JSON.stringify({
-              error: 'Invalid query parameters',
-              details: ParseResult.ArrayFormatter.formatErrorSync(e)
-            })
-          }) as APIGatewayProxyResultV2
-      ),
-      Effect.flatMap(handler),
-      Effect.map(
-        (result) =>
-          ({
-            statusCode: 200,
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(result)
-          }) as APIGatewayProxyResultV2
-      ),
-      Effect.catchAll(Effect.succeed),
-      Effect.catchAllDefect(() =>
-        Effect.succeed({
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' })
-        } as APIGatewayProxyResultV2)
-      ),
-      Effect.provide(AppLayer)
-    ) as Effect.Effect<APIGatewayProxyResultV2>
-  )
-
 // Cron handler: poll for new governance transactions
-export const poll = async () => {
-  await Effect.runPromise(
+export const poll = async () =>
+  CronRuntime.runPromise(
     Effect.gen(function* () {
       const poll = yield* PollService
       yield* poll
-    }).pipe(Effect.provide(AppLayer))
+    })
   )
-}
 
 // GET /vote-results
 export const getVoteResults = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> =>
-  withQueryParams(QueryParams, event, ({ type, entityId }) =>
+  HttpRuntime.runPromise(
     Effect.gen(function* () {
+      const parsed = yield* Schema.decodeUnknown(QueryParams)(
+        event.queryStringParameters ?? {},
+        {
+          errors: 'all'
+        }
+      ).pipe(
+        Effect.mapError((error) => ({
+          statusCode: 400,
+          body: JSON.stringify({
+            error: 'Invalid query parameters',
+            details: ParseResult.ArrayFormatter.formatErrorSync(error)
+          })
+        }))
+      )
       const repo = yield* VoteCalculationRepo
-      return yield* repo.getResultsByEntity(type, entityId)
+      const results = yield* repo.getResultsByEntity(
+        parsed.type,
+        parsed.entityId
+      )
+      return {
+        statusCode: 200,
+        body: JSON.stringify(results)
+      }
     })
   )
 
@@ -137,9 +112,30 @@ export const getVoteResults = async (
 export const getAccountVotes = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> =>
-  withQueryParams(QueryParams, event, ({ type, entityId }) =>
+  HttpRuntime.runPromise(
     Effect.gen(function* () {
+      const parsed = yield* Schema.decodeUnknown(QueryParams)(
+        event.queryStringParameters ?? {},
+        {
+          errors: 'all'
+        }
+      ).pipe(
+        Effect.mapError((error) => ({
+          statusCode: 400,
+          body: JSON.stringify({
+            error: 'Invalid query parameters',
+            details: ParseResult.ArrayFormatter.formatErrorSync(error)
+          })
+        }))
+      )
       const repo = yield* VoteCalculationRepo
-      return yield* repo.getAccountVotesByEntity(type, entityId)
+      const votes = yield* repo.getAccountVotesByEntity(
+        parsed.type,
+        parsed.entityId
+      )
+      return {
+        statusCode: 200,
+        body: JSON.stringify(votes)
+      }
     })
   )
