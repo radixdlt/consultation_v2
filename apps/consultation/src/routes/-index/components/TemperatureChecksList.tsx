@@ -7,6 +7,7 @@ import {
   type SortOrder
 } from '@/atom/temperatureChecksAtom'
 import { InlineCode } from '@/components/ui/typography'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { CardSkeletonList } from './CardSkeleton'
 import { EmptyState } from './EmptyState'
 import { ItemCard } from './ItemCard'
@@ -21,6 +22,7 @@ export function TemperatureChecksList({
 }: TemperatureChecksListProps) {
   const [page, setPage] = useState(1)
   const result = useAtomValue(paginatedTemperatureChecksAtom(page)(sortOrder))
+  const isAdmin = useIsAdmin()
 
   // Reset to page 1 when sort order changes
   useEffect(() => {
@@ -30,14 +32,16 @@ export function TemperatureChecksList({
   return Result.builder(result)
     .onInitial(() => <CardSkeletonList />)
     .onSuccess((data) => {
-      if (data.items.length === 0 && data.page === 1) {
+      const visibleItems = data.items.filter((tc) => isAdmin || !tc.hidden)
+
+      if (visibleItems.length === 0 && data.page === 1) {
         return <EmptyState type="temperature-check" />
       }
 
       return (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4">
-            {data.items.map((tc: TemperatureCheck) => (
+            {visibleItems.map((tc: TemperatureCheck) => (
               <ItemCard
                 key={tc.id}
                 id={tc.id}
@@ -48,6 +52,7 @@ export function TemperatureChecksList({
                 deadline={tc.deadline}
                 quorum={Number(tc.quorum)}
                 linkPrefix="/tc"
+                hidden={tc.hidden}
               />
             ))}
           </div>

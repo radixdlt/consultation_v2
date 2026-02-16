@@ -18,6 +18,7 @@ type ItemCardProps = {
   deadline: Date
   quorum: number
   linkPrefix: '/tc' | '/proposal'
+  hidden?: boolean
 }
 
 export function ItemCard({
@@ -28,7 +29,8 @@ export function ItemCard({
   start,
   deadline,
   quorum,
-  linkPrefix
+  linkPrefix,
+  hidden
 }: ItemCardProps) {
   const status: ItemStatus = getItemStatus(deadline)
   const isActive = status === 'active'
@@ -51,6 +53,11 @@ export function ItemCard({
               {typeLabel} #{id}
             </span>
             {isActive && <EndingSoonBadge deadline={deadline} />}
+            {hidden && (
+              <span className="px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">
+                Hidden
+              </span>
+            )}
           </div>
 
           <h3 className="text-xl font-medium text-neutral-900 dark:text-neutral-100 group-hover:underline decoration-neutral-400 underline-offset-4">

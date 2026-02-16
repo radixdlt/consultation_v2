@@ -774,6 +774,46 @@ CALL_METHOD
           `)
         })
 
+      const makeToggleTemperatureCheckHiddenManifest = (input: {
+        accountAddress: AccountAddress
+        temperatureCheckId: TemperatureCheckId
+      }) =>
+        Effect.succeed(
+          TransactionManifestString.make(`
+CALL_METHOD
+  Address("${input.accountAddress}")
+  "create_proof_of_amount"
+  Address("${config.adminBadgeAddress}")
+  Decimal("1")
+;
+CALL_METHOD
+  Address("${config.componentAddress}")
+  "toggle_temperature_check_hidden"
+  ${input.temperatureCheckId}u64
+;
+          `)
+        )
+
+      const makeToggleProposalHiddenManifest = (input: {
+        accountAddress: AccountAddress
+        proposalId: ProposalId
+      }) =>
+        Effect.succeed(
+          TransactionManifestString.make(`
+CALL_METHOD
+  Address("${input.accountAddress}")
+  "create_proof_of_amount"
+  Address("${config.adminBadgeAddress}")
+  Decimal("1")
+;
+CALL_METHOD
+  Address("${config.componentAddress}")
+  "toggle_proposal_hidden"
+  ${input.proposalId}u64
+;
+          `)
+        )
+
       return {
         getTemperatureChecks,
         getAllTemperatureChecksVotes,
@@ -789,7 +829,9 @@ CALL_METHOD
         getTemperatureCheckVotesByIndex,
         getProposalVotesByIndex,
         getProposalVotesByAccounts,
-        makeProposalVoteManifest
+        makeProposalVoteManifest,
+        makeToggleTemperatureCheckHiddenManifest,
+        makeToggleProposalHiddenManifest
       }
     })
   }
