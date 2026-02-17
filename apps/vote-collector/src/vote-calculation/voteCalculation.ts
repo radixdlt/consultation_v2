@@ -11,9 +11,9 @@ import {
   Schedule
 } from 'effect'
 import { GovernanceComponent } from 'shared/governance/index'
-import { Snapshot } from 'shared/snapshot/snapshot'
 import type { VoteCalculationPayload } from './types'
 import { VoteCalculationRepo } from './voteCalculationRepo'
+import { VotePowerSnapshot } from './votePowerSnapshot'
 
 type DedupedVote = { accountAddress: AccountAddress; votes: string[] }
 
@@ -120,13 +120,13 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
       VoteCalculationRepo.Default,
       GovernanceComponent.Default,
       GetLedgerStateService.Default,
-      Snapshot.Default
+      VotePowerSnapshot.Default
     ],
     effect: Effect.gen(function* () {
       const repo = yield* VoteCalculationRepo
       const governance = yield* GovernanceComponent
       const ledgerState = yield* GetLedgerStateService
-      const snapshot = yield* Snapshot
+      const votePowerSnapshot = yield* VotePowerSnapshot
 
       const fetchDedupedVotes = (
         payload: typeof VoteCalculationPayload.Type,
@@ -222,24 +222,17 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
             A.map((v) => v.accountAddress),
             A.dedupe
           )
-          const result = yield* snapshot({
-            addresses,
-            stateVersion: snapshotStateVersion
-          }).pipe(
-            Effect.retry(
-              Schedule.exponential('1 second').pipe(
-                Schedule.intersect(Schedule.recurs(3))
-              )
-            ),
-            Effect.orDie
+
+          const retryPolicy = Schedule.exponential('1 second').pipe(
+            Schedule.intersect(Schedule.recurs(3))
           )
 
-          return R.map(result, (balances) =>
-            pipe(
-              R.values(balances),
-              A.reduce(new BigNumber(0), (sum, v) => sum.plus(v))
-            )
-          )
+          const { votePower } = yield* votePowerSnapshot({
+            addresses,
+            stateVersion: snapshotStateVersion
+          }).pipe(Effect.retry(retryPolicy), Effect.orDie)
+
+          return votePower
         })
 
       return Effect.fn('@vote-collector/VoteCalculation')(function* (
