@@ -73,7 +73,9 @@ export const poll = async () =>
     Effect.gen(function* () {
       const poll = yield* PollService
       yield* poll()
-    })
+    }).pipe(
+      Effect.tapErrorCause((cause) => Effect.logError('Poll failed', cause))
+    )
   )
 
 // GET /vote-results
@@ -105,7 +107,16 @@ export const getVoteResults = async (
         statusCode: 200,
         body: JSON.stringify(results)
       }
-    })
+    }).pipe(
+      Effect.catchAllDefect((defect) =>
+        Effect.logError('Unhandled defect in getVoteResults', defect).pipe(
+          Effect.as({
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+          })
+        )
+      )
+    )
   )
 
 // GET /account-votes
@@ -137,5 +148,14 @@ export const getAccountVotes = async (
         statusCode: 200,
         body: JSON.stringify(votes)
       }
-    })
+    }).pipe(
+      Effect.catchAllDefect((defect) =>
+        Effect.logError('Unhandled defect in getAccountVotes', defect).pipe(
+          Effect.as({
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+          })
+        )
+      )
+    )
   )

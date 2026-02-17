@@ -38,6 +38,8 @@ cp .env.example .env
 
 Usage: `pnpm sst:local`, `pnpm sst:deploy:dev`, etc.
 
+> **Windows users**: SST dev mode does not work natively on Windows. Use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) instead.
+
 ## AWS Credentials
 
 SST uses the standard AWS credential chain. See the [SST IAM credentials docs](https://sst.dev/docs/iam-credentials) for setup instructions.
