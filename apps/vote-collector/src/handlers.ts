@@ -17,6 +17,7 @@ import { Config, EntityType } from 'shared/governance/index'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
 import { PollService } from './poll'
+import { PollLock } from './pollLock'
 import { VoteCalculationRepo } from './vote-calculation/voteCalculationRepo'
 
 class UnsupportedNetworkIdError extends Data.TaggedError(
@@ -46,6 +47,7 @@ const GovernanceConfigLayer = Layer.unwrapEffect(
 )
 
 const CronJobHandlerLayer = PollService.Default.pipe(
+  Layer.provideMerge(PollLock.Default),
   Layer.provide(ORM.Default),
   Layer.provideMerge(StokenetGatewayApiClientLayer),
   Layer.provideMerge(GovernanceConfigLayer),
@@ -71,9 +73,13 @@ const QueryParams = Schema.Struct({
 export const poll = async () =>
   CronRuntime.runPromise(
     Effect.gen(function* () {
+      const withPollLock = yield* PollLock
       const poll = yield* PollService
-      yield* poll()
+      yield* withPollLock(poll())
     }).pipe(
+      Effect.catchTag('PollLockNotAcquired', () =>
+        Effect.log('Poll lock held by another invocation, skipping')
+      ),
       Effect.tapErrorCause((cause) => Effect.logError('Poll failed', cause))
     )
   )

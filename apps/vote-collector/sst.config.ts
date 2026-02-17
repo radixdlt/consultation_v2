@@ -1,5 +1,7 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
+import { Config, Duration, Effect } from 'effect'
+
 export default $config({
   app(input) {
     return {
@@ -13,14 +15,31 @@ export default $config({
     }
   },
   async run() {
-    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set')
-    if (!process.env.NETWORK_ID) throw new Error('NETWORK_ID is not set')
+    const { databaseUrl, networkId, pollTimeoutDuration } = Effect.runSync(
+      Effect.gen(function* () {
+        const databaseUrl = yield* Config.string('DATABASE_URL').pipe(
+          Effect.orDie
+        )
+        const networkId = yield* Config.string('NETWORK_ID').pipe(
+          Config.withDefault(2)
+        )
+        const pollTimeoutDuration = yield* Config.duration(
+          'POLL_TIMEOUT_DURATION'
+        ).pipe(
+          Config.withDefault(Duration.seconds(120)),
+          Effect.map(Duration.toSeconds),
+          Effect.orDie
+        )
+
+        return { databaseUrl, networkId, pollTimeoutDuration }
+      })
+    )
 
     const commonFnProps = {
       runtime: 'nodejs22.x' as const,
       environment: {
-        DATABASE_URL: process.env.DATABASE_URL,
-        NETWORK_ID: process.env.NETWORK_ID
+        DATABASE_URL: databaseUrl,
+        NETWORK_ID: networkId.toString()
       },
       nodejs: {
         install: ['pg']
@@ -30,7 +49,7 @@ export default $config({
     new sst.aws.Cron('Poll', {
       function: {
         handler: 'src/handlers.poll',
-        timeout: '120 seconds',
+        timeout: `${pollTimeoutDuration} seconds`,
         ...commonFnProps
       },
       schedule: 'rate(1 minute)'
