@@ -297,6 +297,29 @@ export const MakeProposalVoteInputSchema = Schema.Struct({
 
 export type MakeProposalVoteInput = typeof MakeProposalVoteInputSchema.Encoded
 
+export const MakeUpdateGovernanceParametersInputSchema = Schema.Struct({
+  accountAddress: AccountAddress,
+  temperatureCheckDays: Schema.Number.pipe(
+    Schema.int(),
+    Schema.between(1, 65535)
+  ),
+  temperatureCheckQuorum: Schema.NumberFromString,
+  temperatureCheckApprovalThreshold: Schema.NumberFromString.pipe(
+    Schema.between(0, 1)
+  ),
+  proposalLengthDays: Schema.Number.pipe(
+    Schema.int(),
+    Schema.between(1, 65535)
+  ),
+  proposalQuorum: Schema.NumberFromString,
+  proposalApprovalThreshold: Schema.NumberFromString.pipe(
+    Schema.between(0, 1)
+  )
+})
+
+export type MakeUpdateGovernanceParametersInput =
+  typeof MakeUpdateGovernanceParametersInputSchema.Encoded
+
 const ProgrammaticScryptoSborValueSchema = Schema.declare(
   (input): input is ProgrammaticScryptoSborValue =>
     typeof input === 'object' && input !== null && 'kind' in input,

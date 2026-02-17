@@ -30,6 +30,8 @@ import {
   MakeTemperatureCheckVoteInputSchema,
   type MakeProposalVoteInput,
   MakeProposalVoteInputSchema,
+  type MakeUpdateGovernanceParametersInput,
+  MakeUpdateGovernanceParametersInputSchema,
   ProposalSchema,
   ProposalVoteRecord,
   ProposalVoteValueSchema,
@@ -749,6 +751,34 @@ CALL_METHOD
           )
         })
 
+      const getGovernanceParameters = () =>
+        getComponentState().pipe(
+          Effect.map((state) => state.governance_parameters)
+        )
+
+      const makeUpdateGovernanceParametersManifest = (
+        input: MakeUpdateGovernanceParametersInput
+      ) =>
+        Effect.gen(function* () {
+          const parsedInput = yield* Schema.decodeUnknown(
+            MakeUpdateGovernanceParametersInputSchema
+          )(input)
+
+          return TransactionManifestString.make(`
+CALL_METHOD
+  Address("${parsedInput.accountAddress}")
+  "create_proof_of_amount"
+  Address("${config.adminBadgeAddress}")
+  Decimal("1")
+;
+CALL_METHOD
+  Address("${config.componentAddress}")
+  "update_governance_parameters"
+  Tuple(${parsedInput.temperatureCheckDays}u16, Decimal("${parsedInput.temperatureCheckQuorum}"), Decimal("${parsedInput.temperatureCheckApprovalThreshold}"), ${parsedInput.proposalLengthDays}u16, Decimal("${parsedInput.proposalQuorum}"), Decimal("${parsedInput.proposalApprovalThreshold}"))
+;
+          `)
+        })
+
       const makeProposalVoteManifest = (input: MakeProposalVoteInput) =>
         Effect.gen(function* () {
           const parsedInput = yield* Schema.decodeUnknown(
@@ -823,6 +853,8 @@ CALL_METHOD
         makeTemperatureCheckVoteManifest,
         getTemperatureCheckVotesByAccounts,
         getGovernanceState,
+        getGovernanceParameters,
+        makeUpdateGovernanceParametersManifest,
         getProposalById,
         getPaginatedTemperatureChecks,
         getPaginatedProposals,
