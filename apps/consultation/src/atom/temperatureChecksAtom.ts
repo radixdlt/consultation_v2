@@ -2,12 +2,20 @@ import { Atom } from '@effect-atom/atom-react'
 import { GatewayApiClient } from '@radix-effects/gateway'
 import { AccountAddress } from '@radix-effects/shared'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
-import { Array as A, Data, Effect, Layer, Option, pipe } from 'effect'
-import { StokenetGatewayApiClientLayer } from 'shared/gateway'
 import {
-  Config,
+  Array as A,
+  ConfigProvider,
+  Data,
+  Effect,
+  Layer,
+  Option,
+  pipe
+} from 'effect'
+import { GatewayApiClientLayer } from 'shared/gateway'
+import {
   GovernanceComponent,
-  type TemperatureCheckId
+  type TemperatureCheckId,
+  GovernanceConfigLayer
 } from 'shared/governance/index'
 import type {
   MakeTemperatureCheckInput,
@@ -28,15 +36,14 @@ import { getCurrentAccount } from '@/lib/selectedAccount'
 import { truncateAddress } from '@/lib/utils'
 import { accountsAtom } from './dappToolkitAtom'
 import { withToast } from './withToast'
+import { envVars } from '@/lib/envVars'
 
 const runtime = makeAtomRuntime(
-  Layer.mergeAll(
-    GovernanceComponent.Default,
-    SendTransaction.Default
-  ).pipe(
+  Layer.mergeAll(GovernanceComponent.Default, SendTransaction.Default).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
-    Layer.provideMerge(StokenetGatewayApiClientLayer),
-    Layer.provide(Config.StokenetLive)
+    Layer.provideMerge(GatewayApiClientLayer),
+    Layer.provide(GovernanceConfigLayer),
+    Layer.provide(Layer.setConfigProvider(ConfigProvider.fromJson(envVars)))
   )
 )
 

@@ -1,10 +1,17 @@
 import { Atom } from '@effect-atom/atom-react'
 import { GetFungibleBalance } from '@radix-effects/gateway'
 import { AccountAddress } from '@radix-effects/shared'
-import { Effect, Layer, Option } from 'effect'
-import { StokenetGatewayApiClientLayer } from 'shared/gateway'
-import type { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
-import { Config, GovernanceComponent } from 'shared/governance/index'
+import { ConfigProvider, Effect, Layer, Option } from 'effect'
+import { GatewayApiClientLayer } from 'shared/gateway'
+import type {
+  ProposalId,
+  TemperatureCheckId
+} from 'shared/governance/brandedTypes'
+import {
+  GovernanceConfig,
+  GovernanceComponent,
+  GovernanceConfigLayer
+} from 'shared/governance/index'
 import { makeAtomRuntime } from '@/atom/makeRuntimeAtom'
 import {
   RadixDappToolkit,
@@ -18,6 +25,7 @@ import {
   NoAccountConnectedError
 } from './temperatureChecksAtom'
 import { withToast } from './withToast'
+import { envVars } from '@/lib/envVars'
 
 const runtime = makeAtomRuntime(
   Layer.mergeAll(
@@ -26,8 +34,9 @@ const runtime = makeAtomRuntime(
     SendTransaction.Default
   ).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
-    Layer.provideMerge(StokenetGatewayApiClientLayer),
-    Layer.provideMerge(Config.StokenetLive)
+    Layer.provideMerge(GatewayApiClientLayer),
+    Layer.provideMerge(GovernanceConfigLayer),
+    Layer.provide(Layer.setConfigProvider(ConfigProvider.fromJson(envVars)))
   )
 )
 
@@ -37,7 +46,7 @@ export const isAdminAtom = Atom.family((accountAddress: string) =>
     Effect.gen(function* () {
       if (!accountAddress) return false
 
-      const config = yield* Config
+      const config = yield* GovernanceConfig
       const getFungibleBalance = yield* GetFungibleBalance
 
       const balances = yield* getFungibleBalance({
@@ -78,7 +87,10 @@ export const promoteToProposalAtom = runtime.fn(
 
       yield* Effect.log('Promote to proposal manifest:', manifest)
 
-      const result = yield* sendTransaction(manifest, `Promoting TC #${temperatureCheckId} to Proposal`)
+      const result = yield* sendTransaction(
+        manifest,
+        `Promoting TC #${temperatureCheckId} to Proposal`
+      )
 
       get.refresh(getTemperatureCheckByIdAtom(temperatureCheckId))
 

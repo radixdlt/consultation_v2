@@ -7,11 +7,11 @@
 		"dev:inspect": "tsx --inspect-brk src/index.ts",
 		"test": "vitest",
 		"dev": "sst dev --stage local",
-		"sst:deploy:dev": "sst deploy --stage development",
-		"sst:deploy:prod": "sst deploy --stage production",
 		"sst:remove:local": "sst remove --stage local",
-		"sst:remove:dev": "sst remove --stage development",
-		"sst:remove:prod": "sst remove --stage production"
+		"sst:deploy:stokenet": "sst deploy --stage stokenet",
+		"sst:remove:stokenet": "sst remove --stage stokenet",
+		"sst:deploy:mainnet": "sst deploy --stage production",
+		"sst:remove:mainnet": "sst remove --stage mainnet"
 	},
 	"dependencies": {
 		"@effect/opentelemetry": "catalog:",
