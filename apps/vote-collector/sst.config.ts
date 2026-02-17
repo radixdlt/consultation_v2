@@ -1,7 +1,5 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-import { Config, Duration, Effect } from 'effect'
-
 export default $config({
   app(input) {
     return {
@@ -15,6 +13,8 @@ export default $config({
     }
   },
   async run() {
+    const { Config, Duration, Effect } = await import('effect')
+
     const { databaseUrl, networkId, pollTimeoutDuration } = Effect.runSync(
       Effect.gen(function* () {
         const databaseUrl = yield* Config.string('DATABASE_URL').pipe(
