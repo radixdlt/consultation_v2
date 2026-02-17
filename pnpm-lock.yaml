@@ -306,9 +306,6 @@ importers:
       db:
         specifier: workspace:*
         version: link:../../packages/database
-      decimal.js:
-        specifier: ^10.5.0
-        version: 10.6.0
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.1(@types/pg@8.16.0)(pg@8.16.3)
