@@ -1,7 +1,10 @@
-import { Effect, Layer, Option, ParseResult } from 'effect'
+import { ConfigProvider, Effect, Layer, Option, ParseResult } from 'effect'
 import { AccountAddress } from '@radix-effects/shared'
-import { StokenetGatewayApiClientLayer } from 'shared/gateway'
-import { Config, GovernanceComponent } from 'shared/governance/index'
+import { GatewayApiClientLayer } from 'shared/gateway'
+import {
+  GovernanceConfigLayer,
+  GovernanceComponent
+} from 'shared/governance/index'
 import { makeAtomRuntime } from '@/atom/makeRuntimeAtom'
 import {
   RadixDappToolkit,
@@ -11,15 +14,15 @@ import {
 import { getCurrentAccount } from '@/lib/selectedAccount'
 import { NoAccountConnectedError } from './temperatureChecksAtom'
 import { withToast } from './withToast'
+import { envVars } from '@/lib/envVars'
 
 const runtime = makeAtomRuntime(
-  Layer.mergeAll(
-    GovernanceComponent.Default,
-    SendTransaction.Default
-  ).pipe(
+  Layer.mergeAll(GovernanceComponent.Default, SendTransaction.Default).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
-    Layer.provideMerge(StokenetGatewayApiClientLayer),
-    Layer.provideMerge(Config.StokenetLive)
+
+    Layer.provideMerge(GatewayApiClientLayer),
+    Layer.provideMerge(GovernanceConfigLayer),
+    Layer.provide(Layer.setConfigProvider(ConfigProvider.fromJson(envVars)))
   )
 )
 

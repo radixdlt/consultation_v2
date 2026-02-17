@@ -1,14 +1,17 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
 export default $config({
-  app(input) {
+  app(_) {
+    const awsRegion = (process.env.AWS_REGION ??
+      'eu-west-1') as $util.Input<aws.Region>
+
     return {
       name: 'vote-collector',
-      removal: input?.stage === 'production' ? 'retain' : 'remove',
-      protect: ['production'].includes(input?.stage),
+      removal: 'remove',
+      protect: false,
       home: 'aws',
       providers: {
-        aws: { region: 'eu-west-1' }
+        aws: { region: awsRegion }
       }
     }
   },
@@ -39,7 +42,8 @@ export default $config({
       runtime: 'nodejs22.x' as const,
       environment: {
         DATABASE_URL: databaseUrl,
-        NETWORK_ID: networkId.toString()
+        NETWORK_ID: networkId.toString(),
+        POLL_TIMEOUT_DURATION: `${pollTimeoutDuration} seconds`
       },
       nodejs: {
         install: ['pg']

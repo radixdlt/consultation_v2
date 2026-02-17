@@ -21,7 +21,7 @@ import {
   TemperatureCheckVoteKeyValueStoreValue
 } from '../schemas'
 import type { ProposalId, TemperatureCheckId } from './brandedTypes'
-import { Config } from './config'
+import { GovernanceConfig } from './config'
 import { makeVoteIndexKeys } from './makeVoteIndexKeys'
 import {
   type MakeTemperatureCheckInput,
@@ -77,7 +77,7 @@ export class GovernanceComponent extends Effect.Service<GovernanceComponent>()(
       const keyValueStoreDataService = yield* KeyValueStoreDataService
 
       const getComponentStateService = yield* GetComponentStateService
-      const config = yield* Config
+      const config = yield* GovernanceConfig
 
       const getComponentState = () =>
         getComponentStateService

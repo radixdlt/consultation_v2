@@ -3,8 +3,6 @@ import type {
   APIGatewayProxyResultV2
 } from 'aws-lambda'
 import {
-  Config as ConfigEffect,
-  Data,
   Effect,
   Layer,
   Logger,
@@ -12,44 +10,19 @@ import {
   ManagedRuntime,
   ParseResult
 } from 'effect'
-import { StokenetGatewayApiClientLayer } from 'shared/gateway'
-import { Config, EntityType } from 'shared/governance/index'
+
+import { EntityType, GovernanceConfigLayer } from 'shared/governance/index'
 import { ORM } from './db/orm'
 import { PgClientLive } from './db/pgClient'
 import { PollService } from './poll'
 import { PollLock } from './pollLock'
 import { VoteCalculationRepo } from './vote-calculation/voteCalculationRepo'
-
-class UnsupportedNetworkIdError extends Data.TaggedError(
-  '@VoteCollector/UnsupportedNetworkIdError'
-)<{
-  message: string
-}> {}
-
-const GovernanceConfigLayer = Layer.unwrapEffect(
-  Effect.gen(function* () {
-    const networkId = yield* ConfigEffect.number('NETWORK_ID').pipe(
-      ConfigEffect.withDefault(2),
-      Effect.orDie
-    )
-    if (networkId === 1) {
-      return yield* new UnsupportedNetworkIdError({
-        message: `Mainnet (network ID 1) is not supported yet`
-      })
-    } else if (networkId === 2) {
-      return Config.StokenetLive
-    } else {
-      return yield* new UnsupportedNetworkIdError({
-        message: `Unsupported network ID: ${networkId}`
-      })
-    }
-  })
-)
+import { GatewayApiClientLayer } from 'shared/gateway'
 
 const CronJobHandlerLayer = PollService.Default.pipe(
   Layer.provideMerge(PollLock.Default),
   Layer.provide(ORM.Default),
-  Layer.provideMerge(StokenetGatewayApiClientLayer),
+  Layer.provideMerge(GatewayApiClientLayer),
   Layer.provideMerge(GovernanceConfigLayer),
   Layer.provideMerge(PgClientLive),
   Layer.provideMerge(Logger.json)

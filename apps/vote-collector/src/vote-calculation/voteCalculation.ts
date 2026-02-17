@@ -14,7 +14,6 @@ import { GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
 import type { VoteCalculationPayload } from './types'
 import { VoteCalculationRepo } from './voteCalculationRepo'
-import { StateVersion } from '@radix-effects/shared'
 
 type DedupedVote = { accountAddress: AccountAddress; votes: string[] }
 

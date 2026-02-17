@@ -1,7 +1,7 @@
 import { GatewayApiClient } from '@radix-effects/gateway'
 import { StateVersion } from '@radix-effects/shared'
 import { Array as A, Effect, Order, Option, pipe } from 'effect'
-import { Config as GovernanceConfig } from 'shared/governance/config'
+import { GovernanceConfig } from 'shared/governance/config'
 import { LedgerCursor } from './ledgerCursor'
 import { GovernanceEventProcessor } from './governanceEvents'
 import type { VoteCalculationPayload } from './vote-calculation/types'

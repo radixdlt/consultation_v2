@@ -1,14 +1,14 @@
 import { Atom } from '@effect-atom/atom-react'
 import { AccountAddress } from '@radix-effects/shared'
 import type { WalletDataStateAccount } from '@radixdlt/radix-dapp-toolkit'
-import { Data, Effect, Layer, Option } from 'effect'
+import { ConfigProvider, Data, Effect, Layer, Option } from 'effect'
 import { truncateAddress } from '@/lib/utils'
-import { StokenetGatewayApiClientLayer } from 'shared/gateway'
+import { GatewayApiClientLayer } from 'shared/gateway'
 import type { ProposalId } from 'shared/governance/brandedTypes'
 import {
-  Config,
   GovernanceComponent,
-  type MakeProposalVoteInput
+  type MakeProposalVoteInput,
+  GovernanceConfigLayer
 } from 'shared/governance/index'
 import type { KeyValueStoreAddress } from 'shared/schemas'
 import { makeAtomRuntime } from '@/atom/makeRuntimeAtom'
@@ -19,15 +19,14 @@ import {
 } from '@/lib/dappToolkit'
 import { accountsAtom } from './dappToolkitAtom'
 import { withToast } from './withToast'
+import { envVars } from '@/lib/envVars'
 
 const runtime = makeAtomRuntime(
-  Layer.mergeAll(
-    GovernanceComponent.Default,
-    SendTransaction.Default
-  ).pipe(
+  Layer.mergeAll(GovernanceComponent.Default, SendTransaction.Default).pipe(
     Layer.provideMerge(RadixDappToolkit.Live),
-    Layer.provideMerge(StokenetGatewayApiClientLayer),
-    Layer.provide(Config.StokenetLive)
+    Layer.provideMerge(GatewayApiClientLayer),
+    Layer.provide(GovernanceConfigLayer),
+    Layer.provide(Layer.setConfigProvider(ConfigProvider.fromJson(envVars)))
   )
 )
 
@@ -141,11 +140,14 @@ export const voteOnProposalBatchAtom = runtime.fn(
 
       for (const account of accountsToVote) {
         const message = `Vote ${input.selectedOptionLabels.join(', ')} on GP #${input.proposalId} with ${truncateAddress(account.address)}`
-        const result = yield* voteOnProposal({
-          accountAddress: AccountAddress.make(account.address),
-          proposalId: input.proposalId,
-          optionIds: input.optionIds
-        }, message).pipe(
+        const result = yield* voteOnProposal(
+          {
+            accountAddress: AccountAddress.make(account.address),
+            proposalId: input.proposalId,
+            optionIds: input.optionIds
+          },
+          message
+        ).pipe(
           Effect.map(
             (): VoteResult => ({ account: account.address, success: true })
           ),

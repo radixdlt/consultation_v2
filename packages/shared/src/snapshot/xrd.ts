@@ -4,12 +4,12 @@ import {
   type StateVersion
 } from '@radix-effects/shared'
 import { Array as A, Effect, Option, Record as R, pipe } from 'effect'
-import { Config } from '../governance/config'
+import { GovernanceConfig } from '../governance/config'
 import { AccountBalanceState } from './accountBalanceState'
 
 export class XrdPosition extends Effect.Service<XrdPosition>()('XrdPosition', {
   effect: Effect.gen(function* () {
-    const { xrdResourceAddress } = yield* Config
+    const { xrdResourceAddress } = yield* GovernanceConfig
 
     return {
       fromState: (input: {

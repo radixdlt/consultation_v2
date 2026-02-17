@@ -24,19 +24,20 @@ cp .env.example .env
 | -------------- | ---------------------------------------------- | ------- |
 | `DATABASE_URL` | PostgreSQL connection string                   | —       |
 | `NETWORK_ID`   | Radix network (`1` = mainnet, `2` = stokenet)  | `2`     |
+| `POLL_TIMEOUT_DURATION` | Poll Lambda timeout (Effect duration, e.g. `120 seconds`) | `120 seconds` |
 
 ## Scripts
 
 | Script | Command | Description |
 | --- | --- | --- |
-| `sst:local` | `sst dev --stage local` | Local dev with live Lambda emulation |
-| `sst:deploy:dev` | `sst deploy --stage development` | Deploy to development stage |
-| `sst:deploy:prod` | `sst deploy --stage production` | Deploy to production stage |
-| `sst:destroy:local` | `sst destroy --stage local` | Tear down local stage |
-| `sst:destroy:dev` | `sst destroy --stage development` | Tear down development stage |
-| `sst:destroy:prod` | `sst destroy --stage production` | Tear down production stage |
+| `dev` | `sst dev --stage local` | Local dev with live Lambda emulation |
+| `sst:deploy:stokenet` | `sst deploy --stage stokenet` | Deploy to stokenet stage |
+| `sst:deploy:mainnet` | `sst deploy --stage production` | Deploy to production stage |
+| `sst:remove:local` | `sst remove --stage local` | Tear down local stage |
+| `sst:remove:stokenet` | `sst remove --stage stokenet` | Tear down stokenet stage |
+| `sst:remove:mainnet` | `sst remove --stage mainnet` | Tear down mainnet stage |
 
-Usage: `pnpm sst:local`, `pnpm sst:deploy:dev`, etc.
+Usage: `pnpm dev`, `pnpm sst:deploy:stokenet`, etc.
 
 > **Windows users**: SST dev mode does not work natively on Windows. Use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) instead.
 
