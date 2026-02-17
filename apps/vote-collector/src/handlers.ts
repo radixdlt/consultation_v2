@@ -72,7 +72,7 @@ export const poll = async () =>
   CronRuntime.runPromise(
     Effect.gen(function* () {
       const poll = yield* PollService
-      yield* poll
+      yield* poll()
     })
   )
 

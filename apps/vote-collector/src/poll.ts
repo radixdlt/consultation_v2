@@ -83,35 +83,18 @@ export class PollService extends Effect.Service<PollService>()('PollService', {
             entities: deduped.length
           })
 
-          const [failures, successes] = yield* Effect.partition(
+          yield* Effect.forEach(
             deduped,
             (payload) =>
               calculateVotes(payload).pipe(
+                Effect.tap(() => Effect.log('Vote calculation complete')),
                 Effect.annotateLogs({
                   type: payload.type,
                   entityId: payload.entityId
-                }),
-                Effect.mapError((error) => ({ payload, error }))
+                })
               ),
             { concurrency: 5 }
           )
-
-          for (const result of successes) {
-            yield* Effect.log('Vote calculation complete', {
-              type: result.type,
-              entityId: result.entityId
-            })
-          }
-
-          if (failures.length > 0) {
-            for (const { payload, error } of failures) {
-              yield* Effect.logWarning('Vote calculation failed', {
-                type: payload.type,
-                entityId: payload.entityId,
-                error
-              })
-            }
-          }
         }
 
         const nextSv = StateVersion.make(maxSv + 1)
@@ -123,7 +106,7 @@ export class PollService extends Effect.Service<PollService>()('PollService', {
         }
       })
 
-    return Effect.gen(function* () {
+    return Effect.fn('@VoteCollector/PollService')(function* () {
       const sv = yield* cursor.getOrBootstrap()
 
       yield* Effect.log('Poll started', { fromStateVersion: sv })

@@ -1,12 +1,118 @@
 import { GetLedgerStateService } from '@radix-effects/gateway'
 import { type AccountAddress, StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
-import { Array as A, Effect, flow, Option, pipe, Record as R } from 'effect'
+import {
+  Array as A,
+  Effect,
+  flow,
+  Option,
+  pipe,
+  Record as R,
+  Schedule
+} from 'effect'
 import { GovernanceComponent } from 'shared/governance/index'
 import { Snapshot } from 'shared/snapshot/snapshot'
 import type { VoteCalculationPayload } from './types'
 import { VoteCalculationRepo } from './voteCalculationRepo'
 import { StateVersion } from '@radix-effects/shared'
+
+type DedupedVote = { accountAddress: AccountAddress; votes: string[] }
+
+const flattenVotes = (
+  dedupedVotes: ReadonlyArray<DedupedVote>,
+  existingByAccount: Record<
+    AccountAddress,
+    ReadonlyArray<{ vote: string; votePower: string }>
+  >,
+  firstTimeBalances: Record<AccountAddress, BigNumber>
+) => {
+  const getVotePower = (accountAddress: AccountAddress): BigNumber =>
+    pipe(
+      R.get(existingByAccount, accountAddress),
+      Option.flatMap(A.head),
+      Option.map((v) => new BigNumber(v.votePower)),
+      Option.orElse(() => R.get(firstTimeBalances, accountAddress)),
+      Option.getOrElse(() => new BigNumber(0))
+    )
+
+  return pipe(
+    dedupedVotes,
+    A.flatMap((v) =>
+      pipe(
+        v.votes,
+        A.map((vote) => ({
+          accountAddress: v.accountAddress,
+          vote,
+          votePower: getVotePower(v.accountAddress)
+        }))
+      )
+    )
+  )
+}
+
+const aggregateVoteResults = (
+  flattened: ReadonlyArray<{ vote: string; votePower: BigNumber }>
+) =>
+  pipe(
+    flattened,
+    A.groupBy((v) => v.vote),
+    R.map(A.reduce(new BigNumber(0), (sum, v) => sum.plus(v.votePower))),
+    R.toEntries,
+    A.map(([vote, votePower]) => ({
+      vote,
+      votePower: votePower.toFixed()
+    }))
+  )
+
+const buildRevoteRemovals = (
+  revotingVotes: ReadonlyArray<DedupedVote>,
+  existingByAccount: Record<
+    string,
+    ReadonlyArray<{ vote: string; votePower: string }>
+  >
+) =>
+  pipe(
+    revotingVotes,
+    A.map((v) => ({
+      accountAddress: v.accountAddress,
+      oldVotes: pipe(
+        R.get(existingByAccount, v.accountAddress),
+        Option.getOrElse(
+          (): ReadonlyArray<{ vote: string; votePower: string }> => []
+        ),
+        A.map((old) => ({ vote: old.vote, votePower: old.votePower }))
+      )
+    }))
+  )
+
+const buildVoteEntries = (
+  dedupedVotes: ReadonlyArray<DedupedVote>,
+  existingByAccount: Record<
+    AccountAddress,
+    ReadonlyArray<{ vote: string; votePower: string }>
+  >,
+  firstTimeBalances: Record<AccountAddress, BigNumber>,
+  revotingVotes: ReadonlyArray<DedupedVote>
+) => {
+  const flattened = flattenVotes(
+    dedupedVotes,
+    existingByAccount,
+    firstTimeBalances
+  )
+
+  return {
+    voteResults: aggregateVoteResults(flattened),
+    accountVotes: pipe(
+      flattened,
+      A.map((v) => ({
+        accountAddress: v.accountAddress,
+        vote: v.vote,
+        votePower: v.votePower.toFixed()
+      }))
+    ),
+    revoteRemovals: buildRevoteRemovals(revotingVotes, existingByAccount)
+  }
+}
 
 export class VoteCalculation extends Effect.Service<VoteCalculation>()(
   'VoteCalculation',
@@ -22,8 +128,6 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
       const governance = yield* GovernanceComponent
       const ledgerState = yield* GetLedgerStateService
       const snapshot = yield* Snapshot
-
-      type DedupedVote = { accountAddress: AccountAddress; votes: string[] }
 
       const fetchDedupedVotes = (
         payload: typeof VoteCalculationPayload.Type,
@@ -104,7 +208,10 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
 
           const snapshotStateVersion = yield* ledgerState({
             at_ledger_state: { timestamp: new Date(startDate) }
-          }).pipe(Effect.map((r) => StateVersion.make(r.state_version)))
+          }).pipe(
+            Effect.map((r) => StateVersion.make(r.state_version)),
+            Effect.orDie
+          )
 
           yield* Effect.log('Snapshot state version resolved', {
             snapshotStateVersion,
@@ -119,7 +226,15 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
           const result = yield* snapshot({
             addresses,
             stateVersion: snapshotStateVersion
-          })
+          }).pipe(
+            Effect.retry(
+              Schedule.exponential('1 second').pipe(
+                Schedule.intersect(Schedule.recurs(3))
+              )
+            ),
+            Effect.orDie
+          )
+
           return R.map(result, (balances) =>
             pipe(
               R.values(balances),
@@ -127,75 +242,6 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
             )
           )
         })
-
-      const buildVoteEntries = (
-        dedupedVotes: ReadonlyArray<DedupedVote>,
-        existingByAccount: Record<
-          string,
-          ReadonlyArray<{ vote: string; votePower: string }>
-        >,
-        firstTimeBalances: Record<string, BigNumber>,
-        revotingVotes: ReadonlyArray<DedupedVote>
-      ) => {
-        const getVotePower = (accountAddress: AccountAddress): BigNumber =>
-          pipe(
-            R.get(existingByAccount, accountAddress),
-            Option.flatMap(A.head),
-            Option.map((v) => new BigNumber(v.votePower)),
-            Option.orElse(() => R.get(firstTimeBalances, accountAddress)),
-            Option.getOrElse(() => new BigNumber(0))
-          )
-
-        const flattened = pipe(
-          dedupedVotes,
-          A.flatMap((v) =>
-            pipe(
-              v.votes,
-              A.map((vote) => ({
-                accountAddress: v.accountAddress,
-                vote,
-                votePower: getVotePower(v.accountAddress)
-              }))
-            )
-          )
-        )
-
-        const voteResults = pipe(
-          flattened,
-          A.groupBy((v) => v.vote),
-          R.map(A.reduce(new BigNumber(0), (sum, v) => sum.plus(v.votePower))),
-          R.toEntries,
-          A.map(([vote, votePower]) => ({
-            vote,
-            votePower: votePower.toFixed()
-          }))
-        )
-
-        const accountVotes = pipe(
-          flattened,
-          A.map((v) => ({
-            accountAddress: v.accountAddress,
-            vote: v.vote,
-            votePower: v.votePower.toFixed()
-          }))
-        )
-
-        const revoteRemovals = pipe(
-          revotingVotes,
-          A.map((v) => ({
-            accountAddress: v.accountAddress,
-            oldVotes: pipe(
-              R.get(existingByAccount, v.accountAddress),
-              Option.getOrElse(
-                (): ReadonlyArray<{ vote: string; votePower: string }> => []
-              ),
-              A.map((old) => ({ vote: old.vote, votePower: old.votePower }))
-            )
-          }))
-        )
-
-        return { voteResults, accountVotes, revoteRemovals }
-      }
 
       return Effect.fn('@vote-collector/VoteCalculation')(function* (
         payload: typeof VoteCalculationPayload.Type
