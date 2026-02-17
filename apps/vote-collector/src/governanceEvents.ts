@@ -3,10 +3,12 @@ import type {
   DetailedEventsItem,
   ProgrammaticScryptoSborValue
 } from '@radixdlt/babylon-gateway-api-sdk'
-import { Effect } from 'effect'
+import { Array as A, Effect, Option } from 'effect'
 import { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
 import { GovernanceComponent } from 'shared/governance/index'
-import { VoteCalculationQueue } from '../vote-calculation/voteCalculationQueue'
+import type { VoteCalculationPayload } from './vote-calculation/types'
+
+type Payload = typeof VoteCalculationPayload.Type
 
 export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProcessor>()(
   'GovernanceEventProcessor',
@@ -14,15 +16,14 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
     dependencies: [GovernanceComponent.Default],
     effect: Effect.gen(function* () {
       const governance = yield* GovernanceComponent
-      const { upsert } = yield* VoteCalculationQueue
 
       const handleTemperatureCheckVoted = (event: DetailedEventsItem) =>
         Effect.gen(function* () {
           const data = event.payload
             .programmatic_json as ProgrammaticScryptoSborValue
-          if (data.kind !== 'Tuple') return
+          if (data.kind !== 'Tuple') return Option.none<Payload>()
           const idField = data.fields[0]
-          if (!idField || idField.kind !== 'U64') return
+          if (!idField || idField.kind !== 'U64') return Option.none<Payload>()
 
           const id = TemperatureCheckId.make(Number(idField.value))
 
@@ -30,22 +31,22 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
 
           const tc = yield* governance.getTemperatureCheckById(id)
 
-          yield* upsert({
-            type: 'temperature_check',
+          return Option.some<Payload>({
+            type: 'temperature_check' as const,
             entityId: id,
             keyValueStoreAddress: tc.votes,
             voteCount: tc.voteCount,
             start: tc.start.getTime()
           })
-        })
+        }).pipe(Effect.orDie)
 
       const handleProposalVoted = (event: DetailedEventsItem) =>
         Effect.gen(function* () {
           const data = event.payload
             .programmatic_json as ProgrammaticScryptoSborValue
-          if (data.kind !== 'Tuple') return
+          if (data.kind !== 'Tuple') return Option.none<Payload>()
           const idField = data.fields[0]
-          if (!idField || idField.kind !== 'U64') return
+          if (!idField || idField.kind !== 'U64') return Option.none<Payload>()
 
           const id = ProposalId.make(Number(idField.value))
 
@@ -53,19 +54,16 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
 
           const proposal = yield* governance.getProposalById(id)
 
-          yield* upsert({
-            type: 'proposal',
+          return Option.some<Payload>({
+            type: 'proposal' as const,
             entityId: id,
             keyValueStoreAddress: proposal.votes,
             voteCount: proposal.voteCount,
             start: proposal.start.getTime()
           })
-        })
+        }).pipe(Effect.orDie)
 
-      const handlerMap = new Map<
-        string,
-        (event: DetailedEventsItem) => Effect.Effect<void, unknown>
-      >([
+      const handlerMap = new Map([
         ['TemperatureCheckVotedEvent', handleTemperatureCheckVoted],
         ['ProposalVotedEvent', handleProposalVoted]
       ])
@@ -76,18 +74,20 @@ export class GovernanceEventProcessor extends Effect.Service<GovernanceEventProc
             (tx) => tx.receipt?.detailed_events ?? []
           )
 
-          yield* Effect.forEach(events, (event) =>
+          const options = yield* Effect.forEach(events, (event) =>
             Effect.gen(function* () {
               const handler = handlerMap.get(event.identifier.event)
               if (handler) {
-                yield* handler(event)
-              } else {
-                yield* Effect.logDebug('Unrecognized governance event', {
-                  name: event.identifier.event
-                })
+                return yield* handler(event)
               }
+              yield* Effect.logDebug('Unrecognized governance event', {
+                name: event.identifier.event
+              })
+              return Option.none<Payload>()
             })
           )
+
+          return A.getSomes(options)
         })
 
       return { processBatch } as const

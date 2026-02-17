@@ -5,7 +5,7 @@ import {
   voteCalculationResults,
   voteCalculationState
 } from 'db/src/schema'
-import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { Array as A, Effect, Option, pipe } from 'effect'
 import { ORM } from '../db/orm'
 import { EntityId, EntityType } from 'shared/governance/brandedTypes'
@@ -23,7 +23,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
       const db = yield* ORM
       const sqlClient = yield* SqlClient
 
-      const getOrCreateStateId = (
+      const getOrCreateState = (
         type: 'temperature_check' | 'proposal',
         entityId: number
       ) =>
@@ -36,42 +36,26 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
               lastVoteCount: sql`${voteCalculationState.lastVoteCount}`
             }
           })
-          .returning({ id: voteCalculationState.id })
+          .returning({
+            id: voteCalculationState.id,
+            lastVoteCount: voteCalculationState.lastVoteCount
+          })
           .pipe(
             Effect.flatMap((rows) =>
               pipe(
                 rows,
                 A.head,
-                Option.map((r) => r.id),
                 Option.match({
                   onNone: () =>
                     Effect.die(
-                      'Expected id when upserting vote calculation state'
+                      'Expected row when upserting vote calculation state'
                     ),
-                  onSome: (id) => Effect.succeed(id)
+                  onSome: (row) =>
+                    Effect.succeed({
+                      id: row.id,
+                      lastVoteCount: row.lastVoteCount
+                    })
                 })
-              )
-            ),
-            Effect.orDie
-          )
-
-      const getLastVoteCount = (type: string, entityId: number) =>
-        db
-          .select({ lastVoteCount: voteCalculationState.lastVoteCount })
-          .from(voteCalculationState)
-          .where(
-            and(
-              eq(voteCalculationState.type, type),
-              eq(voteCalculationState.entityId, entityId)
-            )
-          )
-          .pipe(
-            Effect.map((rows) =>
-              pipe(
-                rows,
-                A.head,
-                Option.map((r) => r.lastVoteCount),
-                Option.getOrElse(() => 0)
               )
             ),
             Effect.orDie
@@ -142,9 +126,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
         stateId: number,
         oldVotes: A.NonEmptyReadonlyArray<{ vote: string; votePower: string }>
       ) => {
-        const byVote = Object.entries(
-          A.groupBy(oldVotes, ({ vote }) => vote)
-        )
+        const byVote = Object.entries(A.groupBy(oldVotes, ({ vote }) => vote))
 
         const caseExpr = sql`CASE ${sql.join(
           byVote.map(
@@ -239,19 +221,11 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           )
           .pipe(Effect.asVoid, Effect.orDie)
 
-      const resetAllCalculating = () =>
-        db
-          .update(voteCalculationState)
-          .set({ isCalculating: false })
-          .where(eq(voteCalculationState.isCalculating, true))
-          .pipe(Effect.asVoid, Effect.orDie)
-
       const getResultsByEntity = (type: string, entityId: number) =>
         db
           .select({
             vote: voteCalculationResults.vote,
-            votePower: voteCalculationResults.votePower,
-            isCalculating: voteCalculationState.isCalculating
+            votePower: voteCalculationResults.votePower
           })
           .from(voteCalculationState)
           .leftJoin(
@@ -274,8 +248,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
                 .map((r) => ({
                   vote: r.vote,
                   votePower: r.votePower
-                })),
-              isCalculating: rows[0]?.isCalculating ?? false
+                }))
             })),
             Effect.orDie
           )
@@ -320,7 +293,6 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
           })
         )
 
-      // TODO: expose limit/offset through the RPC layer in a future version
       const getAccountVotesByEntity = (
         type: string,
         entityId: number,
@@ -356,58 +328,12 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
             Effect.orDie
           )
 
-      const ensureAndMarkCalculating = (
-        entities: ReadonlyArray<{
-          type: 'temperature_check' | 'proposal'
-          entityId: number
-        }>
-      ) =>
-        db
-          .insert(voteCalculationState)
-          .values(
-            entities.map((e) => ({
-              type: e.type,
-              entityId: e.entityId,
-              isCalculating: true
-            }))
-          )
-          .onConflictDoUpdate({
-            target: [voteCalculationState.type, voteCalculationState.entityId],
-            set: { isCalculating: true }
-          })
-          .pipe(Effect.asVoid, Effect.orDie)
-
-      const clearCalculatingBulk = (
-        entities: ReadonlyArray<{
-          type: string
-          entityId: number
-        }>
-      ) =>
-        db
-          .update(voteCalculationState)
-          .set({ isCalculating: false })
-          .where(
-            or(
-              ...entities.map((e) =>
-                and(
-                  eq(voteCalculationState.type, e.type),
-                  eq(voteCalculationState.entityId, e.entityId)
-                )
-              )
-            )
-          )
-          .pipe(Effect.asVoid, Effect.orDie)
-
       return {
-        getOrCreateStateId,
-        getLastVoteCount,
+        getOrCreateState,
         commitVoteResults,
         getResultsByEntity,
         getAccountVotesByEntity,
-        getAccountVotesByAddresses,
-        resetAllCalculating,
-        ensureAndMarkCalculating,
-        clearCalculatingBulk
+        getAccountVotesByAddresses
       } as const
     })
   }

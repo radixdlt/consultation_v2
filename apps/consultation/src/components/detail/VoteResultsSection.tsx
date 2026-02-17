@@ -1,12 +1,8 @@
-import { Result, useAtomMount, useAtomValue } from '@effect-atom/atom-react'
+import { Result, useAtomValue } from '@effect-atom/atom-react'
 import type { EntityId, EntityType } from 'shared/governance/brandedTypes'
-import {
-  isCalculatingAtom,
-  voteResultsAtom,
-  voteUpdatesAtom
-} from '@/atom/voteResultsAtom'
+import { voteResultsAtom } from '@/atom/voteResultsAtom'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn, formatXrd } from '@/lib/utils'
+import { formatXrd } from '@/lib/utils'
 import type { VoteOption } from '@/lib/voting'
 import { resolveVoteOptions } from '@/lib/voting'
 
@@ -21,11 +17,9 @@ export function VoteResultsSection({
   entityId,
   voteOptions
 }: VoteResultsSectionProps) {
-  useAtomMount(voteUpdatesAtom(entityType)(entityId))
   const voteResultsResult = useAtomValue(
     voteResultsAtom(entityType)(entityId)
   )
-  const isCalculating = useAtomValue(isCalculatingAtom(entityType)(entityId))
 
   return Result.builder(voteResultsResult)
     .onInitial(() => (
@@ -68,18 +62,11 @@ export function VoteResultsSection({
       }))
 
       return (
-        <div
-          className={cn('bg-card border border-border p-6 shadow-sm', isCalculating && 'animate-pulse')}
-        >
-          <div className="mb-6 flex items-center justify-between">
+        <div className="bg-card border border-border p-6 shadow-sm">
+          <div className="mb-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Current Results
             </h3>
-            {isCalculating && (
-              <span className="text-xs text-muted-foreground">
-                Recalculating…
-              </span>
-            )}
           </div>
 
           <div className="space-y-4">

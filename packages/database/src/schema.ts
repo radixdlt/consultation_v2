@@ -1,13 +1,18 @@
 import {
-  boolean,
   integer,
   numeric,
   pgTable,
   primaryKey,
   serial,
+  text,
   unique,
   varchar
 } from 'drizzle-orm/pg-core'
+
+export const config = pgTable('config', {
+  key: varchar('key', { length: 255 }).primaryKey(),
+  value: text('value').notNull()
+})
 
 export const voteCalculationState = pgTable(
   'vote_calculation_state',
@@ -15,8 +20,7 @@ export const voteCalculationState = pgTable(
     id: serial('id').primaryKey(),
     type: varchar('type', { length: 50 }).notNull(),
     entityId: integer('entity_id').notNull(),
-    lastVoteCount: integer('last_vote_count').notNull().default(0),
-    isCalculating: boolean('is_calculating').notNull().default(false)
+    lastVoteCount: integer('last_vote_count').notNull().default(0)
   },
   (table) => [unique().on(table.type, table.entityId)]
 )

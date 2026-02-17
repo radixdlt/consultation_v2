@@ -11,9 +11,7 @@ class EnvVars extends Schema.Class<EnvVars>('EnvVars')({
   }),
   DAPP_DEFINITION_ADDRESS: AccountAddress,
   NETWORK_ID: Schema.NumberFromString,
-  VOTE_COLLECTOR_URL: Schema.String.annotations({
-    decodingFallback: () => Either.right('http://localhost:3001')
-  })
+  VOTE_COLLECTOR_URL: Schema.String
 }) {}
 
 const isVitest = typeof import.meta.env.VITEST !== 'undefined'

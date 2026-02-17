@@ -368,7 +368,8 @@ CALL_METHOD
                 }),
                 { concurrency: 10 }
               )
-            )
+            ),
+            Effect.orDie
           )
         })
 
@@ -411,7 +412,8 @@ CALL_METHOD
                 }),
                 { concurrency: 10 }
               )
-            )
+            ),
+            Effect.orDie
           )
         })
 
@@ -586,8 +588,7 @@ CALL_METHOD
         sortOrder?: 'asc' | 'desc'
       }) =>
         Effect.gen(function* () {
-          const { proposalCount, proposalsKvs } =
-            yield* getGovernanceState()
+          const { proposalCount, proposalsKvs } = yield* getGovernanceState()
 
           const sortOrder = input.sortOrder ?? 'desc'
 
