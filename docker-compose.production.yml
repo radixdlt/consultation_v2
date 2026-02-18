@@ -1,29 +1,61 @@
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${PUBLIC_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      consultation:
+        condition: service_started
+      vote-collector:
+        condition: service_healthy
+    networks:
+      - default
+
   consultation:
     build:
       context: .
       dockerfile: dockerfiles/client.Dockerfile
       args:
-        VITE_API_URL: http://localhost:3001
-    ports:
-      - "3000:3000"
+        VITE_VOTE_COLLECTOR_URL: /api
+        VITE_PUBLIC_DAPP_DEFINITION_ADDRESS: ${VITE_PUBLIC_DAPP_DEFINITION_ADDRESS}
+        VITE_PUBLIC_NETWORK_ID: ${VITE_PUBLIC_NETWORK_ID:-2}
+        VITE_ENV: ${VITE_ENV:-prod}
+    networks:
+      - default
+
+  vote-collector:
+    build:
+      context: .
+      dockerfile: dockerfiles/server.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-consultation}
+      NETWORK_ID: ${NETWORK_ID:-2}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-60000}
+      POLL_TIMEOUT_DURATION: ${POLL_TIMEOUT_DURATION:-120}
     depends_on:
-      - vote-collector
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - default
 
   postgres:
     image: postgres:17-alpine
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: consultation
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-consultation}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 3s
       retries: 5

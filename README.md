@@ -114,6 +114,67 @@ curl 'https://<api-url>/account-votes?type=proposal&entityId=1'
 
 Check CloudWatch Logs for the `Poll` and `Api` Lambda functions to confirm execution.
 
+## Self-hosted deployment (Docker Compose)
+
+Run the entire stack on any server with Docker — no AWS required.
+
+### Architecture
+
+```
+                      port 80
+                  +-----------+
+   browser -----> |   nginx   |
+                  +-----------+
+                   /          \
+             /                /api/*
+        consultation      vote-collector
+        (port 3000)        (port 3001)
+                               |
+                           postgres
+                          (port 5432)
+```
+
+Nginx reverse-proxies all traffic: `/api/*` routes to the vote-collector (stripping the prefix), everything else goes to the consultation frontend. The frontend is built with `VITE_VOTE_COLLECTOR_URL=/api`, so all API calls go through the same origin — no CORS issues on any hostname or IP.
+
+### Prerequisites
+
+- **Docker** and **Docker Compose v2** (`docker compose` — not the legacy `docker-compose`)
+- A **dApp definition address** on the Radix network you're targeting
+
+### Quick start
+
+```sh
+cp .env.example .env
+# Edit .env — at minimum set VITE_PUBLIC_DAPP_DEFINITION_ADDRESS
+docker compose -f docker-compose.production.yml up -d
+```
+
+The app will be available on `http://localhost` (or whichever port you set via `PUBLIC_PORT`).
+
+### Updating
+
+```sh
+git pull
+docker compose -f docker-compose.production.yml up -d --build
+```
+
+The database volume persists across restarts — only the app containers are rebuilt. Schema migrations run automatically on startup.
+
+### Environment variables
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `POSTGRES_USER` | PostgreSQL username | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL password | `postgres` |
+| `POSTGRES_DB` | PostgreSQL database name | `consultation` |
+| `NETWORK_ID` | Radix network (`1` = mainnet, `2` = stokenet) | `2` |
+| `VITE_PUBLIC_NETWORK_ID` | Network ID exposed to the frontend | `2` |
+| `VITE_PUBLIC_DAPP_DEFINITION_ADDRESS` | Your dApp definition address | — |
+| `VITE_ENV` | Frontend environment (`dev` / `staging` / `prod`) | `prod` |
+| `POLL_INTERVAL_MS` | How often to poll for new votes (ms) | `60000` |
+| `POLL_TIMEOUT_DURATION` | Poll lock timeout in seconds | `120` |
+| `PUBLIC_PORT` | Port nginx listens on | `80` |
+
 ## Useful commands
 
 | Command | What it does |
