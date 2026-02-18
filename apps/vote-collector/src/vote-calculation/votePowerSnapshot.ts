@@ -19,7 +19,7 @@ import {
   StateEntityDetails
 } from '@radix-effects/gateway'
 import {
-  type AccountAddress,
+  AccountAddress,
   FungibleResourceAddress,
   type StateVersion
 } from '@radix-effects/shared'
@@ -96,8 +96,9 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
         stateVersion: StateVersion
       }) {
         // 1. Fetch LSULP → XRD rate (mainnet only — address is hardcoded mainnet)
-        const lsulpToXrdRate = isMainnet
-          ? yield* lsulpValueService({
+        const lsulpToXrdRate = yield* Effect.if(isMainnet, {
+          onTrue: () =>
+            lsulpValueService({
               stateVersion: input.stateVersion
             }).pipe(
               Effect.tap((result) =>
@@ -114,8 +115,9 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
                   return new BigNumber(0)
                 })
               )
-            )
-          : new BigNumber(0)
+            ),
+          onFalse: () => Effect.succeed(new BigNumber(0))
+        })
 
         const lsulpResourceAddress = FungibleResourceAddress.make(
           LSULP_RESOURCE_ADDRESS
@@ -191,86 +193,94 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
             lsulpToXrdRate
           }
 
-          const [poolUnitResult, precisionResult, shapeResult] = isMainnet
-            ? yield* Effect.all(
-                [
-                  poolUnitPosition({
-                    addresses: input.addresses,
-                    stateVersion: input.stateVersion,
-                    tokenFilterCtx
-                  }).pipe(
-                    Effect.catchAll((error) =>
-                      Effect.gen(function* () {
-                        yield* Effect.logWarning(
-                          'Failed to compute pool unit positions',
-                          { error }
-                        )
-                        return emptyPoolResult
-                      })
+          const [poolUnitResult, precisionResult, shapeResult] =
+            yield* Effect.if(isMainnet, {
+              onTrue: () =>
+                Effect.all(
+                  [
+                    poolUnitPosition({
+                      addresses: input.addresses,
+                      stateVersion: input.stateVersion,
+                      tokenFilterCtx
+                    }).pipe(
+                      Effect.catchAll((error) =>
+                        Effect.gen(function* () {
+                          yield* Effect.logWarning(
+                            'Failed to compute pool unit positions',
+                            { error }
+                          )
+                          return emptyPoolResult
+                        })
+                      )
+                    ),
+                    ociswapPrecisionPosition({
+                      addresses: input.addresses,
+                      stateVersion: input.stateVersion,
+                      tokenFilterCtx
+                    }).pipe(
+                      Effect.catchAll((error) =>
+                        Effect.gen(function* () {
+                          yield* Effect.logWarning(
+                            'Failed to compute Ociswap precision pool positions',
+                            { error }
+                          )
+                          return emptyPoolResult
+                        })
+                      )
+                    ),
+                    caviarNineShapePosition({
+                      addresses: input.addresses,
+                      stateVersion: input.stateVersion,
+                      tokenFilterCtx
+                    }).pipe(
+                      Effect.catchAll((error) =>
+                        Effect.gen(function* () {
+                          yield* Effect.logWarning(
+                            'Failed to compute CaviarNine shape pool positions',
+                            { error }
+                          )
+                          return emptyPoolResult
+                        })
+                      )
                     )
-                  ),
-                  ociswapPrecisionPosition({
-                    addresses: input.addresses,
-                    stateVersion: input.stateVersion,
-                    tokenFilterCtx
-                  }).pipe(
-                    Effect.catchAll((error) =>
-                      Effect.gen(function* () {
-                        yield* Effect.logWarning(
-                          'Failed to compute Ociswap precision pool positions',
-                          { error }
-                        )
-                        return emptyPoolResult
-                      })
-                    )
-                  ),
-                  caviarNineShapePosition({
-                    addresses: input.addresses,
-                    stateVersion: input.stateVersion,
-                    tokenFilterCtx
-                  }).pipe(
-                    Effect.catchAll((error) =>
-                      Effect.gen(function* () {
-                        yield* Effect.logWarning(
-                          'Failed to compute CaviarNine shape pool positions',
-                          { error }
-                        )
-                        return emptyPoolResult
-                      })
-                    )
+                  ],
+                  { concurrency: 3 }
+                ).pipe(
+                  Effect.tap(([pu, pr, sh]) =>
+                    Effect.log('VotePowerSnapshot pool positions', {
+                      accountsWithPoolUnitPositions: R.size(pu.totals),
+                      accountsWithPrecisionPoolPositions: R.size(pr.totals),
+                      accountsWithShapePoolPositions: R.size(sh.totals)
+                    })
                   )
-                ],
-                { concurrency: 3 }
-              ).pipe(
-                Effect.tap(([pu, pr, sh]) =>
-                  Effect.log('VotePowerSnapshot pool positions', {
-                    accountsWithPoolUnitPositions: R.size(pu.totals),
-                    accountsWithPrecisionPoolPositions: R.size(pr.totals),
-                    accountsWithShapePoolPositions: R.size(sh.totals)
-                  })
+                ),
+              onFalse: () =>
+                Effect.log(
+                  'VotePowerSnapshot: skipping DEX positions (non-mainnet)'
+                ).pipe(
+                  Effect.as(
+                    [
+                      emptyPoolResult,
+                      emptyPoolResult,
+                      emptyPoolResult
+                    ] as const
+                  )
                 )
-              )
-            : yield* Effect.log(
-                'VotePowerSnapshot: skipping DEX positions (non-mainnet)'
-              ).pipe(
-                Effect.as(
-                  [emptyPoolResult, emptyPoolResult, emptyPoolResult] as const
-                )
-              )
+            })
 
           // Merge all position types per account
           const allAccounts = pipe(
             [
               ...input.addresses,
-              ...R.keys(poolUnitResult.totals),
-              ...R.keys(precisionResult.totals),
-              ...R.keys(shapeResult.totals)
+              ...R.keys(poolUnitResult.totals).map((k) => AccountAddress.make(k)),
+              ...R.keys(precisionResult.totals).map((k) => AccountAddress.make(k)),
+              ...R.keys(shapeResult.totals).map((k) => AccountAddress.make(k))
             ],
             A.dedupe
           )
 
           const { votePower, breakdown } = pipe(
-            allAccounts as AccountAddress[],
+            allAccounts,
             A.reduce(
               {
                 votePower: R.empty<AccountAddress, BigNumber>(),

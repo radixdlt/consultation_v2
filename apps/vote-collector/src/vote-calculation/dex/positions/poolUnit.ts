@@ -17,7 +17,6 @@ import type {
 } from '@radix-effects/shared'
 import { FungibleResourceAddress } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
-import type { Context } from 'effect'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
 import { AccountBalanceState } from 'shared/snapshot/accountBalanceState'
 import { POOL_UNIT_POOLS } from '../constants/addresses'
@@ -38,62 +37,71 @@ const metaByPool = new Map(
   POOL_UNIT_POOLS.map((p) => [p.poolAddress, { name: p.name }])
 )
 
-const fetchPoolUnitData = (
-  getFungibleBalance: Context.Tag.Service<typeof GetFungibleBalance>,
-  stateEntityDetails: Context.Tag.Service<typeof StateEntityDetails>,
-  input: {
-    pools: ReadonlyArray<{
-      poolAddress: string
-      lpResourceAddress: string
-    }>
-    stateVersion: StateVersion
-  }
-) =>
+/** Resolve pool unit data for all configured pools. */
+const fetchPoolUnitData = (input: {
+  pools: ReadonlyArray<{
+    poolAddress: string
+    lpResourceAddress: string
+  }>
+  stateVersion: StateVersion
+  getFungibleBalance: Effect.Effect.Success<typeof GetFungibleBalance>
+  stateEntityDetails: Effect.Effect.Success<typeof StateEntityDetails>
+}) =>
   Effect.gen(function* () {
     if (input.pools.length === 0) return []
 
     // Fetch pool fungible balances and LP token details in parallel
     const [poolBalances, lpDetails] = yield* Effect.all(
       [
-        getFungibleBalance({
-          addresses: input.pools.map((p) => p.poolAddress),
+        input.getFungibleBalance({
+          addresses: A.map(input.pools, (p) => p.poolAddress),
           at_ledger_state: { state_version: input.stateVersion }
         }),
-        stateEntityDetails({
-          addresses: input.pools.map((p) => p.lpResourceAddress),
+        input.stateEntityDetails({
+          addresses: A.map(input.pools, (p) => p.lpResourceAddress),
           at_ledger_state: { state_version: input.stateVersion }
         })
       ],
       { concurrency: 2 }
     )
 
-    return input.pools.map((pool): PoolUnitData => {
-      const poolData = poolBalances.find(
-        (b) => b.address === pool.poolAddress
-      )
-      const lpData = lpDetails.items.find(
-        (i) => i.address === pool.lpResourceAddress
-      )
+    return pipe(
+      input.pools,
+      A.map((pool): PoolUnitData => {
+        const totalSupply = pipe(
+          lpDetails.items,
+          A.findFirst((i) => i.address === pool.lpResourceAddress),
+          Option.flatMap((item) => Option.fromNullable(item.details)),
+          Option.filter(
+            (d): d is Extract<typeof d, { type: 'FungibleResource' }> =>
+              d.type === 'FungibleResource'
+          ),
+          Option.flatMap((d) => Option.fromNullable(d.total_supply)),
+          Option.map((v) => new BigNumber(v)),
+          Option.getOrElse(() => new BigNumber(0))
+        )
 
-      const totalSupply =
-        lpData?.details?.type === 'FungibleResource'
-          ? new BigNumber(lpData.details.total_supply ?? '0')
-          : new BigNumber(0)
+        const poolResources = pipe(
+          poolBalances,
+          A.findFirst((b) => b.address === pool.poolAddress),
+          Option.map((pd) => pd.items),
+          Option.getOrElse((): typeof poolBalances[number]['items'] => []),
+          A.map((item) => ({
+            resourceAddress: item.resource_address,
+            poolUnitValue: totalSupply.gt(0)
+              ? item.amount.dividedBy(totalSupply)
+              : new BigNumber(0)
+          }))
+        )
 
-      const poolResources = (poolData?.items ?? []).map((item) => ({
-        resourceAddress: item.resource_address,
-        poolUnitValue: totalSupply.gt(0)
-          ? item.amount.dividedBy(totalSupply)
-          : new BigNumber(0)
-      }))
-
-      return {
-        poolAddress: pool.poolAddress,
-        lpResourceAddress: pool.lpResourceAddress,
-        totalSupply,
-        poolResources
-      }
-    })
+        return {
+          poolAddress: pool.poolAddress,
+          lpResourceAddress: pool.lpResourceAddress,
+          totalSupply,
+          poolResources
+        }
+      })
+    )
   })
 
 /** Compute a single account's pool-unit positions declaratively. */
@@ -109,7 +117,10 @@ const computeAccountPositions = (
   pipe(
     poolUnitData,
     A.reduce(
-      { total: new BigNumber(0), contributions: [] as PoolContribution[] },
+      { total: new BigNumber(0), contributions: [] } as {
+        total: BigNumber
+        contributions: PoolContribution[]
+      },
       (acc, pool) => {
         const lpBalance = getFungibleTokenBalance(
           address,
@@ -173,14 +184,12 @@ export class PoolUnitPosition extends Effect.Service<PoolUnitPosition>()(
         tokenFilterCtx: TokenFilterContext
       }) {
         // Fetch all pool unit data in one batch
-        const poolUnitData = yield* fetchPoolUnitData(
+        const poolUnitData = yield* fetchPoolUnitData({
+          pools: POOL_UNIT_POOLS,
+          stateVersion: input.stateVersion,
           getFungibleBalance,
-          stateEntityDetails,
-          {
-            pools: POOL_UNIT_POOLS,
-            stateVersion: input.stateVersion
-          }
-        )
+          stateEntityDetails
+        })
 
         yield* Effect.log('PoolUnitPosition fetched pool data', {
           poolCount: poolUnitData.length

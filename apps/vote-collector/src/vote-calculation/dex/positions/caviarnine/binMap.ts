@@ -69,15 +69,22 @@ export class GetQuantaSwapBinMap extends Effect.Service<GetQuantaSwapBinMap>()(
             })
         ).pipe(
           Effect.map((items) =>
-            pipe(
-              items,
-              A.reduce(new Map() as BinMapData, (acc, { key, value }) => {
-                acc.set(key, {
-                  amount: new I192(value.amount),
-                  total_claim: new I192(value.total_claim)
-                })
-                return acc
-              })
+            new Map(
+              pipe(
+                items,
+                A.map(
+                  ({ key, value }): [
+                    number,
+                    { amount: I192; total_claim: I192 }
+                  ] => [
+                    key,
+                    {
+                      amount: new I192(value.amount),
+                      total_claim: new I192(value.total_claim)
+                    }
+                  ]
+                )
+              )
             )
           )
         )

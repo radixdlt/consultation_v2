@@ -4,9 +4,11 @@
  * Copied from radix-incentives/packages/api/src/common/dapps/ociswap/tickCalculator.ts
  */
 
-import { Decimal } from 'decimal.js'
+import DecimalJs from 'decimal.js'
 
-Decimal.config({ precision: 50 })
+/** Isolated Decimal constructor to avoid global config conflicts with other modules. */
+export const Decimal = DecimalJs.clone({ precision: 50 })
+export type Decimal = DecimalJs
 
 export const TICK_BASE_SQRT = new Decimal(
   '1.000049998750062496094023416993798697'

@@ -14,8 +14,7 @@ import {
   GetComponentStateService,
   GetNonFungibleBalanceService
 } from '@radix-effects/gateway'
-import type { AccountAddress, StateVersion } from '@radix-effects/shared'
-import { Decimal } from 'decimal.js'
+import { AccountAddress, type StateVersion } from '@radix-effects/shared'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
 import s from 'sbor-ez-mode'
 import BigNumber from 'bignumber.js'
@@ -25,7 +24,7 @@ import {
 } from '../../constants/addresses'
 import type { NftAccountBalance, PoolContribution, PrecisionPoolConfig } from '../../types'
 import { convertToXrd, type TokenFilterContext } from '../../tokenFilter'
-import { removableAmounts, tickToPriceSqrt } from './tickCalculator'
+import { Decimal, removableAmounts, tickToPriceSqrt } from './tickCalculator'
 
 /** Simplified component state schema — only fields we need */
 const PrecisionPoolSchema = s.struct({
@@ -50,8 +49,10 @@ const allLpResourceAddresses = allPrecisionPools.map(
 )
 
 const poolVersion = (pool: PrecisionPoolConfig): string =>
-  OCISWAP_PRECISION_POOLS_V1.some(
-    (p) => p.componentAddress === pool.componentAddress
+  pipe(
+    OCISWAP_PRECISION_POOLS_V1,
+    A.findFirst((p) => p.componentAddress === pool.componentAddress),
+    Option.isSome
   )
     ? 'V1'
     : 'V2'
@@ -100,7 +101,7 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
 
         // Fetch all NFT receipts for all accounts (filtered by precision pool LP resources)
         const nftBalances = yield* getNonFungibleBalance({
-          addresses: input.addresses as string[],
+          addresses: input.addresses.map(String),
           at_ledger_state: { state_version: input.stateVersion },
           resourceAddresses: allLpResourceAddresses
         }).pipe(
@@ -132,7 +133,7 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
               >()
             },
             (acc, accountNfts) => {
-              const address = accountNfts.address as AccountAddress
+              const address = AccountAddress.make(accountNfts.address)
 
               const { accountTotal, contributions } = pipe(
                 accountNfts.nonFungibleResources,

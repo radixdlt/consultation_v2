@@ -14,7 +14,7 @@ import {
   GetComponentStateService,
   GetNonFungibleBalanceService
 } from '@radix-effects/gateway'
-import type { AccountAddress, StateVersion } from '@radix-effects/shared'
+import { AccountAddress, type StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
 import s from 'sbor-ez-mode'
@@ -67,62 +67,66 @@ const computeClaimsXrd = (
   claims: Map<number, string>,
   poolState: ShapePoolState,
   tokenFilterCtx: TokenFilterContext
-): BigNumber => {
-  const {
-    currentTick,
-    active_total_claim,
-    active_x,
-    active_y,
-    binMap,
-    token_x,
-    token_y
-  } = poolState
+): Effect.Effect<BigNumber> =>
+  Effect.gen(function* () {
+    const {
+      currentTick,
+      active_total_claim,
+      active_x,
+      active_y,
+      binMap,
+      token_x,
+      token_y
+    } = poolState
 
-  if (currentTick === undefined) return new BigNumber(0)
+    if (currentTick === undefined) return new BigNumber(0)
 
-  const { amount_x, amount_y } = pipe(
-    Array.from(claims.entries()),
-    A.reduce(
-      { amount_x: I192.zero(), amount_y: I192.zero() },
-      (acc, [tick, claimAmount]) => {
-        const bin = binMap.get(tick)
+    const { amount_x, amount_y } = pipe(
+      Array.from(claims.entries()),
+      A.reduce(
+        { amount_x: I192.zero(), amount_y: I192.zero() },
+        (acc, [tick, claimAmount]) => {
+          const bin = binMap.get(tick)
 
-        // Bin below current tick → Y tokens only
-        if (tick < currentTick && bin) {
-          const share = new I192(claimAmount).divide(bin.total_claim)
-          return {
-            ...acc,
-            amount_y: acc.amount_y.add(share.multiply(bin.amount))
+          // Bin below current tick → Y tokens only
+          if (tick < currentTick && bin) {
+            if (bin.total_claim.isZero()) return acc
+            const share = new I192(claimAmount).divide(bin.total_claim)
+            return {
+              ...acc,
+              amount_y: acc.amount_y.add(share.multiply(bin.amount))
+            }
           }
-        }
 
-        // Bin above current tick → X tokens only
-        if (tick > currentTick && bin) {
-          const share = new I192(claimAmount).divide(bin.total_claim)
-          return {
-            ...acc,
-            amount_x: acc.amount_x.add(share.multiply(bin.amount))
+          // Bin above current tick → X tokens only
+          if (tick > currentTick && bin) {
+            if (bin.total_claim.isZero()) return acc
+            const share = new I192(claimAmount).divide(bin.total_claim)
+            return {
+              ...acc,
+              amount_x: acc.amount_x.add(share.multiply(bin.amount))
+            }
           }
-        }
 
-        // Bin at current tick → both X and Y tokens
-        if (tick === currentTick) {
-          const share = new I192(claimAmount).divide(active_total_claim)
-          return {
-            amount_x: acc.amount_x.add(active_x.multiply(share)),
-            amount_y: acc.amount_y.add(active_y.multiply(share))
+          // Bin at current tick → both X and Y tokens
+          if (tick === currentTick) {
+            if (active_total_claim.isZero()) return acc
+            const share = new I192(claimAmount).divide(active_total_claim)
+            return {
+              amount_x: acc.amount_x.add(active_x.multiply(share)),
+              amount_y: acc.amount_y.add(active_y.multiply(share))
+            }
           }
-        }
 
-        return acc
-      }
+          return acc
+        }
+      )
     )
-  )
 
-  const xXrd = convertToXrd(token_x, amount_x.toString(), tokenFilterCtx)
-  const yXrd = convertToXrd(token_y, amount_y.toString(), tokenFilterCtx)
-  return new BigNumber(xXrd).plus(yXrd)
-}
+    const xXrd = convertToXrd(token_x, amount_x.toString(), tokenFilterCtx)
+    const yXrd = convertToXrd(token_y, amount_y.toString(), tokenFilterCtx)
+    return new BigNumber(xXrd).plus(yXrd)
+  })
 
 const allLiquidityReceiptAddresses = CAVIARNINE_SHAPE_POOLS.map(
   (p) => p.liquidity_receipt
@@ -184,8 +188,9 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
                 address: cs.state.bin_map,
                 at_ledger_state: { state_version: input.stateVersion }
               }).pipe(
-                Effect.catchAll(() =>
-                  Effect.succeed(new Map() as BinMapData)
+                Effect.catchAll(
+                  (): Effect.Effect<BinMapData> =>
+                    Effect.succeed(new Map())
                 )
               )
 
@@ -194,7 +199,10 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
                   ? cs.state.tick_index.current.value[0]
                   : undefined
 
-              return Option.some({
+              const poolState: ShapePoolState & {
+                liquidityReceipt: string
+                poolName: string
+              } = {
                 componentAddress: cs.address,
                 token_x: pool.token_x,
                 token_y: pool.token_y,
@@ -206,10 +214,8 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
                 active_y: new I192(cs.state.active_y),
                 liquidityReceipt: pool.liquidity_receipt,
                 poolName: pool.name
-              } as ShapePoolState & {
-                liquidityReceipt: string
-                poolName: string
-              })
+              }
+              return Option.some(poolState)
             }),
           { concurrency: 5 }
         ).pipe(Effect.map(A.getSomes))
@@ -225,7 +231,7 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
 
         // Fetch all NFT receipts for all accounts
         const nftBalances = yield* getNonFungibleBalance({
-          addresses: input.addresses as string[],
+          addresses: input.addresses.map(String),
           at_ledger_state: { state_version: input.stateVersion },
           resourceAddresses: allLiquidityReceiptAddresses
         }).pipe(
@@ -240,34 +246,34 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
           )
         )
 
-        // Process each account declaratively
-        return pipe(
+        // Process each account
+        return yield* Effect.reduce(
           nftBalances.items,
-          A.reduce(
-            {
-              totals: R.empty<AccountAddress, BigNumber>(),
-              breakdown: R.empty<
-                AccountAddress,
-                readonly PoolContribution[]
-              >()
-            },
-            (acc, accountNfts) => {
-              const address = accountNfts.address as AccountAddress
+          {
+            totals: R.empty<AccountAddress, BigNumber>(),
+            breakdown: R.empty<
+              AccountAddress,
+              readonly PoolContribution[]
+            >()
+          },
+          (acc, accountNfts) =>
+            Effect.gen(function* () {
+              const address = AccountAddress.make(accountNfts.address)
 
-              const { accountTotal, contributions } = pipe(
+              const { accountTotal, contributions } = yield* Effect.reduce(
                 accountNfts.nonFungibleResources,
-                A.reduce(
-                  {
-                    accountTotal: new BigNumber(0),
-                    contributions: [] as PoolContribution[]
-                  },
-                  (innerAcc, nftResource) => {
+                {
+                  accountTotal: new BigNumber(0),
+                  contributions: [] as PoolContribution[]
+                },
+                (innerAcc, nftResource) =>
+                  Effect.gen(function* () {
                     const poolState = poolByReceipt.get(
                       nftResource.resourceAddress
                     )
                     if (!poolState) return innerAcc
 
-                    const poolXrd = pipe(
+                    const validClaims = pipe(
                       nftResource.items,
                       A.filterMap((nft) => {
                         if (!nft.sbor || nft.isBurned) return Option.none()
@@ -275,15 +281,23 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
                           nft.sbor
                         )
                         return parsed.isOk()
-                          ? Option.some(
-                              computeClaimsXrd(
-                                parsed.value.liquidity_claims,
-                                poolState,
-                                input.tokenFilterCtx
-                              )
-                            )
+                          ? Option.some(parsed.value.liquidity_claims)
                           : Option.none()
-                      }),
+                      })
+                    )
+
+                    const claimXrds = yield* Effect.forEach(
+                      validClaims,
+                      (claims) =>
+                        computeClaimsXrd(
+                          claims,
+                          poolState,
+                          input.tokenFilterCtx
+                        )
+                    )
+
+                    const poolXrd = pipe(
+                      claimXrds,
                       A.reduce(new BigNumber(0), (sum, xrd) => sum.plus(xrd))
                     )
 
@@ -301,8 +315,7 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
                             }
                           ]
                     }
-                  }
-                )
+                  })
               )
 
               if (accountTotal.isZero()) return acc
@@ -310,8 +323,7 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
                 totals: R.set(acc.totals, address, accountTotal),
                 breakdown: R.set(acc.breakdown, address, contributions)
               }
-            }
-          )
+            })
         )
       })
     })

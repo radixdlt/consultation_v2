@@ -67,13 +67,16 @@ export const buildLsuConverterMap = (
           HashMap.fromIterable
         )
       ),
-      Effect.catchAll(() =>
-        Effect.succeed(
-          HashMap.empty<
+      Effect.catchAll((error) =>
+        Effect.gen(function* () {
+          yield* Effect.logWarning('Failed to build LSU converter map', {
+            error
+          })
+          return HashMap.empty<
             FungibleResourceAddress,
             (amount: string) => string
           >()
-        )
+        })
       )
     )
   })

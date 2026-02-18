@@ -3,9 +3,9 @@
  * amount to an XRD-equivalent value. Tokens that don't match are discarded.
  */
 
-import type { FungibleResourceAddress } from '@radix-effects/shared'
+import { FungibleResourceAddress } from '@radix-effects/shared'
 import type BigNumber from 'bignumber.js'
-import { HashMap } from 'effect'
+import { HashMap, Option, pipe } from 'effect'
 import { LSULP_RESOURCE_ADDRESS, XRD_ADDRESS } from './constants/assets'
 
 export type LsuConverterMap = HashMap.HashMap<
@@ -29,7 +29,7 @@ export const isLsu = (
 ): boolean =>
   HashMap.has(
     lsuConverterMap,
-    address as FungibleResourceAddress
+    FungibleResourceAddress.make(address)
   )
 
 /**
@@ -53,13 +53,9 @@ export const convertToXrd = (
     return ctx.lsulpToXrdRate.multipliedBy(amount).toFixed()
   }
 
-  if (isLsu(address, ctx.lsuConverterMap)) {
-    const converter = HashMap.unsafeGet(
-      ctx.lsuConverterMap,
-      address as FungibleResourceAddress
-    )
-    return converter(amount)
-  }
-
-  return '0'
+  return pipe(
+    HashMap.get(ctx.lsuConverterMap, FungibleResourceAddress.make(address)),
+    Option.map((converter) => converter(amount)),
+    Option.getOrElse(() => '0')
+  )
 }

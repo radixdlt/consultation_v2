@@ -10,7 +10,7 @@ import {
   AccountAddress,
   ComponentAddress,
   FungibleResourceAddress,
-  type StateVersion
+  StateVersion
 } from '@radix-effects/shared'
 import { ConfigProvider, Effect, Layer, Logger, Option, Record as R } from 'effect'
 import { describe, expect, it } from 'vitest'
@@ -46,12 +46,14 @@ describe('Vote Power Snapshot', () => {
     { timeout: 120_000 },
     async () => {
       const account = fixture.account
-      const stateVersion = fixture.stateVersion as StateVersion
+      const stateVersion = StateVersion.make(fixture.stateVersion)
+
+      const accountAddress = AccountAddress.make(account)
 
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const votePowerSnapshot = yield* VotePowerSnapshot
-          const addresses = [AccountAddress.make(account)]
+          const addresses = [accountAddress]
 
           return yield* votePowerSnapshot({ addresses, stateVersion })
         }).pipe(Effect.provide(TestLayer))
@@ -59,17 +61,17 @@ describe('Vote Power Snapshot', () => {
 
       const total = R.get(
         result.votePower,
-        account as AccountAddress
+        accountAddress
       ).pipe(
         Option.map((bn) => bn.toFixed()),
         Option.getOrElse(() => '0')
       )
 
-      expect(total).toBe(fixture.votePower.total)
+      expect(total).toBe(fixture.total)
 
       const dexBreakdown = R.get(
         result.breakdown,
-        account as AccountAddress
+        accountAddress
       ).pipe(Option.getOrElse(() => [] as const))
 
       expect(dexBreakdown).toEqual(fixture.dexBreakdown)

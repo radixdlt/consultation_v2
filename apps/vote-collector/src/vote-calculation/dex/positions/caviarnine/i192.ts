@@ -8,9 +8,11 @@
  * Copied from radix-incentives/packages/api/src/common/helpers/i192.ts
  */
 
-import { Decimal } from 'decimal.js'
+import DecimalJs from 'decimal.js'
 
-Decimal.set({ precision: 40, rounding: Decimal.ROUND_DOWN })
+/** Isolated Decimal constructor to avoid global config conflicts with other modules. */
+const Decimal = DecimalJs.clone({ precision: 40, rounding: DecimalJs.ROUND_DOWN })
+type Decimal = DecimalJs
 
 export class I192 {
   private static readonly DECIMALS = 18
@@ -61,7 +63,7 @@ export class I192 {
     const otherValue = other instanceof I192 ? other.value : new Decimal(other)
     const truncatedOther = this.truncateToDecimals(otherValue)
     if (truncatedOther.isZero()) {
-      throw new Error('Division by zero')
+      return I192.zero()
     }
     const result = this.truncateToDecimals(
       this.value.dividedBy(truncatedOther)
