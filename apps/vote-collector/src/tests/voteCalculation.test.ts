@@ -5,7 +5,8 @@ import {
   Amount,
   ComponentAddress,
   FungibleResourceAddress,
-  PackageAddress
+  PackageAddress,
+  AccountAddress
 } from '@radix-effects/shared'
 import {
   createAccount,
@@ -26,7 +27,7 @@ import {
   Encoding,
   Duration
 } from 'effect'
-import { live } from '@effect/vitest'
+import { expect, live } from '@effect/vitest'
 import { GatewayApiClientLayer } from 'shared/gateway'
 import {
   GovernanceConfig,
@@ -45,6 +46,8 @@ import {
   voteCalculationState as voteCalculationStateTable,
   voteCalculationAccountVotes as voteCalculationAccountVotesTable
 } from 'db/src/schema'
+import { VoteCalculationRepo } from '../vote-calculation/voteCalculationRepo'
+import BigNumber from 'bignumber.js'
 
 class TestConfig extends Context.Tag('@TestConfig')<
   TestConfig,
@@ -155,11 +158,37 @@ const makeGovernanceConfigLayer = (componentAddress: ComponentAddress) =>
     )
   })
 
+const getXrdBalance = Effect.fn(function* (accountAddress: AccountAddress) {
+  const fungibleTokens = yield* GetFungibleBalance
+  const config = yield* GovernanceConfig
+
+  return yield* fungibleTokens({
+    addresses: [accountAddress]
+  }).pipe(
+    Effect.map((result) =>
+      pipe(
+        result,
+        A.head,
+        Option.map((item) => item.items),
+        Option.getOrThrow,
+        A.findFirst(
+          (balance) => balance.resource_address === config.xrdResourceAddress
+        ),
+        Option.map((i) => i.amount),
+        Option.getOrElse(() => new BigNumber(0))
+      )
+    ),
+    Effect.orDie
+  )
+})
+
 const testSetup = Effect.gen(function* () {
   const transactionHelper = yield* TransactionHelper
   const testConfig = yield* TestConfig
   const fungibleTokens = yield* GetFungibleBalance
   const config = yield* GovernanceConfig
+
+  yield* resetDatabase()
 
   const hasXrdBalance = yield* fungibleTokens({
     addresses: [testConfig.account.address]
@@ -295,7 +324,8 @@ const createTemperatureCheck = Effect.fn(function* () {
 })
 
 const voteOnTemperatureCheck = Effect.fn(function* (
-  temperatureCheckId: TemperatureCheckId
+  temperatureCheckId: TemperatureCheckId,
+  vote: 'For' | 'Against'
 ) {
   const transactionHelper = yield* TransactionHelper
   const governanceComponent = yield* GovernanceComponent
@@ -304,7 +334,7 @@ const voteOnTemperatureCheck = Effect.fn(function* (
   const manifest = yield* governanceComponent.makeTemperatureCheckVoteManifest({
     accountAddress: testConfig.account.address,
     temperatureCheckId: temperatureCheckId,
-    vote: 'For'
+    vote
   })
 
   yield* transactionHelper
@@ -334,8 +364,6 @@ live(
 
       yield* Effect.log('Bootstrapping test setup')
 
-      yield* resetDatabase()
-
       // conditionally instantiate governance component
       const { componentAddress } = yield* testSetup
 
@@ -343,29 +371,62 @@ live(
 
       yield* Effect.gen(function* () {
         const governanceComponent = yield* GovernanceComponent
+        const voteCalculationRepo = yield* VoteCalculationRepo
         const poll = yield* PollService
+        const testConfig = yield* TestConfig
 
-        yield* Effect.sleep(Duration.seconds(5))
+        const xrdBalance = yield* getXrdBalance(testConfig.account.address)
 
-        yield* poll()
+        yield* Effect.log('XRD balance', xrdBalance)
 
         const temperatureCheckId = yield* createTemperatureCheck()
-
         yield* Effect.log('Temperature check id', temperatureCheckId)
 
-        const temperatureCheck =
-          yield* governanceComponent.getTemperatureCheckById(temperatureCheckId)
+        yield* poll()
 
-        yield* Effect.log('Temperature check', temperatureCheck)
-
-        yield* voteOnTemperatureCheck(temperatureCheckId)
-
-        yield* Effect.sleep(Duration.seconds(10))
+        yield* voteOnTemperatureCheck(temperatureCheckId, 'For')
 
         yield* poll()
+
+        const firstVoteResults = yield* voteCalculationRepo
+          .getResultsByEntity('temperature_check', temperatureCheckId)
+          .pipe(
+            Effect.tap((results) =>
+              Effect.log('Temperature check results', results)
+            )
+          )
+
+        expect(
+          firstVoteResults.results.find((r) => r.vote === 'For')?.votePower
+        ).toBe(xrdBalance.toString())
+
+        // Revote
+        yield* voteOnTemperatureCheck(temperatureCheckId, 'Against')
+
+        yield* poll()
+
+        const revoteResults = yield* voteCalculationRepo
+          .getResultsByEntity('temperature_check', temperatureCheckId)
+          .pipe(
+            Effect.tap((results) =>
+              Effect.log('Temperature check results', results)
+            )
+          )
+
+        expect(
+          revoteResults.results.find((r) => r.vote === 'Against')?.votePower
+        ).toBe(xrdBalance.toString())
+
+        expect(
+          revoteResults.results.find((r) => r.vote === 'For')?.votePower
+        ).toBe('0.00000000000')
       }).pipe(
         Effect.provide(
-          Layer.merge(GovernanceComponent.Default, PollService.Default).pipe(
+          Layer.mergeAll(
+            GovernanceComponent.Default,
+            PollService.Default,
+            VoteCalculationRepo.Default
+          ).pipe(
             Layer.provideMerge(makeGovernanceConfigLayer(componentAddress))
           )
         )
