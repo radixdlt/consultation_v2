@@ -8,6 +8,7 @@ import {
   Schedule,
   Schema,
   Config,
+  Duration,
   Option
 } from 'effect'
 import { EntityType } from 'shared/governance/index'
@@ -29,7 +30,10 @@ const runtime = ManagedRuntime.make(HttpServerLayer)
 const pollSchedule = Effect.gen(function* () {
   const withPollLock = yield* PollLock
   const poll = yield* PollService
-  yield* withPollLock(poll())
+  const POLL_TIMEOUT_DURATION = yield* Config.duration(
+    'POLL_TIMEOUT_DURATION'
+  ).pipe(Config.withDefault(Duration.seconds(120)), Effect.orDie)
+  yield* withPollLock(poll()).pipe(Effect.timeout(POLL_TIMEOUT_DURATION))
 }).pipe(
   Effect.catchTag('PollLockNotAcquired', () =>
     Effect.log('Poll lock held by another instance, skipping')
