@@ -70,7 +70,9 @@ const TestLayer = Layer.mergeAll(
         return DatabaseMigrations.Default.pipe(
           Layer.provide(
             Layer.setConfigProvider(
-              ConfigProvider.fromJson({ DATABASE_URL: db.getConnectionUri() })
+              ConfigProvider.fromJson({
+                DATABASE_URL: db.getConnectionUri()
+              }).pipe(ConfigProvider.orElse(() => ConfigProvider.fromEnv()))
             )
           )
         )
@@ -139,7 +141,7 @@ const TestLayer = Layer.mergeAll(
         NETWORK_ID: 2,
         INTEGRATION_TEST_PRIVATE_KEY_HEX:
           process.env.INTEGRATION_TEST_PRIVATE_KEY_HEX
-      })
+      }).pipe(ConfigProvider.orElse(() => ConfigProvider.fromEnv()))
     )
   )
 )
@@ -418,8 +420,8 @@ live(
         ).toBe(xrdBalance.toString())
 
         expect(
-          revoteResults.results.find((r) => r.vote === 'For')?.votePower
-        ).toBe('0.00000000000')
+          Number(revoteResults.results.find((r) => r.vote === 'For')?.votePower)
+        ).toBe(0)
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
