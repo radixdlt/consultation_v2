@@ -1,9 +1,8 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    env: {
-      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/boilerplate'
-    }
+    exclude: [...configDefaults.exclude, '.repos/**'],
+    env: { NETWORK_ID: '2' }
   }
 })
