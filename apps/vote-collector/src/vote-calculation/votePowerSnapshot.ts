@@ -16,6 +16,7 @@
 
 import {
   GetFungibleBalance,
+  GetNonFungibleBalanceService,
   StateEntityDetails
 } from '@radix-effects/gateway'
 import {
@@ -40,13 +41,18 @@ import {
 } from 'shared/snapshot/accountBalanceState'
 import { GovernanceConfig } from 'shared/governance/config'
 import { LSULP_RESOURCE_ADDRESS } from './dex/constants/assets'
+import {
+  CAVIARNINE_SHAPE_POOLS,
+  OCISWAP_PRECISION_POOLS_V1,
+  OCISWAP_PRECISION_POOLS_V2
+} from './dex/constants/addresses'
 import { buildLsuConverterMap, getLsuResourceAddresses } from './lsuConverter'
 import { LsulpValue } from './dex/positions/caviarnine/lsulpValue'
 import { CaviarNineShapePosition } from './dex/positions/caviarnine/shapePool'
 import { OciswapPrecisionPosition } from './dex/positions/ociswap/precisionPool'
 import { PoolUnitPosition } from './dex/positions/poolUnit'
 import type { TokenFilterContext } from './dex/tokenFilter'
-import type { PoolContribution } from './dex/types'
+import type { NftAccountBalance, PoolContribution } from './dex/types'
 
 export type VotePowerSnapshotResult = {
   readonly votePower: R.ReadonlyRecord<AccountAddress, BigNumber>
@@ -72,6 +78,7 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
     dependencies: [
       AccountBalanceState.Default,
       GetFungibleBalance.Default,
+      GetNonFungibleBalanceService.Default,
       StateEntityDetails.Default,
       LsulpValue.Default,
       PoolUnitPosition.Default,
@@ -80,16 +87,20 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
     ],
     effect: Effect.gen(function* () {
       const accountBalanceState = yield* AccountBalanceState
+      const stateEntityDetails = yield* StateEntityDetails
+      const getNonFungibleBalance = yield* GetNonFungibleBalanceService
       const lsulpValueService = yield* LsulpValue
       const poolUnitPosition = yield* PoolUnitPosition
       const ociswapPrecisionPosition = yield* OciswapPrecisionPosition
       const caviarNineShapePosition = yield* CaviarNineShapePosition
-      const stateEntityDetails = yield* StateEntityDetails
       const { xrdResourceAddress } = yield* GovernanceConfig
       const networkId = yield* Config.number('NETWORK_ID').pipe(
         Effect.orDie
       )
       const isMainnet = networkId === 1
+      const dexPositionConcurrency = yield* Config.number(
+        'DEX_POSITION_CONCURRENCY'
+      ).pipe(Config.withDefault(3), Effect.orDie)
 
       return Effect.fn('VotePowerSnapshot')(function* (input: {
         addresses: AccountAddress[]
@@ -107,11 +118,21 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
                 })
               ),
               Effect.map((result) => result.lsulpToXrdRate),
-              Effect.catchAll((error) =>
+              Effect.catchTag('LsulpNotFoundError', (error) =>
                 Effect.gen(function* () {
-                  yield* Effect.logWarning('Failed to fetch LSULP value', {
-                    error
-                  })
+                  yield* Effect.logWarning(
+                    'LSULP component not found at state version',
+                    { error }
+                  )
+                  return new BigNumber(0)
+                })
+              ),
+              Effect.catchTag('EntityNotFoundError', (error) =>
+                Effect.gen(function* () {
+                  yield* Effect.logWarning(
+                    'LSULP entity not found at state version',
+                    { error }
+                  )
                   return new BigNumber(0)
                 })
               )
@@ -193,65 +214,63 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
             lsulpToXrdRate
           }
 
+          // All NFT resource addresses across all dapps
+          const allNftResourceAddresses = [
+            ...OCISWAP_PRECISION_POOLS_V1.map((p) => p.lpResourceAddress),
+            ...OCISWAP_PRECISION_POOLS_V2.map((p) => p.lpResourceAddress),
+            ...CAVIARNINE_SHAPE_POOLS.map((p) => p.liquidity_receipt)
+          ]
+
           const [poolUnitResult, precisionResult, shapeResult] =
             yield* Effect.if(isMainnet, {
               onTrue: () =>
-                Effect.all(
-                  [
-                    poolUnitPosition({
-                      addresses: input.addresses,
-                      stateVersion: input.stateVersion,
-                      tokenFilterCtx
-                    }).pipe(
-                      Effect.catchAll((error) =>
-                        Effect.gen(function* () {
-                          yield* Effect.logWarning(
-                            'Failed to compute pool unit positions',
-                            { error }
-                          )
-                          return emptyPoolResult
-                        })
+                getNonFungibleBalance({
+                  addresses: input.addresses.map(String),
+                  at_ledger_state: { state_version: input.stateVersion },
+                  resourceAddresses: allNftResourceAddresses
+                }).pipe(
+                  Effect.catchTag('EntityNotFoundError', (error) =>
+                    Effect.gen(function* () {
+                      yield* Effect.logWarning(
+                        'NFT balances not found at state version',
+                        { error }
                       )
-                    ),
-                    ociswapPrecisionPosition({
-                      addresses: input.addresses,
-                      stateVersion: input.stateVersion,
-                      tokenFilterCtx
-                    }).pipe(
-                      Effect.catchAll((error) =>
-                        Effect.gen(function* () {
-                          yield* Effect.logWarning(
-                            'Failed to compute Ociswap precision pool positions',
-                            { error }
-                          )
-                          return emptyPoolResult
+                      return { items: [] as NftAccountBalance[] }
+                    })
+                  ),
+                  Effect.flatMap((nftBalances) =>
+                    Effect.all(
+                      [
+                        poolUnitPosition({
+                          addresses: input.addresses,
+                          stateVersion: input.stateVersion,
+                          tokenFilterCtx
+                        }),
+                        ociswapPrecisionPosition({
+                          addresses: input.addresses,
+                          stateVersion: input.stateVersion,
+                          tokenFilterCtx,
+                          nftBalances
+                        }),
+                        caviarNineShapePosition({
+                          addresses: input.addresses,
+                          stateVersion: input.stateVersion,
+                          tokenFilterCtx,
+                          nftBalances
                         })
-                      )
-                    ),
-                    caviarNineShapePosition({
-                      addresses: input.addresses,
-                      stateVersion: input.stateVersion,
-                      tokenFilterCtx
-                    }).pipe(
-                      Effect.catchAll((error) =>
-                        Effect.gen(function* () {
-                          yield* Effect.logWarning(
-                            'Failed to compute CaviarNine shape pool positions',
-                            { error }
-                          )
-                          return emptyPoolResult
+                      ],
+                      { concurrency: dexPositionConcurrency }
+                    ).pipe(
+                      Effect.tap(([pu, pr, sh]) =>
+                        Effect.log('VotePowerSnapshot pool positions', {
+                          accountsWithPoolUnitPositions: R.size(pu.totals),
+                          accountsWithPrecisionPoolPositions: R.size(
+                            pr.totals
+                          ),
+                          accountsWithShapePoolPositions: R.size(sh.totals)
                         })
                       )
                     )
-                  ],
-                  { concurrency: 3 }
-                ).pipe(
-                  Effect.tap(([pu, pr, sh]) =>
-                    Effect.log('VotePowerSnapshot pool positions', {
-                      accountsWithPoolUnitPositions: R.size(pu.totals),
-                      accountsWithPrecisionPoolPositions: R.size(pr.totals),
-                      accountsWithShapePoolPositions: R.size(sh.totals)
-                    })
                   )
                 ),
               onFalse: () =>
@@ -268,19 +287,8 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
                 )
             })
 
-          // Merge all position types per account
-          const allAccounts = pipe(
-            [
-              ...input.addresses,
-              ...R.keys(poolUnitResult.totals).map((k) => AccountAddress.make(k)),
-              ...R.keys(precisionResult.totals).map((k) => AccountAddress.make(k)),
-              ...R.keys(shapeResult.totals).map((k) => AccountAddress.make(k))
-            ],
-            A.dedupe
-          )
-
           const { votePower, breakdown } = pipe(
-            allAccounts,
+            input.addresses,
             A.reduce(
               {
                 votePower: R.empty<AccountAddress, BigNumber>(),

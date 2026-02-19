@@ -10,10 +10,7 @@
  * sums all token amounts regardless of position range.
  */
 
-import {
-  GetComponentStateService,
-  GetNonFungibleBalanceService
-} from '@radix-effects/gateway'
+import { GetComponentStateService } from '@radix-effects/gateway'
 import { AccountAddress, type StateVersion } from '@radix-effects/shared'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
 import s from 'sbor-ez-mode'
@@ -44,10 +41,6 @@ const allPrecisionPools: readonly PrecisionPoolConfig[] = [
   ...OCISWAP_PRECISION_POOLS_V2
 ]
 
-const allLpResourceAddresses = allPrecisionPools.map(
-  (p) => p.lpResourceAddress
-)
-
 const poolVersion = (pool: PrecisionPoolConfig): string =>
   pipe(
     OCISWAP_PRECISION_POOLS_V1,
@@ -60,18 +53,15 @@ const poolVersion = (pool: PrecisionPoolConfig): string =>
 export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPosition>()(
   'OciswapPrecisionPosition',
   {
-    dependencies: [
-      GetComponentStateService.Default,
-      GetNonFungibleBalanceService.Default
-    ],
+    dependencies: [GetComponentStateService.Default],
     effect: Effect.gen(function* () {
       const getComponentState = yield* GetComponentStateService
-      const getNonFungibleBalance = yield* GetNonFungibleBalanceService
 
       return Effect.fn('OciswapPrecisionPosition')(function* (input: {
         addresses: AccountAddress[]
         stateVersion: StateVersion
         tokenFilterCtx: TokenFilterContext
+        nftBalances: { items: NftAccountBalance[] }
       }) {
         if (allPrecisionPools.length === 0) {
           return { totals: R.empty(), breakdown: R.empty() }
@@ -83,10 +73,10 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
           schema: PrecisionPoolSchema,
           at_ledger_state: { state_version: input.stateVersion }
         }).pipe(
-          Effect.catchAll((error) =>
+          Effect.catchTag('EntityNotFoundError', (error) =>
             Effect.gen(function* () {
               yield* Effect.logWarning(
-                'Failed to fetch precision pool states',
+                'Precision pool component not found at state version',
                 { error }
               )
               return [] as { address: string; state: s.infer<typeof PrecisionPoolSchema> }[]
@@ -99,23 +89,6 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
           poolStates.map((ps) => [ps.address, ps.state])
         )
 
-        // Fetch all NFT receipts for all accounts (filtered by precision pool LP resources)
-        const nftBalances = yield* getNonFungibleBalance({
-          addresses: input.addresses.map(String),
-          at_ledger_state: { state_version: input.stateVersion },
-          resourceAddresses: allLpResourceAddresses
-        }).pipe(
-          Effect.catchAll((error) =>
-            Effect.gen(function* () {
-              yield* Effect.logWarning(
-                'Failed to fetch precision pool NFTs',
-                { error }
-              )
-              return { items: [] as NftAccountBalance[] }
-            })
-          )
-        )
-
         // Build lookup: lpResourceAddress → pool config
         const poolByLpResource = new Map(
           allPrecisionPools.map((p) => [p.lpResourceAddress, p])
@@ -123,7 +96,7 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
 
         // Process each account declaratively
         return pipe(
-          nftBalances.items,
+          input.nftBalances.items,
           A.reduce(
             {
               totals: R.empty<AccountAddress, BigNumber>(),

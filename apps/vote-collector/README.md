@@ -25,6 +25,7 @@ cp .env.example .env
 | `DATABASE_URL` | PostgreSQL connection string                   | —       |
 | `NETWORK_ID`   | Radix network (`1` = mainnet, `2` = stokenet)  | `2`     |
 | `POLL_TIMEOUT_DURATION` | Poll Lambda timeout (Effect duration, e.g. `120 seconds`) | `120 seconds` |
+| `DEX_POSITION_CONCURRENCY` | Max concurrent DEX position computations | `3` |
 
 ## Scripts
 

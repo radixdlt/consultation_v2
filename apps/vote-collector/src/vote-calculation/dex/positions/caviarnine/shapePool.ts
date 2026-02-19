@@ -10,10 +10,7 @@
  * sums all token amounts regardless of bin position.
  */
 
-import {
-  GetComponentStateService,
-  GetNonFungibleBalanceService
-} from '@radix-effects/gateway'
+import { GetComponentStateService } from '@radix-effects/gateway'
 import { AccountAddress, type StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
@@ -128,10 +125,6 @@ const computeClaimsXrd = (
     return new BigNumber(xXrd).plus(yXrd)
   })
 
-const allLiquidityReceiptAddresses = CAVIARNINE_SHAPE_POOLS.map(
-  (p) => p.liquidity_receipt
-)
-
 /** Pre-built lookup: componentAddress → pool config (avoids O(n*m) .find()) */
 const poolByComponent = new Map(
   CAVIARNINE_SHAPE_POOLS.map((p) => [p.componentAddress, p])
@@ -140,20 +133,16 @@ const poolByComponent = new Map(
 export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosition>()(
   'CaviarNineShapePosition',
   {
-    dependencies: [
-      GetComponentStateService.Default,
-      GetNonFungibleBalanceService.Default,
-      GetQuantaSwapBinMap.Default
-    ],
+    dependencies: [GetComponentStateService.Default, GetQuantaSwapBinMap.Default],
     effect: Effect.gen(function* () {
       const getComponentState = yield* GetComponentStateService
-      const getNonFungibleBalance = yield* GetNonFungibleBalanceService
       const getQuantaSwapBinMap = yield* GetQuantaSwapBinMap
 
       return Effect.fn('CaviarNineShapePosition')(function* (input: {
         addresses: AccountAddress[]
         stateVersion: StateVersion
         tokenFilterCtx: TokenFilterContext
+        nftBalances: { items: NftAccountBalance[] }
       }) {
         if (CAVIARNINE_SHAPE_POOLS.length === 0) {
           return { totals: R.empty(), breakdown: R.empty() }
@@ -165,10 +154,10 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
           schema: QuantaSwapSchema,
           at_ledger_state: { state_version: input.stateVersion }
         }).pipe(
-          Effect.catchAll((error) =>
+          Effect.catchTag('EntityNotFoundError', (error) =>
             Effect.gen(function* () {
               yield* Effect.logWarning(
-                'Failed to fetch shape pool states',
+                'Shape pool component not found at state version',
                 { error }
               )
               return [] as { address: string; state: s.infer<typeof QuantaSwapSchema> }[]
@@ -188,7 +177,8 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
                 address: cs.state.bin_map,
                 at_ledger_state: { state_version: input.stateVersion }
               }).pipe(
-                Effect.catchAll(
+                Effect.catchTag(
+                  'EntityNotFoundError',
                   (): Effect.Effect<BinMapData> =>
                     Effect.succeed(new Map())
                 )
@@ -229,26 +219,9 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
           poolStates.map((p) => [p.liquidityReceipt, p])
         )
 
-        // Fetch all NFT receipts for all accounts
-        const nftBalances = yield* getNonFungibleBalance({
-          addresses: input.addresses.map(String),
-          at_ledger_state: { state_version: input.stateVersion },
-          resourceAddresses: allLiquidityReceiptAddresses
-        }).pipe(
-          Effect.catchAll((error) =>
-            Effect.gen(function* () {
-              yield* Effect.logWarning(
-                'Failed to fetch shape pool NFTs',
-                { error }
-              )
-              return { items: [] as NftAccountBalance[] }
-            })
-          )
-        )
-
         // Process each account
         return yield* Effect.reduce(
-          nftBalances.items,
+          input.nftBalances.items,
           {
             totals: R.empty<AccountAddress, BigNumber>(),
             breakdown: R.empty<

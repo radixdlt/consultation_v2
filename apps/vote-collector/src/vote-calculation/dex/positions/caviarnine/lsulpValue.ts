@@ -15,6 +15,10 @@ import BigNumber from 'bignumber.js'
 import { Array as A, Data, Effect, Option, pipe } from 'effect'
 import { LSULP_COMPONENT_ADDRESS, LSULP_RESOURCE_ADDRESS } from '../../constants/assets'
 
+class LsulpNotFoundError extends Data.TaggedError('LsulpNotFoundError')<{
+  message: string
+}> {}
+
 class LsulpValueError extends Data.TaggedError('LsulpValueError')<{
   message: string
 }> {}
@@ -42,7 +46,7 @@ export class LsulpValue extends Effect.Service<LsulpValue>()('LsulpValue', {
       )
 
       if (Option.isNone(componentItem) || Option.isNone(resourceItem)) {
-        return yield* new LsulpValueError({
+        return yield* new LsulpNotFoundError({
           message: 'LSULP component or resource not found at state version'
         })
       }
@@ -96,9 +100,9 @@ export class LsulpValue extends Effect.Service<LsulpValue>()('LsulpValue', {
       const lsulpToXrdRate = dexValuationXrd.dividedBy(lsulpTotalSupply)
 
       return {
-        lsulpToXrdRate: lsulpToXrdRate.isNaN()
-          ? new BigNumber(0)
-          : lsulpToXrdRate
+        lsulpToXrdRate: lsulpToXrdRate.isFinite()
+          ? lsulpToXrdRate
+          : new BigNumber(0)
       }
     })
   })
