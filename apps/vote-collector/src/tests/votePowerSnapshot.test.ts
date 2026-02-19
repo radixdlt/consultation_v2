@@ -12,7 +12,14 @@ import {
   FungibleResourceAddress,
   StateVersion
 } from '@radix-effects/shared'
-import { ConfigProvider, Effect, Layer, Logger, Option, Record as R } from 'effect'
+import {
+  ConfigProvider,
+  Effect,
+  Layer,
+  Logger,
+  Option,
+  Record as R
+} from 'effect'
 import { describe, expect, it } from 'vitest'
 import { MainnetGatewayApiClientLayer } from 'shared/gateway'
 import { GovernanceConfig } from 'shared/governance/index'
@@ -59,20 +66,16 @@ describe('Vote Power Snapshot', () => {
         }).pipe(Effect.provide(TestLayer))
       )
 
-      const total = R.get(
-        result.votePower,
-        accountAddress
-      ).pipe(
+      const total = R.get(result.votePower, accountAddress).pipe(
         Option.map((bn) => bn.toFixed()),
         Option.getOrElse(() => '0')
       )
 
       expect(total).toBe(fixture.total)
 
-      const dexBreakdown = R.get(
-        result.breakdown,
-        accountAddress
-      ).pipe(Option.getOrElse(() => [] as const))
+      const dexBreakdown = R.get(result.breakdown, accountAddress).pipe(
+        Option.getOrElse(() => [] as const)
+      )
 
       expect(dexBreakdown).toEqual(fixture.dexBreakdown)
     }

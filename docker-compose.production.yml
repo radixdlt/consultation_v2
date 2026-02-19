@@ -4,7 +4,10 @@ services:
       context: .
       dockerfile: dockerfiles/client.Dockerfile
       args:
-        VITE_API_URL: http://localhost:3001
+        VITE_ENV: production
+        VITE_VOTE_COLLECTOR_URL: http://localhost:${SERVER_PORT:-3001}
+        VITE_PUBLIC_DAPP_DEFINITION_ADDRESS: ${VITE_PUBLIC_DAPP_DEFINITION_ADDRESS}
+        VITE_PUBLIC_NETWORK_ID: ${VITE_PUBLIC_NETWORK_ID}
     ports:
       - "3000:3000"
     depends_on:
@@ -12,23 +15,17 @@ services:
     networks:
       - default
 
-  postgres:
-    image: postgres:17-alpine
+  vote-collector:
+    build:
+      context: .
+      dockerfile: dockerfiles/server.Dockerfile
     ports:
-      - "5432:5432"
+      - "${SERVER_PORT:-3001}:${SERVER_PORT:-3001}"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: consultation
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      DATABASE_URL: ${DATABASE_URL}
+      NETWORK_ID: ${NETWORK_ID}
+      SERVER_PORT: 3001
+      ENV: production
+    restart: always
     networks:
       - default
-
-volumes:
-  postgres_data:

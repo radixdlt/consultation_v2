@@ -17,6 +17,7 @@ Central index of context files for AI agents and coding assistants working with 
 | [sql-drizzle](./context/sql-drizzle.md) | Database ORM | Drizzle + Effect, remote proxy, transactions |
 | [radix-Gateway](./context/radix-Gateway.md) | Radix Ledger | Gateway API client, tagged errors, pagination, SBOR schema, ROLA |
 | [sst-Lambda](./context/sst-Lambda.md) | Serverless Deploy | SST v3 Function component, esbuild bundling, IAM, resource linking, dev mode |
+| [hono](./context/hono.md) | HTTP Framework | Hono v4, multi-runtime, type-safe routing, RPC client, middleware |
 
 
 ---
@@ -418,6 +419,45 @@ Central index of context files for AI agents and coding assistants working with 
 
 ---
 
+## Hono
+
+> Web Standards-based, ultrafast HTTP framework with type-safe routing and RPC client
+
+**File:** [hono.md](./context/hono.md)
+
+| Section | Description |
+|---------|-------------|
+| [Overview](./context/hono.md#overview) | Multi-runtime, Web Standards, zero dependencies, SmartRouter |
+| [Core: Hono Class](./context/hono.md#core-hono-class) | `Hono<E, S, BasePath>` generics, constructor options, request processing flow |
+| [Context Object](./context/hono.md#context-object) | `Context<E, P, I>` — request/response access, variables, response helpers |
+| [Routing](./context/hono.md#routing) | HTTP method handlers, path params, wildcards, sub-apps, `.route()` composition |
+| [Middleware](./context/hono.md#middleware) | `compose()` onion model, `next()` chaining, `MiddlewareHandler` type |
+| [Type System](./context/hono.md#type-system) | `Env`, `Input`, `Schema` inference, `TypedResponse` phantom types, path merging |
+| [Built-in Middleware Catalog](./context/hono.md#built-in-middleware-catalog) | 23 middleware: cors, jwt, csrf, compress, logger, body-limit, etc. |
+| [Helpers](./context/hono.md#helpers) | cookie, streaming, SSE, WebSocket, factory, testClient, accepts |
+| [Validator](./context/hono.md#validator) | `validator()` middleware — json/form/query/param/header/cookie targets |
+| [RPC Client (hc)](./context/hono.md#rpc-client-hc) | Proxy-based typed client, `$get`/`$post`/`$url`/`$ws`, `ClientRequestOptions` |
+| [Error Handling](./context/hono.md#error-handling) | `HTTPException` class, `app.onError()`, error flow through compose |
+| [Adapters](./context/hono.md#adapters) | AWS Lambda (`handle`/`streamHandle`), Workers, Deno, Bun, Vercel, Netlify |
+| [Router Algorithms](./context/hono.md#router-algorithms) | SmartRouter, RegExpRouter, TrieRouter, LinearRouter, PatternRouter |
+| [JSX](./context/hono.md#jsx) | JSX engine, Suspense, streaming, React-compatible hooks |
+| [Key Patterns](./context/hono.md#key-patterns) | Route composition, typed factory, middleware combine, RPC-style API, Zod validator |
+
+### Hono Subsections
+
+| Topic | Section |
+|-------|---------|
+| Route grouping with `.route()` | [Route Composition](./context/hono.md#1-route-composition-with-route) |
+| `c.json()` / `c.html()` / `c.body()` helpers | [Response Helpers](./context/hono.md#response-helpers) |
+| Middleware compose & `next()` chaining | [Onion Model](./context/hono.md#onion-model) |
+| `validator()` middleware factory | [Validator](./context/hono.md#validator) |
+| `hc()` proxy-based typed client | [RPC Client (hc)](./context/hono.md#rpc-client-hc) |
+| `HTTPException` class & error handler | [Error Handling](./context/hono.md#error-handling) |
+| AWS Lambda adapter (`handle`/`streamHandle`) | [AWS Lambda Adapter](./context/hono.md#aws-lambda-adapter-most-relevant-to-this-project) |
+| SmartRouter algorithm selection | [SmartRouter](./context/hono.md#smartrouter-default-meta-router) |
+
+---
+
 ## Cross-Reference: Common Tasks
 
 | Task | Primary Context | Related Sections |
@@ -464,6 +504,13 @@ Central index of context files for AI agents and coding assistants working with 
 | Set up Lambda dev mode | [sst-Lambda](./context/sst-Lambda.md#dev-mode-architecture) | [Dev vs Production](./context/sst-Lambda.md#dev-vs-production) |
 | Subscribe Lambda to events | [sst-Lambda](./context/sst-Lambda.md#lambda-subscribers) | [Key Patterns](./context/sst-Lambda.md#key-patterns) |
 | Configure Lambda IAM permissions | [sst-Lambda](./context/sst-Lambda.md#iam--permissions) | [Resource Linking](./context/sst-Lambda.md#resource-linking) |
+| Create HTTP server (Hono) | [hono](./context/hono.md#core-hono-class) | [Key Patterns](./context/hono.md#key-patterns) |
+| Route HTTP requests (Hono) | [hono](./context/hono.md#routing) | [Router Algorithms](./context/hono.md#router-algorithms) |
+| Add middleware | [hono](./context/hono.md#middleware) | [Built-in Middleware Catalog](./context/hono.md#built-in-middleware-catalog) |
+| Validate request data | [hono](./context/hono.md#validator) | [Key Patterns](./context/hono.md#key-patterns) |
+| Generate typed API client | [hono](./context/hono.md#rpc-client-hc) | [Type System](./context/hono.md#type-system) |
+| Handle HTTP errors | [hono](./context/hono.md#error-handling) | [Context Object](./context/hono.md#context-object) |
+| Deploy to Lambda/Workers | [hono](./context/hono.md#adapters) | [AWS Lambda Adapter](./context/hono.md#aws-lambda-adapter-most-relevant-to-this-project) |
 
 
 ---
