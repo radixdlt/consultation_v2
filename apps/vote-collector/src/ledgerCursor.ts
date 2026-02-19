@@ -10,7 +10,6 @@ const CURSOR_KEY = 'ledger_state_version'
 export class LedgerCursor extends Effect.Service<LedgerCursor>()(
   'LedgerCursor',
   {
-    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const db = yield* ORM
       const gateway = yield* GatewayApiClient

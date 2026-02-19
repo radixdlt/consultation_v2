@@ -1,6 +1,7 @@
 import {
   ComponentAddress,
-  FungibleResourceAddress
+  FungibleResourceAddress,
+  PackageAddress
 } from '@radix-effects/shared'
 import { Context, Effect, Layer, Config as ConfigEffect, Data } from 'effect'
 
@@ -13,12 +14,16 @@ export class UnsupportedNetworkIdError extends Data.TaggedError(
 export class GovernanceConfig extends Context.Tag('@Governance/Config')<
   GovernanceConfig,
   {
+    readonly packageAddress: PackageAddress
     readonly componentAddress: ComponentAddress
     readonly adminBadgeAddress: FungibleResourceAddress
     readonly xrdResourceAddress: FungibleResourceAddress
   }
 >() {
   static StokenetLive = Layer.succeed(this, {
+    packageAddress: PackageAddress.make(
+      'package_tdx_2_1p5cv7gym87c8dnsdx8rlv587mqw34v6qmska5ctxh04st0t07wq32s'
+    ),
     componentAddress: ComponentAddress.make(
       'component_tdx_2_1cqnp3rptnwqjc4r7kzwkctec09jkdqa8v2rue580kw66fvt4ctpnmc'
     ),
@@ -31,6 +36,7 @@ export class GovernanceConfig extends Context.Tag('@Governance/Config')<
   })
 
   static MainnetLive = Layer.succeed(this, {
+    packageAddress: PackageAddress.make('TODO_MAINNET_PACKAGE_ADDRESS'),
     componentAddress: ComponentAddress.make('TODO_MAINNET_COMPONENT_ADDRESS'),
     adminBadgeAddress: FungibleResourceAddress.make(
       'TODO_MAINNET_ADMIN_BADGE_ADDRESS'
