@@ -28,7 +28,7 @@ pnpm db:migrate        # requires DATABASE_URL in env
 
 ### Ledger cursor override
 
-Set `LEDGER_STATE_VERSION` to rewind (or fast-forward) the poll cursor to a specific state version. The override is **idempotent** — it only applies once per unique value, so it's safe to leave set permanently.
+Set `LEDGER_STATE_VERSION` to rewind (or fast-forward) the poll cursor to a specific state version. The override is **idempotent** — it won't re-apply if the value hasn't changed, so it's safe to leave set permanently.
 
 How it works: the last applied override value is stored in the DB. On startup, if the env var matches that stored value the override is skipped. If it differs, the cursor is moved and the new value is remembered.
 
