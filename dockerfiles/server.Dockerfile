@@ -32,4 +32,4 @@ COPY --from=builder --chown=server:nodejs /app/apps/vote-collector/node_modules 
 COPY --from=builder --chown=server:nodejs /app/packages ./packages
 COPY --from=builder --chown=server:nodejs /app/node_modules ./node_modules
 USER server
-CMD ["node", "apps/vote-collector/dist/index.mjs"]
+CMD ["node", "apps/vote-collector/dist/http-server.mjs"]

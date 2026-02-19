@@ -4,9 +4,10 @@
 	"scripts": {
 		"build": "tsdown",
 		"check-types": "tsc --noEmit",
+		"dev": "tsx --watch src/http-server.ts",
 		"dev:inspect": "tsx --inspect-brk src/index.ts",
 		"test": "vitest",
-		"dev": "sst dev --stage local",
+		"sst:dev": "sst dev --stage local",
 		"sst:remove:local": "sst remove --stage local",
 		"sst:deploy:stokenet": "sst deploy --stage stokenet",
 		"sst:remove:stokenet": "sst remove --stage stokenet",
@@ -26,10 +27,12 @@
 		"@radixdlt/babylon-gateway-api-sdk": "catalog:",
 		"@types/node": "catalog:",
 		"bignumber.js": "catalog:",
-		"decimal.js": "catalog:",
 		"db": "workspace:*",
+		"decimal.js": "catalog:",
 		"drizzle-orm": "catalog:",
 		"effect": "catalog:",
+		"@hono/node-server": "^1.14.0",
+		"hono": "^4.11.10",
 		"pg": "^8.16.0",
 		"sbor-ez-mode": "catalog:",
 		"shared": "workspace:*"
@@ -40,9 +43,9 @@
 		"@testcontainers/postgresql": "^11.10.0",
 		"@types/aws-lambda": "8.10.160",
 		"@types/pg": "^8.16.0",
+		"sst": "3.17.38",
 		"tsdown": "catalog:",
 		"tsx": "catalog:",
-		"vitest": "catalog:",
-		"sst": "3.17.38"
+		"vitest": "catalog:"
 	}
 }

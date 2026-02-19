@@ -6,7 +6,7 @@
 
 - **Node 22+** (see `engines` in root `package.json`)
 - **pnpm** (corepack-managed — `corepack enable` if not already active)
-- **AWS credentials** — SST uses the standard credential chain (`AWS_PROFILE`, env vars, etc.). See [SST IAM credentials docs](https://sst.dev/docs/iam-credentials).
+- **AWS credentials** (SST path only) — SST uses the standard credential chain (`AWS_PROFILE`, env vars, etc.). See [SST IAM credentials docs](https://sst.dev/docs/iam-credentials). Not needed for Docker deployment.
 - **Docker** (recommended) or a PostgreSQL instance
 
 ## Setup
@@ -22,6 +22,8 @@ pnpm db:migrate        # requires DATABASE_URL in env
 | `DATABASE_URL` | PostgreSQL connection string                  | —       |
 | `NETWORK_ID`   | Radix network (`1` = mainnet, `2` = stokenet) | `2`     |
 | `POLL_TIMEOUT_DURATION` | Poll Lambda timeout (Effect duration, e.g. `120 seconds`) | `120 seconds` |
+| `SERVER_PORT` | HTTP server listen port (Docker/HTTP mode only) | `4000` |
+| `ENV` | Environment name (`production`, `development`) | — |
 
 ## Running locally
 
@@ -34,12 +36,13 @@ Or run each app individually:
 ### Vote Collector
 
 ```sh
-pnpm -F vote-collector dev   # → sst dev --stage local
+pnpm -F vote-collector dev       # → Hono HTTP server on :4000 (default)
+pnpm -F vote-collector sst:dev   # → SST live Lambda proxy (requires AWS credentials)
 ```
 
-This deploys **real AWS infrastructure** (API Gateway, Lambda, Cron) but routes Lambda invocations back to your local machine via the SST Live Lambda proxy.
+The default `dev` command starts a self-contained Node.js HTTP server (Hono + Effect) with an embedded poll scheduler — no AWS account needed.
 
-On first run, SST prints the API Gateway URL (stable per stage). Copy it — you'll need it for the consultation app.
+The `sst:dev` command deploys **real AWS infrastructure** (API Gateway, Lambda, Cron) and routes Lambda invocations back to your local machine via the SST Live Lambda proxy. On first run, SST prints the API Gateway URL (stable per stage). Copy it — you'll need it for the consultation app.
 
 ### Consultation dApp
 
@@ -114,6 +117,41 @@ curl 'https://<api-url>/account-votes?type=proposal&entityId=1'
 
 Check CloudWatch Logs for the `Poll` and `Api` Lambda functions to confirm execution.
 
+## Deploying with Docker
+
+As an alternative to SST/Lambda, the vote collector can run as a plain Node.js HTTP server deployed via Docker Compose. This bundles the API endpoints and the poll scheduler into a single process — no AWS account required.
+
+```sh
+docker compose -f docker-compose.production.yml up --build
+```
+
+### Services
+
+| Service | Port | Description |
+| --- | --- | --- |
+| `vote-collector` | 3001 | Hono HTTP server + embedded poll scheduler |
+| `consultation` | 3000 | Vite + React consultation dApp |
+
+> An external PostgreSQL instance is required. Set `DATABASE_URL` in your `.env` file.
+
+### Environment variables
+
+Set these in your shell or a `.env` file alongside `docker-compose.production.yml`:
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string | — (required) |
+| `NETWORK_ID` | Radix network (`1` = mainnet, `2` = stokenet) | — |
+| `SERVER_PORT` | HTTP server listen port | `3001` |
+| `ENV` | Environment name | `production` |
+
+### Verify
+
+```sh
+curl 'http://localhost:3001/vote-results?type=proposal&entityId=1'
+curl 'http://localhost:3001/account-votes?type=proposal&entityId=1'
+```
+
 ## Useful commands
 
 | Command | What it does |
@@ -128,11 +166,11 @@ Check CloudWatch Logs for the `Poll` and `Api` Lambda functions to confirm execu
 
 ```
 apps/
-  vote-collector/   SST-powered serverless vote collector (Lambda + Cron + API Gateway)
+  vote-collector/   Vote collector — SST serverless (Lambda + Cron) or HTTP server (Hono + Docker)
   consultation/     Vite + React consultation dApp (TanStack Router)
 packages/
   database/         Drizzle ORM schema & migrations
   shared/           Shared types and utilities
 ```
 
-See [`apps/vote-collector/README.md`](apps/vote-collector/README.md) for SST-specific details (deployment, custom domains, stage management).
+See [`apps/vote-collector/README.md`](apps/vote-collector/README.md) for architecture details, SST configuration, and custom domains.

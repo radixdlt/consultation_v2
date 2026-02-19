@@ -4,38 +4,15 @@ import type {
 } from 'aws-lambda'
 import {
   Effect,
-  Layer,
-  Logger,
   Schema,
-  ManagedRuntime,
   ParseResult
 } from 'effect'
 
-import { EntityType, GovernanceConfigLayer } from 'shared/governance/index'
-import { ORM } from './db/orm'
-import { PgClientLive } from './db/pgClient'
+import { EntityType } from 'shared/governance/index'
 import { PollService } from './poll'
 import { PollLock } from './pollLock'
 import { VoteCalculationRepo } from './vote-calculation/voteCalculationRepo'
-import { GatewayApiClientLayer } from 'shared/gateway'
-
-const CronJobHandlerLayer = PollService.Default.pipe(
-  Layer.provideMerge(PollLock.Default),
-  Layer.provide(ORM.Default),
-  Layer.provideMerge(GatewayApiClientLayer),
-  Layer.provideMerge(GovernanceConfigLayer),
-  Layer.provideMerge(PgClientLive),
-  Layer.provideMerge(Logger.json)
-)
-
-const HttpHandlerLayer = VoteCalculationRepo.Default.pipe(
-  Layer.provide(ORM.Default),
-  Layer.provideMerge(PgClientLive),
-  Layer.provideMerge(Logger.json)
-)
-
-const CronRuntime = ManagedRuntime.make(CronJobHandlerLayer)
-const HttpRuntime = ManagedRuntime.make(HttpHandlerLayer)
+import { CronRuntime, HttpRuntime } from './layers'
 
 const QueryParams = Schema.Struct({
   type: EntityType,

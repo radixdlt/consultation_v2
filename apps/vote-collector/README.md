@@ -1,11 +1,12 @@
 # Vote Collector
 
-Serverless vote collector for Radix governance, built with [SST v3](https://sst.dev/) and [Effect](https://effect.website/).
+Vote collector for Radix governance, built with [Effect](https://effect.website/). Supports two deployment modes: **SST v3** (serverless Lambda + Cron) and a self-contained **HTTP server** (Hono + Node.js, deployed via Docker).
 
 ## Architecture
 
-- **Cron** (`Poll`): fires every minute, polls the Radix Gateway for new governance transactions, processes events and recalculates votes. Loops until the page is drained (< 100 txs).
-- **API** (`Api`): `GET /vote-results` and `GET /account-votes`, backed by API Gateway V2.
+- **HTTP server** (Hono): self-contained Node.js server exposing `GET /vote-results` and `GET /account-votes`, with an embedded poll scheduler (1-minute interval via `Effect.repeat`). Runs database migrations on startup. Deployed via Docker.
+- **SST Cron** (`Poll`): fires every minute via `sst.aws.Cron`, polls the Radix Gateway for new governance transactions, processes events and recalculates votes. Loops until the page is drained (< 100 txs).
+- **SST API** (`Api`): `GET /vote-results` and `GET /account-votes`, backed by API Gateway V2.
 - **Database**: PostgreSQL via Drizzle ORM. Schema lives in `packages/database/src/schema.ts`.
 
 ## Environment
@@ -26,12 +27,15 @@ cp .env.example .env
 | `NETWORK_ID`   | Radix network (`1` = mainnet, `2` = stokenet)  | `2`     |
 | `POLL_TIMEOUT_DURATION` | Poll Lambda timeout (Effect duration, e.g. `120 seconds`) | `120 seconds` |
 | `DEX_POSITION_CONCURRENCY` | Max concurrent DEX position computations | `3` |
+| `SERVER_PORT` | HTTP server listen port (HTTP mode only) | `4000` |
+| `ENV` | Environment name (`production`, `development`) | — |
 
 ## Scripts
 
 | Script | Command | Description |
 | --- | --- | --- |
-| `dev` | `sst dev --stage local` | Local dev with live Lambda emulation |
+| `dev` | `tsx --watch src/http-server.ts` | Hono HTTP server with hot reload |
+| `sst:dev` | `sst dev --stage local` | Local dev with live Lambda emulation |
 | `sst:deploy:stokenet` | `sst deploy --stage stokenet` | Deploy to stokenet stage |
 | `sst:deploy:mainnet` | `sst deploy --stage production` | Deploy to production stage |
 | `sst:remove:local` | `sst remove --stage local` | Tear down local stage |

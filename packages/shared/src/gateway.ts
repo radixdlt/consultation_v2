@@ -16,7 +16,11 @@ export const GatewayApiClientLayer = Layer.unwrapEffect(
     } else if (networkId === 2) {
       return GatewayApiClient.Default.pipe(
         Layer.provide(
-          Layer.setConfigProvider(ConfigProvider.fromJson({ NETWORK_ID: 2 }))
+          Layer.setConfigProvider(
+            ConfigProvider.fromJson({ NETWORK_ID: 2 }).pipe(
+              ConfigProvider.orElse(() => ConfigProvider.fromEnv())
+            )
+          )
         )
       )
     } else {
@@ -29,6 +33,10 @@ export const GatewayApiClientLayer = Layer.unwrapEffect(
 
 export const MainnetGatewayApiClientLayer = GatewayApiClient.Default.pipe(
   Layer.provide(
-    Layer.setConfigProvider(ConfigProvider.fromJson({ NETWORK_ID: 1 }))
+    Layer.setConfigProvider(
+      ConfigProvider.fromJson({ NETWORK_ID: 1 }).pipe(
+        ConfigProvider.orElse(() => ConfigProvider.fromEnv())
+      )
+    )
   )
 )
