@@ -24,6 +24,20 @@ pnpm db:migrate        # requires DATABASE_URL in env
 | `POLL_TIMEOUT_DURATION` | Poll Lambda timeout (Effect duration, e.g. `120 seconds`) | `120 seconds` |
 | `SERVER_PORT` | HTTP server listen port (Docker/HTTP mode only) | `4000` |
 | `ENV` | Environment name (`production`, `development`) | — |
+| `LEDGER_STATE_VERSION` | Override ledger cursor position (see below) | — |
+
+### Ledger cursor override
+
+Set `LEDGER_STATE_VERSION` to rewind (or fast-forward) the poll cursor to a specific state version. The override is **idempotent** — it won't re-apply if the value hasn't changed, so it's safe to leave set permanently.
+
+How it works: the last applied override value is stored in the DB. On startup, if the env var matches that stored value the override is skipped. If it differs, the cursor is moved and the new value is remembered.
+
+| Scenario | What happens |
+| --- | --- |
+| Set `LEDGER_STATE_VERSION=500` for the first time | Cursor moves to 500 |
+| Lambda restarts, env var still `500` | Already applied — nothing changes |
+| Change env var to `800` | Cursor moves to 800 |
+| Remove the env var entirely | Override is inactive, cursor advances normally |
 
 ## Running locally
 

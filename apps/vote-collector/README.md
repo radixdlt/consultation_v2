@@ -29,7 +29,6 @@ cp .env.example .env
 | `DEX_POSITION_CONCURRENCY` | Max concurrent DEX position computations | `3` |
 | `SERVER_PORT` | HTTP server listen port (HTTP mode only) | `4000` |
 | `ENV` | Environment name (`production`, `development`) | — |
-
 ## Scripts
 
 | Script | Command | Description |

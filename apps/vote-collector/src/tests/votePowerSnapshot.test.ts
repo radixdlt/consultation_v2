@@ -10,6 +10,7 @@ import {
   AccountAddress,
   ComponentAddress,
   FungibleResourceAddress,
+  PackageAddress,
   StateVersion
 } from '@radix-effects/shared'
 import {
@@ -27,6 +28,7 @@ import { VotePowerSnapshot } from '../vote-calculation/votePowerSnapshot'
 import fixture from './fixtures/votePowerSnapshot.fixture.json'
 
 const MainnetGovernanceConfig = Layer.succeed(GovernanceConfig, {
+  packageAddress: PackageAddress.make(''),
   componentAddress: ComponentAddress.make(
     'component_rdx1cqnp3rptnwqjc4r7kzwkctec09jkdqa8v2rue580kw66fvt4ctpnmc'
   ),
