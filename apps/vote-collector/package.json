@@ -26,6 +26,7 @@
 		"@radixdlt/babylon-gateway-api-sdk": "catalog:",
 		"@types/node": "catalog:",
 		"bignumber.js": "catalog:",
+		"decimal.js": "catalog:",
 		"db": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"effect": "catalog:",

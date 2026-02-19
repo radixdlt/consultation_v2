@@ -26,3 +26,9 @@ export const GatewayApiClientLayer = Layer.unwrapEffect(
     }
   })
 )
+
+export const MainnetGatewayApiClientLayer = GatewayApiClient.Default.pipe(
+  Layer.provide(
+    Layer.setConfigProvider(ConfigProvider.fromJson({ NETWORK_ID: 1 }))
+  )
+)

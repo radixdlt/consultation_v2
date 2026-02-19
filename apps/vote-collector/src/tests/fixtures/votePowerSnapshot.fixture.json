@@ -1,0 +1,283 @@
+{
+  "account": "account_rdx12xl2meqtelz47mwp3nzd72jkwyallg5yxr9hkc75ac4qztsxulfpew",
+  "stateVersion": 458723388,
+  "total": "75919.449583494071330722205151679361023735508842549230540879604",
+  "dexBreakdown": [
+    {
+      "poolName": "LSULP Direct",
+      "poolType": "lsulp",
+      "componentAddress": "resource_rdx1thksg5ng70g9mmy9ne7wz0sc7auzrrwy7fmgcxzel2gvp8pj0xxfmf",
+      "xrdValue": "8097.2733454146802505226884988588698660814"
+    },
+    {
+      "poolName": "Ociswap Basic: EARLY/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5hm2rt67scp22pq6tpkfg6cd22g0wwz88065wsy9gdfnd86sv3t4t",
+      "xrdValue": "58.24024488112011679062552216813633145524"
+    },
+    {
+      "poolName": "Ociswap Basic: OCI/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ckyg8aujf09uh8qlz6asst75g5w6pl6vu8nl6qrhskawcndyk6585y",
+      "xrdValue": "95.54206226864671053794523686795754540944"
+    },
+    {
+      "poolName": "Ociswap Basic: ILIS/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ck0daslg9anw64t5ytq0g4svmuj85jwvrrhgz2005exh8gt6qxle4w",
+      "xrdValue": "6.190070449732199236261215165263617296"
+    },
+    {
+      "poolName": "Ociswap Basic: WEFT/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ck5w5vnm6qwrmcp4way3wtyjztk7armjea3xc5xaktlk9r4gq6s3ee",
+      "xrdValue": "106.498056899392021497351907161902359521"
+    },
+    {
+      "poolName": "Ociswap Flex: ILIS/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5cyh7lhxly2mxzsmrs4c99vhxt9jzap3gaf7s8h0h68fqlpfht0un",
+      "xrdValue": "218.09509990195642020232188335181817380165"
+    },
+    {
+      "poolName": "CaviarNine HLP: LSULP/XRD (HLP)",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1chmckjpr0ks5lk6h7mqvmrw56wt4w6tsuy6n2jhd8fhr8vc5en5e90",
+      "xrdValue": "2769.937398288942927823645183703685254824828899656316406166859"
+    },
+    {
+      "poolName": "CaviarNine Simple: REDDICKS/LSULP",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1chmx480a0crrnaqyg2e6tr7wtqwk5239grzs6ecckcmhqjm3gdmm73",
+      "xrdValue": "639.141350177992629532722200394405697948409942892914134712745"
+    },
+    {
+      "poolName": "CaviarNine Simple: FLOOP/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ch3vyhagpzqll4cu6quafdpkf7lvyuz7ke4z66tuqpxhvtxzd9lvmu",
+      "xrdValue": "93.62577942449615787999808694172743659365"
+    },
+    {
+      "poolName": "CaviarNine Simple: hUSDC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5dcv0r8tz0tzw8radv3grwvdj6jkya84c93k30mqmx70tyatlye0n",
+      "xrdValue": "899.59572055180589881184531524957284145572"
+    },
+    {
+      "poolName": "CaviarNine Simple: hETH/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1chcefkz8qqlhl4tk6vm2ftwh7qmht8yru5cxwl0e5r444tw86vzjwd",
+      "xrdValue": "712.20598237281191100195815755715205410472"
+    },
+    {
+      "poolName": "DefiPlaza Base: xUSDC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5z06xda4gjykyhupj4fjszdfhsye7h3mcsgwe5cvuz2vemwn7yjax",
+      "xrdValue": "279.7635409020801005792487710784058489336"
+    },
+    {
+      "poolName": "DefiPlaza Quote: xUSDC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ch62axcl22gnmhe5ajtwraukrxstxxqlq5c6p9n2y5qv0pgyqnhfry",
+      "xrdValue": "135.1001578562662369510198815578063770534"
+    },
+    {
+      "poolName": "DefiPlaza Base: xUSDT/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5pvssdmlgjh78anllzszh7alal666ayv8h6at3xmxmmpueqf7at4q",
+      "xrdValue": "126.41151953646493574478154035161884626896"
+    },
+    {
+      "poolName": "DefiPlaza Quote: xUSDT/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c4scl7k67czs4e29skz0njvcmx4epmrjk4nkrkvsmt93rug7jcnagf",
+      "xrdValue": "136.47059775999865516239987381471802838226"
+    },
+    {
+      "poolName": "DefiPlaza Base: xETH/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ckt7dhmt5gr9vdsgz3p62fm88pm7f69kzzqw2268f3negvgns2xkpa",
+      "xrdValue": "47.28967551543883264115163382749147100992"
+    },
+    {
+      "poolName": "DefiPlaza Quote: xETH/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5glrayedmn0utd44pqs8a3x52dw9aklq2g5f9ewxjxtm7xvjmussa",
+      "xrdValue": "130.08545774354273029586240256364229807758"
+    },
+    {
+      "poolName": "DefiPlaza Base: xwBTC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5xlqz5uc62fzlsyl2f3ql6lx8upc75tdpe4f8cmys83lpqrrul976",
+      "xrdValue": "108.70770444036302178202663087040406302555"
+    },
+    {
+      "poolName": "DefiPlaza Quote: xwBTC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1cht7hqhcnj2la96cygema5l32xwz26luunr9umlszy3s9gr78ppdzv",
+      "xrdValue": "141.74762619190832340949348539146673870468"
+    },
+    {
+      "poolName": "DefiPlaza Base: XRD/DFP2",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1chxn0nqj840r78t2ah5agchq4ue9p65q23nc9ckqfe0mmjstq8fyg0",
+      "xrdValue": "123.59765638808428121259714764134178662896"
+    },
+    {
+      "poolName": "DefiPlaza Quote: XRD/DFP2",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c4547fnprjhlp2m27aycmf8rzrkrfzcck58jt2706r85gpcaeapz7k",
+      "xrdValue": "20.83698304435771467798336426981302898951"
+    },
+    {
+      "poolName": "DefiPlaza Quote: hETH/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1chawt3wgkpe0jkdhgrysw9dducx3032nse8r9tfl4gsxfqp2z2alx5",
+      "xrdValue": "858.1055682416686539189273680396979141826"
+    },
+    {
+      "poolName": "DefiPlaza Base: hUSDC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1chxzajmur7p67h0uvk7etgnm9m67ptzfv7ysfdvq35ck2zz6zuttqq",
+      "xrdValue": "357.2866200258515563603069030735721644992"
+    },
+    {
+      "poolName": "DefiPlaza Quote: hUSDC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5t2v0jac6sdyv9qs5hur76uc5kjr70sl8dftc5aa92k0tsuc06r04",
+      "xrdValue": "853.7581701046210528251746321827481700029"
+    },
+    {
+      "poolName": "DefiPlaza Base: hwBTC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1c5xdcsxjfpled776cl2ln2mdv9svh5sp4z8u3qhv5r5sslnuxul7rs",
+      "xrdValue": "19.85291268386332712260795787928411835643"
+    },
+    {
+      "poolName": "DefiPlaza Quote: hwBTC/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ckv54hdmtyn308zkm3mq98876puwhpqa3hrn8d27swgspaackvnmu7",
+      "xrdValue": "839.04870010109595785495118912487363005268"
+    },
+    {
+      "poolName": "DefiPlaza Base: hUSDT/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ch5zj8tlarxz38kwh4ss3jn5mphd98rssalkmfut6mhzvswezzg3vd",
+      "xrdValue": "357.01491471904363929333019156931425177519"
+    },
+    {
+      "poolName": "DefiPlaza Quote: hUSDT/XRD",
+      "poolType": "simple",
+      "componentAddress": "pool_rdx1ckvu5wqp2pc284yj7jssckueqtcvt72gjjwz4sv4rl5kdtk70etg2n",
+      "xrdValue": "816.82318186311255997497897102267110930003"
+    },
+    {
+      "poolName": "Ociswap Precision V2: hETH/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1crumqsy0nu4pl3fwah3nkf8eg8qhltxenk83wh9tzlmr5jnsqs3x4c",
+      "xrdValue": "1494.708531624777631085"
+    },
+    {
+      "poolName": "Ociswap Precision V2: hwBTC/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1crd7xk0nu07kj60artzz6evws7r6w69lwarf0nqmkxuwwluy5xjud0",
+      "xrdValue": "1867.87773804848059521"
+    },
+    {
+      "poolName": "Ociswap Precision V2: hUSDT/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1cprwh9r3wx6vvt0gnv8wscwljegzcevp0hzuju2873eza7fgg493fw",
+      "xrdValue": "2366.959924"
+    },
+    {
+      "poolName": "Ociswap Precision V2: hUSDC/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1czy2naejcqx8gv46zdsex2syuxrs4jnqzug58e66zr8wglxzvu97qr",
+      "xrdValue": "2366.20716"
+    },
+    {
+      "poolName": "Ociswap Precision V2: OCI/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1crm530ath85gcwm4gvwq8m70ay07df085kmupp6gte3ew94vg5pdcp",
+      "xrdValue": "147.489039797190685651"
+    },
+    {
+      "poolName": "Ociswap Precision V1: xUSDT/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1cz79xc57dpuhzd3wylnc88m3pyvfk7c5e03me2qv7x8wh9t6c3aw4g",
+      "xrdValue": "646.761351961861549027"
+    },
+    {
+      "poolName": "Ociswap Precision V1: xETH/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1crahf8qdh8fgm8mvzmq5w832h97q5099svufnqn26ue44fyezn7gnm",
+      "xrdValue": "483.364282127433677077"
+    },
+    {
+      "poolName": "Ociswap Precision V1: xwBTC/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1cpgmgrskahkxe4lnpp9s2f5ga0z8jkl7ne8gjmw3fc2224lxq505mr",
+      "xrdValue": "570.741099507854963652"
+    },
+    {
+      "poolName": "Ociswap Precision V1: xUSDC/XRD",
+      "poolType": "precision",
+      "componentAddress": "component_rdx1cz8daq5nwmtdju4hj5rxud0ta26wf90sdk5r4nj9fqjcde5eht8p0f",
+      "xrdValue": "1702.445544178024311176"
+    },
+    {
+      "poolName": "CaviarNine Shape: XRD/hUSDT",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1cph6ayqwqgnavd5yjxjx966nfcnxwt85k9p8fqv37r5pfnn3qcm6az",
+      "xrdValue": "2053.337920962504859605"
+    },
+    {
+      "poolName": "CaviarNine Shape: hETH/XRD",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1cqr24rye05h28qnn5crjwlq0djvfcmaegg8sgdkwywfx6s97nk9fcy",
+      "xrdValue": "1718.54590931277389393"
+    },
+    {
+      "poolName": "CaviarNine Shape: hwBTC/XRD",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1crmvyl8nghu4g9ssxjq3yns793mqpn7nkc2cx5rmd2rzkaw0x755cu",
+      "xrdValue": "2180.813169600027974651"
+    },
+    {
+      "poolName": "CaviarNine Shape: XRD/hUSDC",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1cqelumvmmgwths34k9pp0htd2ykwq7d70m0r389etwh39ul3j5tyj5",
+      "xrdValue": "2106.059715842099944789"
+    },
+    {
+      "poolName": "CaviarNine Shape: XRD/xUSDC",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1cr6lxkr83gzhmyg4uxg49wkug5s4wwc3c7cgmhxuczxraa09a97wcu",
+      "xrdValue": "1447.033254329226587034"
+    },
+    {
+      "poolName": "CaviarNine Shape: XRD/xUSDT",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1cqs338cyje65rk44zgmjvvy42qcszrhk9ewznedtkqd8l3crtgnmh5",
+      "xrdValue": "139.556146336691565814"
+    },
+    {
+      "poolName": "CaviarNine Shape: LSULP/XRD",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1crdhl7gel57erzgpdz3l3vr64scslq4z7vd0xgna6vh5fq5fnn9xas",
+      "xrdValue": "476.350582318016914065"
+    },
+    {
+      "poolName": "CaviarNine Shape: xETH/XRD",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1cpsvw207842gafeyvf6tc0gdnq47u3mn74kvzszqlhc03lrns52v82",
+      "xrdValue": "147.946846110966706865"
+    },
+    {
+      "poolName": "CaviarNine Shape: xwBTC/XRD",
+      "poolType": "shape",
+      "componentAddress": "component_rdx1cp9w8443uyz2jtlaxnkcq84q5a5ndqpg05wgckzrnd3lgggpa080ed",
+      "xrdValue": "174.741735747013230665"
+    }
+  ]
+}

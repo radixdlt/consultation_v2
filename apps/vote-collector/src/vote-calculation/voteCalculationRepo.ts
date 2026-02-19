@@ -85,7 +85,7 @@ export class VoteCalculationRepo extends Effect.Service<VoteCalculationRepo>()(
                   eq(voteCalculationAccountVotes.stateId, stateId),
                   inArray(
                     voteCalculationAccountVotes.accountAddress,
-                    accountAddresses as string[]
+                    accountAddresses.map(String)
                   )
                 )
               )

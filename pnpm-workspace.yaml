@@ -20,6 +20,7 @@ catalog:
   '@radixdlt/babylon-gateway-api-sdk': ^1.10.1
   '@types/node': ^25.0.0
   bignumber.js: ^9.3.1
+  decimal.js: ^10.5.0
   drizzle-orm: 0.45.1
   effect: 3.19.11
   sbor-ez-mode: ^0.2.0
