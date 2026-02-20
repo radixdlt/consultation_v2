@@ -29,6 +29,38 @@ cp .env.example .env
 | `DEX_POSITION_CONCURRENCY` | Max concurrent DEX position computations | `3` |
 | `SERVER_PORT` | HTTP server listen port (HTTP mode only) | `4000` |
 | `ENV` | Environment name (`production`, `development`) | — |
+
+## Vote Power Sources
+
+Vote power is calculated from 6 source categories: **XRD** direct holdings, **LSU** (liquid staking units), **LSULP** (liquid staking unit LP), **pool units** (fungible LP tokens), **precision pools** (Ociswap concentrated liquidity), and **shape pools** (CaviarNine concentrated liquidity).
+
+### Epoch-based configuration
+
+Source configuration is **time-versioned** via epochs in `src/vote-calculation/voteSourceConfig.ts`. Each epoch has an `effectiveFrom` date, source toggles, and pool lists. When calculating vote power for a proposal, the system selects the epoch whose `effectiveFrom <= proposal.start` (newest matching epoch wins). This ensures historical proposals can always be recalculated with the config that was active at the time.
+
+### Changing which sources are counted
+
+To change which sources count toward vote power, **prepend a new epoch** to `VOTE_POWER_EPOCHS` in `voteSourceConfig.ts`. Keep old epochs intact for historical recalculation.
+
+### Adding or removing pools
+
+**Never modify existing pool arrays** in `src/vote-calculation/dex/constants/addresses.ts` — old epochs reference them, so changing them would silently alter historical vote power calculations. Existing arrays are suffixed with their epoch (e.g. `POOL_UNIT_POOLS_EPOCH_0`). Instead, create a **new** array for your epoch (e.g. `POOL_UNIT_POOLS_EPOCH_1`) and reference it from the new epoch entry. You can also define the pool list inline in the epoch itself.
+
+This way each epoch is a self-contained snapshot: past proposals always recalculate with exactly the pools that were active at the time.
+
+### Example: disable everything except XRD
+
+```ts
+// In VOTE_POWER_EPOCHS, prepend before the existing epoch:
+{
+  effectiveFrom: new Date('2026-06-01'),
+  sources: { xrd: true, lsu: false, lsulp: false },
+  precisionPools: [],
+  poolUnitPools: [],
+  shapePools: []
+}
+```
+
 ## Scripts
 
 | Script | Command | Description |

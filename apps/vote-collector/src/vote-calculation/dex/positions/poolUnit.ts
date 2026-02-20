@@ -19,9 +19,8 @@ import { FungibleResourceAddress } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
 import { AccountBalanceState } from 'shared/snapshot/accountBalanceState'
-import { POOL_UNIT_POOLS } from '../constants/addresses'
 import { convertToXrd, type TokenFilterContext } from '../tokenFilter'
-import type { PoolContribution } from '../types'
+import type { PoolContribution, PoolUnitPoolConfig } from '../types'
 
 type PoolUnitData = {
   readonly poolAddress: string
@@ -33,9 +32,8 @@ type PoolUnitData = {
   }>
 }
 
-const metaByPool = new Map(
-  POOL_UNIT_POOLS.map((p) => [p.poolAddress, { name: p.name }])
-)
+const buildMetaByPool = (pools: readonly PoolUnitPoolConfig[]) =>
+  new Map(pools.map((p) => [p.poolAddress, { name: p.name }]))
 
 /** Resolve pool unit data for all configured pools. */
 const fetchPoolUnitData = (input: {
@@ -112,7 +110,8 @@ const computeAccountPositions = (
     resourceAddress: FungibleResourceAddress
   ) => Option.Option<string>,
   address: AccountAddress,
-  tokenFilterCtx: TokenFilterContext
+  tokenFilterCtx: TokenFilterContext,
+  metaByPool: Map<string, { name: string }>
 ): { total: BigNumber; contributions: PoolContribution[] } =>
   pipe(
     poolUnitData,
@@ -182,10 +181,17 @@ export class PoolUnitPosition extends Effect.Service<PoolUnitPosition>()(
         addresses: AccountAddress[]
         stateVersion: StateVersion
         tokenFilterCtx: TokenFilterContext
+        pools: readonly PoolUnitPoolConfig[]
       }) {
+        if (input.pools.length === 0) {
+          return { totals: R.empty(), breakdown: R.empty() }
+        }
+
+        const metaByPool = buildMetaByPool(input.pools)
+
         // Fetch all pool unit data in one batch
         const poolUnitData = yield* fetchPoolUnitData({
-          pools: POOL_UNIT_POOLS,
+          pools: input.pools,
           stateVersion: input.stateVersion,
           getFungibleBalance,
           stateEntityDetails
@@ -213,7 +219,8 @@ export class PoolUnitPosition extends Effect.Service<PoolUnitPosition>()(
                 poolUnitData,
                 getFungibleTokenBalance,
                 address,
-                input.tokenFilterCtx
+                input.tokenFilterCtx,
+                metaByPool
               )
               if (total.isZero()) return acc
               return {

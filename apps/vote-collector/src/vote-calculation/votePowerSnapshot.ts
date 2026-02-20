@@ -42,11 +42,10 @@ import {
 import { GovernanceConfig } from 'shared/governance/config'
 import { LSULP_RESOURCE_ADDRESS } from './dex/constants/assets'
 import {
-  CAVIARNINE_SHAPE_POOLS,
-  OCISWAP_PRECISION_POOLS_V1,
-  OCISWAP_PRECISION_POOLS_V2
+  OCISWAP_PRECISION_POOLS_V1_EPOCH_0
 } from './dex/constants/addresses'
 import { buildLsuConverterMap, getLsuResourceAddresses } from './lsuConverter'
+import type { VotePowerSourceConfig } from './voteSourceConfig'
 import { LsulpValue } from './dex/positions/caviarnine/lsulpValue'
 import { CaviarNineShapePosition } from './dex/positions/caviarnine/shapePool'
 import { OciswapPrecisionPosition } from './dex/positions/ociswap/precisionPool'
@@ -105,9 +104,18 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
       return Effect.fn('VotePowerSnapshot')(function* (input: {
         addresses: AccountAddress[]
         stateVersion: StateVersion
+        sourceConfig: VotePowerSourceConfig
       }) {
+        const { sourceConfig } = input
+        const hasPoolPositions =
+          sourceConfig.poolUnitPools.length > 0 ||
+          sourceConfig.precisionPools.length > 0 ||
+          sourceConfig.shapePools.length > 0
+        const needsLsulpRate = sourceConfig.sources.lsulp || hasPoolPositions
+        const needsLsuMap = sourceConfig.sources.lsu || hasPoolPositions
+
         // 1. Fetch LSULP → XRD rate (mainnet only — address is hardcoded mainnet)
-        const lsulpToXrdRate = yield* Effect.if(isMainnet, {
+        const lsulpToXrdRate = yield* Effect.if(isMainnet && needsLsulpRate, {
           onTrue: () =>
             lsulpValueService({
               stateVersion: input.stateVersion
@@ -146,15 +154,20 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
 
         // 2-7. Create shared state once and run all positions
         return yield* Effect.gen(function* () {
-          // Build LSU converter map (ONE StateEntityDetails call)
-          const lsuConverterMap = yield* buildLsuConverterMap(
-            stateEntityDetails,
-            input.stateVersion
+          // Build LSU converter map (ONE StateEntityDetails call) — skip if not needed
+          const lsuConverterMap = yield* (needsLsuMap
+            ? buildLsuConverterMap(
+                stateEntityDetails,
+                input.stateVersion
+              ).pipe(
+                Effect.tap((map) =>
+                  Effect.log('VotePowerSnapshot LSU converter map', {
+                    lsuCount: HashMap.size(map)
+                  })
+                )
+              )
+            : Effect.succeed(HashMap.empty<FungibleResourceAddress, (amount: string) => string>())
           )
-
-          yield* Effect.log('VotePowerSnapshot LSU converter map', {
-            lsuCount: HashMap.size(lsuConverterMap)
-          })
 
           const getFungibleTokenBalance =
             yield* AccountBalanceState.createGetFungibleTokenBalanceFn
@@ -214,49 +227,61 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
             lsulpToXrdRate
           }
 
-          // All NFT resource addresses across all dapps
+          // All NFT resource addresses across enabled dapps
           const allNftResourceAddresses = [
-            ...OCISWAP_PRECISION_POOLS_V1.map((p) => p.lpResourceAddress),
-            ...OCISWAP_PRECISION_POOLS_V2.map((p) => p.lpResourceAddress),
-            ...CAVIARNINE_SHAPE_POOLS.map((p) => p.liquidity_receipt)
+            ...sourceConfig.precisionPools.map((p) => p.lpResourceAddress),
+            ...sourceConfig.shapePools.map((p) => p.liquidity_receipt)
           ]
 
+          // V1 component addresses for labeling precision pool versions
+          const v1ComponentAddresses = new Set(
+            OCISWAP_PRECISION_POOLS_V1_EPOCH_0.map((p) => p.componentAddress)
+          )
+
           const [poolUnitResult, precisionResult, shapeResult] =
-            yield* Effect.if(isMainnet, {
+            yield* Effect.if(isMainnet && hasPoolPositions, {
               onTrue: () =>
-                getNonFungibleBalance({
-                  addresses: input.addresses.map(String),
-                  at_ledger_state: { state_version: input.stateVersion },
-                  resourceAddresses: allNftResourceAddresses
-                }).pipe(
-                  Effect.catchTag('EntityNotFoundError', (error) =>
-                    Effect.gen(function* () {
-                      yield* Effect.logWarning(
-                        'NFT balances not found at state version',
-                        { error }
+                (allNftResourceAddresses.length > 0
+                  ? getNonFungibleBalance({
+                      addresses: input.addresses.map(String),
+                      at_ledger_state: { state_version: input.stateVersion },
+                      resourceAddresses: allNftResourceAddresses
+                    }).pipe(
+                      Effect.catchTag('EntityNotFoundError', (error) =>
+                        Effect.gen(function* () {
+                          yield* Effect.logWarning(
+                            'NFT balances not found at state version',
+                            { error }
+                          )
+                          return { items: [] as NftAccountBalance[] }
+                        })
                       )
-                      return { items: [] as NftAccountBalance[] }
-                    })
-                  ),
+                    )
+                  : Effect.succeed({ items: [] as NftAccountBalance[] })
+                ).pipe(
                   Effect.flatMap((nftBalances) =>
                     Effect.all(
                       [
                         poolUnitPosition({
                           addresses: input.addresses,
                           stateVersion: input.stateVersion,
-                          tokenFilterCtx
+                          tokenFilterCtx,
+                          pools: sourceConfig.poolUnitPools
                         }),
                         ociswapPrecisionPosition({
                           addresses: input.addresses,
                           stateVersion: input.stateVersion,
                           tokenFilterCtx,
-                          nftBalances
+                          nftBalances,
+                          pools: sourceConfig.precisionPools,
+                          v1ComponentAddresses
                         }),
                         caviarNineShapePosition({
                           addresses: input.addresses,
                           stateVersion: input.stateVersion,
                           tokenFilterCtx,
-                          nftBalances
+                          nftBalances,
+                          pools: sourceConfig.shapePools
                         })
                       ],
                       { concurrency: dexPositionConcurrency }
@@ -275,7 +300,7 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
                 ),
               onFalse: () =>
                 Effect.log(
-                  'VotePowerSnapshot: skipping DEX positions (non-mainnet)'
+                  'VotePowerSnapshot: skipping DEX positions (non-mainnet or disabled)'
                 ).pipe(
                   Effect.as(
                     [
@@ -298,9 +323,10 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
                 >()
               },
               (acc, address) => {
-                const xrd = computeXrd(address)
-                const lsu = computeLsu(address)
-                const lsulp = computeLsulp(address)
+                const zero = new BigNumber(0)
+                const xrd = sourceConfig.sources.xrd ? computeXrd(address) : zero
+                const lsu = sourceConfig.sources.lsu ? computeLsu(address) : zero
+                const lsulp = sourceConfig.sources.lsulp ? computeLsulp(address) : zero
                 const simple = R.get(
                   poolUnitResult.totals,
                   address

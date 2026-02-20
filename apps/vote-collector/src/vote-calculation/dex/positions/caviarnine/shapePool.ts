@@ -15,14 +15,13 @@ import { AccountAddress, type StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
 import s from 'sbor-ez-mode'
-import { CAVIARNINE_SHAPE_POOLS } from '../../constants/addresses'
 import { I192 } from './i192'
 import {
   GetQuantaSwapBinMap,
   type BinMapData
 } from './binMap'
 import { convertToXrd, type TokenFilterContext } from '../../tokenFilter'
-import type { NftAccountBalance, PoolContribution } from '../../types'
+import type { NftAccountBalance, PoolContribution, ShapePoolConfig } from '../../types'
 
 /** CaviarNine QuantaSwap component state schema */
 const TickIndex = s.struct({
@@ -125,11 +124,6 @@ const computeClaimsXrd = (
     return new BigNumber(xXrd).plus(yXrd)
   })
 
-/** Pre-built lookup: componentAddress → pool config (avoids O(n*m) .find()) */
-const poolByComponent = new Map(
-  CAVIARNINE_SHAPE_POOLS.map((p) => [p.componentAddress, p])
-)
-
 export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosition>()(
   'CaviarNineShapePosition',
   {
@@ -143,14 +137,20 @@ export class CaviarNineShapePosition extends Effect.Service<CaviarNineShapePosit
         stateVersion: StateVersion
         tokenFilterCtx: TokenFilterContext
         nftBalances: { items: NftAccountBalance[] }
+        pools: readonly ShapePoolConfig[]
       }) {
-        if (CAVIARNINE_SHAPE_POOLS.length === 0) {
+        if (input.pools.length === 0) {
           return { totals: R.empty(), breakdown: R.empty() }
         }
 
+        // Build lookup: componentAddress → pool config
+        const poolByComponent = new Map(
+          input.pools.map((p) => [p.componentAddress, p])
+        )
+
         // Fetch all shape pool component states
         const componentStates = yield* getComponentState.run({
-          addresses: CAVIARNINE_SHAPE_POOLS.map((p) => p.componentAddress),
+          addresses: input.pools.map((p) => p.componentAddress),
           schema: QuantaSwapSchema,
           at_ledger_state: { state_version: input.stateVersion }
         }).pipe(

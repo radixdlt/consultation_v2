@@ -18,7 +18,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 /** Ociswap V1 precision (concentrated liquidity) pools */
-export const OCISWAP_PRECISION_POOLS_V1: readonly PrecisionPoolConfig[] = [
+export const OCISWAP_PRECISION_POOLS_V1_EPOCH_0: readonly PrecisionPoolConfig[] = [
   {
     name: 'xwBTC/XRD',
     componentAddress:
@@ -70,7 +70,7 @@ export const OCISWAP_PRECISION_POOLS_V1: readonly PrecisionPoolConfig[] = [
 ]
 
 /** Ociswap V2 precision (concentrated liquidity) pools */
-export const OCISWAP_PRECISION_POOLS_V2: readonly PrecisionPoolConfig[] = [
+export const OCISWAP_PRECISION_POOLS_V2_EPOCH_0: readonly PrecisionPoolConfig[] = [
   {
     name: 'OCI/XRD',
     componentAddress:
@@ -198,7 +198,7 @@ export const OCISWAP_PRECISION_POOLS_V2: readonly PrecisionPoolConfig[] = [
 // ---------------------------------------------------------------------------
 
 /** All pool-unit-based (fungible LP) pools across all DEXes. */
-export const POOL_UNIT_POOLS: readonly PoolUnitPoolConfig[] = [
+export const POOL_UNIT_POOLS_EPOCH_0: readonly PoolUnitPoolConfig[] = [
   // Ociswap basic pools
   {
     name: 'Ociswap Basic: EARLY/XRD',
@@ -484,7 +484,7 @@ export const POOL_UNIT_POOLS: readonly PoolUnitPoolConfig[] = [
 // ---------------------------------------------------------------------------
 
 /** CaviarNine shape liquidity pools (concentrated, NFT receipt) — only those with XRD or LSULP */
-export const CAVIARNINE_SHAPE_POOLS: readonly ShapePoolConfig[] = [
+export const CAVIARNINE_SHAPE_POOLS_EPOCH_0: readonly ShapePoolConfig[] = [
   {
     name: 'LSULP/XRD',
     componentAddress:
