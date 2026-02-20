@@ -6,7 +6,8 @@ import {
   ComponentAddress,
   FungibleResourceAddress,
   PackageAddress,
-  AccountAddress
+  AccountAddress,
+  StateVersion
 } from '@radix-effects/shared'
 import {
   createAccount,
@@ -34,8 +35,11 @@ import {
   GovernanceConfigLayer
 } from 'shared/governance/config'
 import { GovernanceComponent } from 'shared/governance/governanceComponent'
-import { TemperatureCheckId } from 'shared/governance/brandedTypes'
-import { GetFungibleBalance } from '@radix-effects/gateway'
+import { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
+import {
+  GetFungibleBalance,
+  GetLedgerStateService
+} from '@radix-effects/gateway'
 import { PollService } from '../poll'
 import { ORM } from '../db/orm'
 import { PgContainer } from '../db/pgContainer'
@@ -60,7 +64,8 @@ class TestConfig extends Context.Tag('@TestConfig')<
 
 const TestLayer = Layer.mergeAll(
   TransactionHelper.Default,
-  GetFungibleBalance.Default
+  GetFungibleBalance.Default,
+  GetLedgerStateService.Default
 ).pipe(
   Layer.provideMerge(
     Layer.unwrapEffect(
@@ -160,12 +165,18 @@ const makeGovernanceConfigLayer = (componentAddress: ComponentAddress) =>
     )
   })
 
-const getXrdBalance = Effect.fn(function* (accountAddress: AccountAddress) {
+const getXrdBalance = Effect.fn(function* (
+  accountAddress: AccountAddress,
+  stateVersion: StateVersion
+) {
   const fungibleTokens = yield* GetFungibleBalance
   const config = yield* GovernanceConfig
 
   return yield* fungibleTokens({
-    addresses: [accountAddress]
+    addresses: [accountAddress],
+    at_ledger_state: {
+      state_version: stateVersion
+    }
   }).pipe(
     Effect.map((result) =>
       pipe(
@@ -347,6 +358,77 @@ const voteOnTemperatureCheck = Effect.fn(function* (
     .pipe(Effect.annotateLogs('manifest', 'voteOnTemperatureCheck'))
 })
 
+const createProposal = Effect.fn(function* (
+  temperatureCheckId: TemperatureCheckId
+) {
+  const transactionHelper = yield* TransactionHelper
+  const governanceComponent = yield* GovernanceComponent
+  const testConfig = yield* TestConfig
+
+  const manifest = yield* governanceComponent.makeProposalManifest({
+    accountAddress: testConfig.account.address,
+    temperatureCheckId
+  })
+
+  const proposalId = yield* transactionHelper
+    .submitTransaction({
+      manifest,
+      feePayer: { account: testConfig.account, amount: Amount.make('100') }
+    })
+    .pipe(
+      Effect.annotateLogs('manifest', 'createProposal'),
+      Effect.flatMap(({ id }) => transactionHelper.getCommittedDetails({ id })),
+      Effect.map((receipt) =>
+        pipe(
+          receipt.transaction.receipt?.events,
+          Option.fromNullable,
+          Option.flatMap((events) =>
+            A.findFirst(
+              events,
+              (event) => event.name === 'ProposalCreatedEvent'
+            )
+          ),
+          Option.getOrThrow,
+
+          (event) =>
+            event.data.kind === 'Tuple'
+              ? event.data.fields[0]?.kind === 'U64'
+                ? Option.some(Number(event.data.fields[0].value))
+                : Option.none()
+              : Option.none(),
+          Option.getOrThrow,
+          ProposalId.make
+        )
+      )
+    )
+
+  yield* Effect.log('Proposal id', proposalId)
+
+  return proposalId
+})
+
+const voteOnProposal = Effect.fn(function* (
+  proposalId: ProposalId,
+  optionIds: number[]
+) {
+  const transactionHelper = yield* TransactionHelper
+  const governanceComponent = yield* GovernanceComponent
+  const testConfig = yield* TestConfig
+
+  const manifest = yield* governanceComponent.makeProposalVoteManifest({
+    accountAddress: testConfig.account.address,
+    proposalId,
+    optionIds
+  })
+
+  yield* transactionHelper
+    .submitTransaction({
+      manifest,
+      feePayer: { account: testConfig.account, amount: Amount.make('100') }
+    })
+    .pipe(Effect.annotateLogs('manifest', 'voteOnProposal'))
+})
+
 const resetDatabase = Effect.fn(function* () {
   const db = yield* ORM
   const databaseMigrations = yield* DatabaseMigrations
@@ -362,8 +444,6 @@ live(
   'voteCalculation',
   () =>
     Effect.gen(function* () {
-      const db = yield* ORM
-
       yield* Effect.log('Bootstrapping test setup')
 
       // conditionally instantiate governance component
@@ -376,13 +456,34 @@ live(
         const voteCalculationRepo = yield* VoteCalculationRepo
         const poll = yield* PollService
         const testConfig = yield* TestConfig
+        const getLedgerState = yield* GetLedgerStateService
 
-        const xrdBalance = yield* getXrdBalance(testConfig.account.address)
-
-        yield* Effect.log('XRD balance', xrdBalance)
+        // Test flow:
+        // 1. Create temperature check, vote "For", assert vote power = XRD balance at epoch start
+        // 2. Revote "Against", assert vote power moved (Against = full, For = 0)
+        // 3. Create proposal from temperature check, vote option 0, assert vote power
+        // 4. Revote to option 1, assert vote power moved (option 1 = full, option 0 = 0)
 
         const temperatureCheckId = yield* createTemperatureCheck()
         yield* Effect.log('Temperature check id', temperatureCheckId)
+
+        const tc =
+          yield* governanceComponent.getTemperatureCheckById(temperatureCheckId)
+        const tcStartStateVersion = yield* getLedgerState({
+          at_ledger_state: {
+            timestamp: tc.start
+          }
+        }).pipe(
+          Effect.map((r) => StateVersion.make(r.state_version)),
+          Effect.orDie
+        )
+
+        const xrdBalanceAtTCStart = yield* getXrdBalance(
+          testConfig.account.address,
+          tcStartStateVersion
+        ).pipe(Effect.map((balance) => balance.toString()))
+
+        yield* Effect.log('XRD balance at TC start', xrdBalanceAtTCStart)
 
         yield* poll()
 
@@ -390,17 +491,22 @@ live(
 
         yield* poll()
 
-        const firstVoteResults = yield* voteCalculationRepo
-          .getResultsByEntity('temperature_check', temperatureCheckId)
-          .pipe(
-            Effect.tap((results) =>
-              Effect.log('Temperature check results', results)
-            )
-          )
-
         expect(
-          firstVoteResults.results.find((r) => r.vote === 'For')?.votePower
-        ).toBe(xrdBalance.toString())
+          xrdBalanceAtTCStart,
+          'XRD balance after temperature check vote'
+        ).toBe(
+          yield* voteCalculationRepo
+            .getResultsByEntity('temperature_check', temperatureCheckId)
+            .pipe(
+              Effect.tap((results) =>
+                Effect.log('Temperature check results', results)
+              ),
+              Effect.map(
+                (results) =>
+                  results.results.find((r) => r.vote === 'For')?.votePower
+              )
+            )
+        )
 
         // Revote
         yield* voteOnTemperatureCheck(temperatureCheckId, 'Against')
@@ -417,10 +523,69 @@ live(
 
         expect(
           revoteResults.results.find((r) => r.vote === 'Against')?.votePower
-        ).toBe(xrdBalance.toString())
+        ).toBe(xrdBalanceAtTCStart)
 
         expect(
           Number(revoteResults.results.find((r) => r.vote === 'For')?.votePower)
+        ).toBe(0)
+
+        // --- Proposal tests ---
+
+        const proposalId = yield* createProposal(temperatureCheckId)
+        yield* Effect.log('Proposal id', proposalId)
+
+        const proposal = yield* governanceComponent.getProposalById(proposalId)
+        const proposalStartStateVersion = yield* getLedgerState({
+          at_ledger_state: {
+            timestamp: proposal.start
+          }
+        }).pipe(
+          Effect.map((r) => StateVersion.make(r.state_version)),
+          Effect.orDie
+        )
+        const xrdBalanceAtProposalStart = yield* getXrdBalance(
+          testConfig.account.address,
+          proposalStartStateVersion
+        ).pipe(Effect.map((balance) => balance.toString()))
+
+        yield* voteOnProposal(proposalId, [0])
+
+        yield* poll()
+
+        const proposalFirstVoteResults = yield* voteCalculationRepo
+          .getResultsByEntity('proposal', proposalId)
+          .pipe(
+            Effect.tap((results) =>
+              Effect.log('Proposal first vote results', results)
+            )
+          )
+
+        expect(
+          proposalFirstVoteResults.results.find((r) => r.vote === '0')
+            ?.votePower
+        ).toBe(xrdBalanceAtProposalStart)
+
+        // Revote to second option
+        yield* voteOnProposal(proposalId, [1])
+
+        yield* poll()
+
+        const proposalRevoteResults = yield* voteCalculationRepo
+          .getResultsByEntity('proposal', proposalId)
+          .pipe(
+            Effect.tap((results) =>
+              Effect.log('Proposal revote results', results)
+            )
+          )
+
+        expect(
+          proposalRevoteResults.results.find((r) => r.vote === '1')?.votePower
+        ).toBe(xrdBalanceAtProposalStart)
+
+        expect(
+          Number(
+            proposalRevoteResults.results.find((r) => r.vote === '0')?.votePower
+          )
         ).toBe(0)
       }).pipe(
         Effect.provide(
