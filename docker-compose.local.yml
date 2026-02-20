@@ -1,0 +1,36 @@
+services:
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/local.conf.template:/etc/nginx/templates/default.conf.template:ro
+
+  certbot:
+    profiles:
+      - disabled
+
+  consultation:
+    build:
+      args:
+        VITE_VOTE_COLLECTOR_URL: http://${API_DOMAIN}
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: consultation
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  vote-collector:
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/consultation
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:

@@ -1,0 +1,29 @@
+# Consultation dApp
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+
+    location / {
+        proxy_pass http://consultation:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Vote Collector API
+server {
+    listen 80;
+    server_name ${API_DOMAIN};
+
+    location / {
+        limit_req zone=api burst=20 nodelay;
+
+        proxy_pass http://vote-collector:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
