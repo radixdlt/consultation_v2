@@ -52,3 +52,6 @@ scrypto/target/
 
 .repos
 .notes
+
+# Let's Encrypt certificates & challenge files
+certbot/

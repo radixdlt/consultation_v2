@@ -133,38 +133,104 @@ Check CloudWatch Logs for the `Poll` and `Api` Lambda functions to confirm execu
 
 ## Deploying with Docker
 
-As an alternative to SST/Lambda, the vote collector can run as a plain Node.js HTTP server deployed via Docker Compose. This bundles the API endpoints and the poll scheduler into a single process — no AWS account required.
+As an alternative to SST/Lambda, the vote collector can run as a plain Node.js HTTP server deployed via Docker Compose with nginx reverse proxy and automatic TLS via Let's Encrypt. No AWS account required.
 
-```sh
-docker compose -f docker-compose.production.yml up --build
-```
+### Prerequisites
+
+- Docker and Docker Compose
+- An external PostgreSQL instance (e.g. managed Postgres, Supabase, Neon)
+- DNS A records for two subdomains pointing to your server (e.g. `app.example.com`, `api.example.com`)
+- If using Cloudflare: set SSL/TLS mode to **Full (Strict)**
 
 ### Services
 
-| Service | Port | Description |
-| --- | --- | --- |
-| `vote-collector` | 3001 | Hono HTTP server + embedded poll scheduler |
-| `consultation` | 3000 | Vite + React consultation dApp |
-
-> An external PostgreSQL instance is required. Set `DATABASE_URL` in your `.env` file.
+| Service | Description |
+| --- | --- |
+| `nginx` | Reverse proxy with TLS termination (ports 80 + 443) |
+| `certbot` | Automatic certificate renewal (checks every 12h) |
+| `consultation` | Vite + React consultation dApp (internal port 3000) |
+| `vote-collector` | Hono HTTP server + embedded poll scheduler (internal port 3001) |
 
 ### Environment variables
 
-Set these in your shell or a `.env` file alongside `docker-compose.production.yml`:
+Copy `.env.example` to `.env` and fill in the values:
 
 | Variable | Description | Default |
 | --- | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string | — (required) |
 | `NETWORK_ID` | Radix network (`1` = mainnet, `2` = stokenet) | — |
-| `SERVER_PORT` | HTTP server listen port | `3001` |
-| `ENV` | Environment name | `production` |
+| `APP_DOMAIN` | Consultation dApp domain (e.g. `app.example.com`) | — (required) |
+| `API_DOMAIN` | Vote collector API domain (e.g. `api.example.com`) | — (required) |
+| `CERTBOT_EMAIL` | Email for Let's Encrypt notifications | — (required) |
+| `CERTBOT_STAGING` | Set to `1` for staging certs (testing) | `0` |
+| `VITE_PUBLIC_DAPP_DEFINITION_ADDRESS` | Radix dApp definition address | — |
+| `VITE_PUBLIC_NETWORK_ID` | Radix network ID for the dApp | `2` |
+
+### First-time setup
+
+```sh
+cp .env.example .env
+# Edit .env with your values
+
+# Test with staging certs first (avoids Let's Encrypt rate limits)
+CERTBOT_STAGING=1 bash init-letsencrypt.sh
+
+# Once verified, delete certbot/conf and re-run for production certs
+rm -rf certbot/conf
+bash init-letsencrypt.sh
+
+# Start all services
+docker compose -f docker-compose.production.yml up -d
+```
+
+### Certificate renewal
+
+Certbot automatically checks for renewal every 12 hours. However, nginx needs a reload to pick up new certs. Add a host cron job:
+
+```sh
+# Reload nginx every 12 hours to pick up renewed certificates
+0 */12 * * * docker compose -f docker-compose.production.yml exec nginx nginx -s reload
+```
+
+> **Alternative**: For zero-renewal setups behind Cloudflare, consider using a [Cloudflare Origin CA certificate](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/) (15-year validity) instead of Let's Encrypt.
 
 ### Verify
 
 ```sh
-curl 'http://localhost:3001/vote-results?type=proposal&entityId=1'
-curl 'http://localhost:3001/account-votes?type=proposal&entityId=1'
+curl "https://$APP_DOMAIN"
+curl "https://$API_DOMAIN/vote-results?type=proposal&entityId=1"
 ```
+
+### Local testing
+
+To test the nginx routing, headers, and rate limiting locally without TLS or real DNS:
+
+1. Add local DNS entries to `/etc/hosts`:
+
+   ```
+   127.0.0.1 app.local api.local
+   ```
+
+2. Set domains in `.env`:
+
+   ```
+   APP_DOMAIN=app.local
+   API_DOMAIN=api.local
+   ```
+
+3. Start with the local override (HTTP-only, no certbot):
+
+   ```sh
+   docker compose -f docker-compose.production.yml -f docker-compose.local.yml up --build
+   ```
+
+4. Verify:
+
+   ```sh
+   curl http://app.local                                              # consultation HTML
+   curl http://api.local/vote-results?type=proposal&entityId=1        # API response
+   docker compose -f docker-compose.production.yml -f docker-compose.local.yml exec nginx nginx -t  # config test
+   ```
 
 ## Useful commands
 
