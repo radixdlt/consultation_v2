@@ -232,6 +232,39 @@ To test the nginx routing, headers, and rate limiting locally without TLS or rea
    docker compose -f docker-compose.production.yml -f docker-compose.local.yml exec nginx nginx -t  # config test
    ```
 
+## Deploying Consultation (standalone)
+
+The consultation app is a [TanStack Start](https://tanstack.com/start) app that builds to a [Nitro](https://nitro.build) server output, deployable to any Node.js host, Vercel, Netlify, Cloudflare, and more.
+
+### Build
+
+```sh
+pnpm -F consultation-dapp build
+```
+
+This produces a `.output/` directory containing the standalone server.
+
+The following env vars are **baked at build time** (Vite static replacement) and must be set before building:
+
+| Variable | Description |
+| --- | --- |
+| `VITE_ENV` | Environment name (e.g. `production`) |
+| `VITE_VOTE_COLLECTOR_URL` | Vote collector API base URL |
+| `VITE_PUBLIC_DAPP_DEFINITION_ADDRESS` | Radix dApp definition address |
+| `VITE_PUBLIC_NETWORK_ID` | Radix network ID |
+
+### Run
+
+```sh
+NITRO_HOST=0.0.0.0 NITRO_PORT=3000 node .output/server/index.mjs
+```
+
+### Platform presets
+
+For platform-specific deployments (Vercel, Netlify, Cloudflare, etc.), see the [TanStack Start hosting guide](https://tanstack.com/start/latest/docs/framework/react/guide/hosting).
+
+For Docker-based deployment, see [Deploying with Docker](#deploying-with-docker) above.
+
 ## Useful commands
 
 | Command | What it does |
