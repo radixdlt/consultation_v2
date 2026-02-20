@@ -14,6 +14,7 @@ import { GovernanceComponent } from 'shared/governance/index'
 import type { VoteCalculationPayload } from './types'
 import { VoteCalculationRepo } from './voteCalculationRepo'
 import { VotePowerSnapshot } from './votePowerSnapshot'
+import { getVotePowerConfig } from './voteSourceConfig'
 
 type DedupedVote = { accountAddress: AccountAddress; votes: string[] }
 
@@ -227,9 +228,12 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
             Schedule.intersect(Schedule.recurs(3))
           )
 
+          const sourceConfig = getVotePowerConfig(new Date(startDate))
+
           const { votePower } = yield* votePowerSnapshot({
             addresses,
-            stateVersion: snapshotStateVersion
+            stateVersion: snapshotStateVersion,
+            sourceConfig
           }).pipe(Effect.retry(retryPolicy), Effect.orDie)
 
           return votePower

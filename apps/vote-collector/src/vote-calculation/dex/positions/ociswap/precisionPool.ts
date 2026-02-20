@@ -15,10 +15,6 @@ import { AccountAddress, type StateVersion } from '@radix-effects/shared'
 import { Array as A, Effect, Option, pipe, Record as R } from 'effect'
 import s from 'sbor-ez-mode'
 import BigNumber from 'bignumber.js'
-import {
-  OCISWAP_PRECISION_POOLS_V1,
-  OCISWAP_PRECISION_POOLS_V2
-} from '../../constants/addresses'
 import type { NftAccountBalance, PoolContribution, PrecisionPoolConfig } from '../../types'
 import { convertToXrd, type TokenFilterContext } from '../../tokenFilter'
 import { Decimal, removableAmounts, tickToPriceSqrt } from './tickCalculator'
@@ -36,19 +32,10 @@ const LiquidityPositionSchema = s.struct({
   right_bound: s.number()
 })
 
-const allPrecisionPools: readonly PrecisionPoolConfig[] = [
-  ...OCISWAP_PRECISION_POOLS_V1,
-  ...OCISWAP_PRECISION_POOLS_V2
-]
-
-const poolVersion = (pool: PrecisionPoolConfig): string =>
-  pipe(
-    OCISWAP_PRECISION_POOLS_V1,
-    A.findFirst((p) => p.componentAddress === pool.componentAddress),
-    Option.isSome
-  )
-    ? 'V1'
-    : 'V2'
+const poolVersion = (
+  pool: PrecisionPoolConfig,
+  v1Addresses: ReadonlySet<string>
+): string => (v1Addresses.has(pool.componentAddress) ? 'V1' : 'V2')
 
 export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPosition>()(
   'OciswapPrecisionPosition',
@@ -62,14 +49,16 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
         stateVersion: StateVersion
         tokenFilterCtx: TokenFilterContext
         nftBalances: { items: NftAccountBalance[] }
+        pools: readonly PrecisionPoolConfig[]
+        v1ComponentAddresses?: ReadonlySet<string>
       }) {
-        if (allPrecisionPools.length === 0) {
+        if (input.pools.length === 0) {
           return { totals: R.empty(), breakdown: R.empty() }
         }
 
         // Fetch all precision pool component states
         const poolStates = yield* getComponentState.run({
-          addresses: allPrecisionPools.map((p) => p.componentAddress),
+          addresses: input.pools.map((p) => p.componentAddress),
           schema: PrecisionPoolSchema,
           at_ledger_state: { state_version: input.stateVersion }
         }).pipe(
@@ -91,8 +80,10 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
 
         // Build lookup: lpResourceAddress → pool config
         const poolByLpResource = new Map(
-          allPrecisionPools.map((p) => [p.lpResourceAddress, p])
+          input.pools.map((p) => [p.lpResourceAddress, p])
         )
+
+        const v1Addresses = input.v1ComponentAddresses ?? new Set<string>()
 
         // Process each account declaratively
         return pipe(
@@ -179,7 +170,7 @@ export class OciswapPrecisionPosition extends Effect.Service<OciswapPrecisionPos
                         : [
                             ...innerAcc.contributions,
                             {
-                              poolName: `Ociswap Precision ${poolVersion(pool)}: ${pool.name}`,
+                              poolName: `Ociswap Precision ${poolVersion(pool, v1Addresses)}: ${pool.name}`,
                               poolType: 'precision' as const,
                               componentAddress: pool.componentAddress,
                               xrdValue: poolXrd.toFixed()
