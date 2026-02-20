@@ -29,6 +29,7 @@ import {
   findEpoch,
   getVotePowerConfig,
   VOTE_POWER_EPOCHS,
+  type VotePowerEpochConfig,
   type VotePowerSourceConfig
 } from '../vote-calculation/voteSourceConfig'
 import fixture from './fixtures/votePowerSnapshot.fixture.json'
@@ -111,12 +112,19 @@ describe('Vote Power Snapshot', () => {
     async () => {
       const accountAddress = AccountAddress.make(fixture.account)
       const stateVersion = StateVersion.make(fixture.stateVersion)
+      const epoch0 = VOTE_POWER_EPOCHS[0]
+
+      // Resolve an epoch config (with defaults) into a VotePowerSourceConfig
+      const resolve = (config: Omit<VotePowerEpochConfig, 'effectiveFrom'>) =>
+        findEpoch([{ effectiveFrom: new Date(0), ...config }], new Date(0))
 
       // Step 1: Disable shape pools
-      const noShapeConfig: VotePowerSourceConfig = {
-        ...allSourcesConfig,
-        shapePools: []
-      }
+      const noShapeConfig = resolve({
+        sources: epoch0.sources,
+        precisionPoolsV1: epoch0.precisionPoolsV1,
+        precisionPoolsV2: epoch0.precisionPoolsV2,
+        poolUnitPools: epoch0.poolUnitPools
+      })
       const noShapeResult = await runSnapshot(
         noShapeConfig,
         accountAddress,
@@ -126,10 +134,10 @@ describe('Vote Power Snapshot', () => {
       expect(noShapeTotal).toBeLessThan(Number(fixture.total))
 
       // Step 2: Also disable precision pools
-      const noPrecisionConfig: VotePowerSourceConfig = {
-        ...noShapeConfig,
-        precisionPools: []
-      }
+      const noPrecisionConfig = resolve({
+        sources: epoch0.sources,
+        poolUnitPools: epoch0.poolUnitPools
+      })
       const noPrecisionResult = await runSnapshot(
         noPrecisionConfig,
         accountAddress,
@@ -141,10 +149,9 @@ describe('Vote Power Snapshot', () => {
       expect(noPrecisionTotal).toBeLessThan(noShapeTotal)
 
       // Step 3: Also disable pool unit pools
-      const noPoolUnitConfig: VotePowerSourceConfig = {
-        ...noPrecisionConfig,
-        poolUnitPools: []
-      }
+      const noPoolUnitConfig = resolve({
+        sources: epoch0.sources
+      })
       const noPoolUnitResult = await runSnapshot(
         noPoolUnitConfig,
         accountAddress,
@@ -156,10 +163,9 @@ describe('Vote Power Snapshot', () => {
       expect(noPoolUnitTotal).toBeLessThan(noPrecisionTotal)
 
       // Step 4: Also disable LSULP
-      const noLsulpConfig: VotePowerSourceConfig = {
-        ...noPoolUnitConfig,
-        sources: { ...noPoolUnitConfig.sources, lsulp: false }
-      }
+      const noLsulpConfig = resolve({
+        sources: new Set(['xrd', 'lsu'])
+      })
       const noLsulpResult = await runSnapshot(
         noLsulpConfig,
         accountAddress,
@@ -169,10 +175,9 @@ describe('Vote Power Snapshot', () => {
       expect(noLsulpTotal).toBeLessThan(noPoolUnitTotal)
 
       // Step 5: Also disable LSU → XRD-only
-      const xrdOnlyConfig: VotePowerSourceConfig = {
-        ...noLsulpConfig,
-        sources: { xrd: true, lsu: false, lsulp: false }
-      }
+      const xrdOnlyConfig = resolve({
+        sources: new Set(['xrd'])
+      })
       const xrdOnlyResult = await runSnapshot(
         xrdOnlyConfig,
         accountAddress,
@@ -195,42 +200,38 @@ describe('findEpoch', () => {
   it('returns the correct epoch for a given date', () => {
     // With only epoch 0 (effectiveFrom: Date(0)), all dates should return it
     const config = getVotePowerConfig(new Date('2025-01-01'))
-    expect(config).toBe(VOTE_POWER_EPOCHS[VOTE_POWER_EPOCHS.length - 1])
-    expect(config.sources.xrd).toBe(true)
-    expect(config.sources.lsu).toBe(true)
-    expect(config.sources.lsulp).toBe(true)
-    expect(config.precisionPools.length).toBeGreaterThan(0)
+    expect(config.effectiveFrom).toStrictEqual(new Date(0))
+    expect(config.sources.has('xrd')).toBe(true)
+    expect(config.sources.has('lsu')).toBe(true)
+    expect(config.sources.has('lsulp')).toBe(true)
+    expect(
+      config.precisionPoolsV1.length + config.precisionPoolsV2.length
+    ).toBeGreaterThan(0)
     expect(config.poolUnitPools.length).toBeGreaterThan(0)
     expect(config.shapePools.length).toBeGreaterThan(0)
   })
 
   it('selects the correct epoch when multiple epochs exist', () => {
-    const epoch0: VotePowerSourceConfig = {
+    const epoch0: VotePowerEpochConfig = {
       effectiveFrom: new Date(0),
-      sources: { xrd: true, lsu: true, lsulp: true },
-      precisionPools: [],
-      poolUnitPools: [],
-      shapePools: []
+      sources: new Set(['xrd', 'lsu', 'lsulp'])
     }
 
-    const epoch1: VotePowerSourceConfig = {
-      effectiveFrom: new Date('2026-06-01'),
-      sources: { xrd: true, lsu: false, lsulp: false },
-      precisionPools: [],
-      poolUnitPools: [],
-      shapePools: []
+    const epoch1: VotePowerEpochConfig = {
+      effectiveFrom: new Date('2026-06-01T00:00:00.000Z'),
+      sources: new Set(['xrd'])
     }
 
     // Ordered newest-first (same as VOTE_POWER_EPOCHS convention)
     const epochs = [epoch1, epoch0]
 
     // Before epoch 1 → should get epoch 0
-    expect(findEpoch(epochs, new Date('2025-01-01'))).toBe(epoch0)
+    expect(findEpoch(epochs, new Date('2025-01-01')).effectiveFrom).toStrictEqual(epoch0.effectiveFrom)
 
     // After epoch 1 → should get epoch 1
-    expect(findEpoch(epochs, new Date('2026-07-01'))).toBe(epoch1)
+    expect(findEpoch(epochs, new Date('2026-07-01')).effectiveFrom).toStrictEqual(epoch1.effectiveFrom)
 
     // Boundary: effectiveFrom is inclusive
-    expect(findEpoch(epochs, new Date('2026-06-01'))).toBe(epoch1)
+    expect(findEpoch(epochs, new Date('2026-06-01T00:00:00.000Z')).effectiveFrom).toStrictEqual(epoch1.effectiveFrom)
   })
 })

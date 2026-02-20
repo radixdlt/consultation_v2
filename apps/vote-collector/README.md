@@ -53,11 +53,8 @@ This way each epoch is a self-contained snapshot: past proposals always recalcul
 ```ts
 // In VOTE_POWER_EPOCHS, prepend before the existing epoch:
 {
-  effectiveFrom: new Date('2026-06-01'),
-  sources: { xrd: true, lsu: false, lsulp: false },
-  precisionPools: [],
-  poolUnitPools: [],
-  shapePools: []
+  effectiveFrom: new Date('2026-06-01T00:00:00.000Z'),
+  sources: new Set(['xrd'])
 }
 ```
 

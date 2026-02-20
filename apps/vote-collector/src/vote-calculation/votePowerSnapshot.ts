@@ -41,9 +41,6 @@ import {
 } from 'shared/snapshot/accountBalanceState'
 import { GovernanceConfig } from 'shared/governance/config'
 import { LSULP_RESOURCE_ADDRESS } from './dex/constants/assets'
-import {
-  OCISWAP_PRECISION_POOLS_V1_EPOCH_0
-} from './dex/constants/addresses'
 import { buildLsuConverterMap, getLsuResourceAddresses } from './lsuConverter'
 import type { VotePowerSourceConfig } from './voteSourceConfig'
 import { LsulpValue } from './dex/positions/caviarnine/lsulpValue'
@@ -107,12 +104,16 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
         sourceConfig: VotePowerSourceConfig
       }) {
         const { sourceConfig } = input
+        const allPrecisionPools = [
+          ...sourceConfig.precisionPoolsV1,
+          ...sourceConfig.precisionPoolsV2
+        ]
         const hasPoolPositions =
           sourceConfig.poolUnitPools.length > 0 ||
-          sourceConfig.precisionPools.length > 0 ||
+          allPrecisionPools.length > 0 ||
           sourceConfig.shapePools.length > 0
-        const needsLsulpRate = sourceConfig.sources.lsulp || hasPoolPositions
-        const needsLsuMap = sourceConfig.sources.lsu || hasPoolPositions
+        const needsLsulpRate = sourceConfig.sources.has('lsulp') || hasPoolPositions
+        const needsLsuMap = sourceConfig.sources.has('lsu') || hasPoolPositions
 
         // 1. Fetch LSULP → XRD rate (mainnet only — address is hardcoded mainnet)
         const lsulpToXrdRate = yield* Effect.if(isMainnet && needsLsulpRate, {
@@ -229,13 +230,13 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
 
           // All NFT resource addresses across enabled dapps
           const allNftResourceAddresses = [
-            ...sourceConfig.precisionPools.map((p) => p.lpResourceAddress),
+            ...allPrecisionPools.map((p) => p.lpResourceAddress),
             ...sourceConfig.shapePools.map((p) => p.liquidity_receipt)
           ]
 
           // V1 component addresses for labeling precision pool versions
           const v1ComponentAddresses = new Set(
-            OCISWAP_PRECISION_POOLS_V1_EPOCH_0.map((p) => p.componentAddress)
+            sourceConfig.precisionPoolsV1.map((p) => p.componentAddress)
           )
 
           const [poolUnitResult, precisionResult, shapeResult] =
@@ -273,7 +274,7 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
                           stateVersion: input.stateVersion,
                           tokenFilterCtx,
                           nftBalances,
-                          pools: sourceConfig.precisionPools,
+                          pools: allPrecisionPools,
                           v1ComponentAddresses
                         }),
                         caviarNineShapePosition({
@@ -324,9 +325,9 @@ export class VotePowerSnapshot extends Effect.Service<VotePowerSnapshot>()(
               },
               (acc, address) => {
                 const zero = new BigNumber(0)
-                const xrd = sourceConfig.sources.xrd ? computeXrd(address) : zero
-                const lsu = sourceConfig.sources.lsu ? computeLsu(address) : zero
-                const lsulp = sourceConfig.sources.lsulp ? computeLsulp(address) : zero
+                const xrd = sourceConfig.sources.has('xrd') ? computeXrd(address) : zero
+                const lsu = sourceConfig.sources.has('lsu') ? computeLsu(address) : zero
+                const lsulp = sourceConfig.sources.has('lsulp') ? computeLsulp(address) : zero
                 const simple = R.get(
                   poolUnitResult.totals,
                   address
