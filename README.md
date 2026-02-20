@@ -1,6 +1,12 @@
 # Consultation & Vote Collector
 
+A governance dApp for Radix DLT. The on-chain Scrypto blueprints manage temperature checks, proposals, and voting. The web app displays votes and counts results off-chain.
 
+## On-Chain Setup
+
+Before running the web app, you need a deployed Governance component on the Radix ledger. See [`scrypto/README.md`](scrypto/README.md) for the full guide — building the blueprints, deploying the package, creating an owner badge, instantiating the component, and creating admin badges.
+
+After deployment, update the governance addresses in `packages/shared/src/governance/config.ts` — the `TODO_*` placeholders for `packageAddress`, `componentAddress`, and `adminBadgeAddress` must be replaced with the addresses from your deployment (see [step 5 in the Scrypto README](scrypto/README.md#5-configure-the-web-app)).
 
 ## Prerequisites
 
@@ -84,8 +90,10 @@ Set `VITE_VOTE_COLLECTOR_URL` to the API Gateway URL printed by SST above. You c
 
 > **Mainnet only**: populate the governance addresses in
 > `packages/shared/src/governance/config.ts` (`GovernanceConfig.MainnetLive`) —
-> `componentAddress`, `adminBadgeAddress` are currently
-> set to `TODO_*` placeholders.
+> `packageAddress`, `componentAddress`, and `adminBadgeAddress`
+> are currently set to `TODO_*` placeholders. These come from deploying and
+> instantiating a Governance component — see [`scrypto/README.md`](scrypto/README.md#deploying-to-ledger)
+> for the full walkthrough.
 
 ### Deploy
 
@@ -278,12 +286,14 @@ For Docker-based deployment, see [Deploying with Docker](#deploying-with-docker)
 ## Project structure
 
 ```
+scrypto/              Radix Scrypto blueprints (Governance + VoteDelegation)
 apps/
-  vote-collector/   Vote collector — SST serverless (Lambda + Cron) or HTTP server (Hono + Docker)
-  consultation/     Vite + React consultation dApp (TanStack Router)
+  vote-collector/     Vote collector — SST serverless (Lambda + Cron) or HTTP server (Hono + Docker)
+  consultation/       Vite + React consultation dApp (TanStack Router)
 packages/
-  database/         Drizzle ORM schema & migrations
-  shared/           Shared types and utilities
+  database/           Drizzle ORM schema & migrations
+  shared/             Shared types and utilities (includes governance config)
 ```
 
+See [`scrypto/README.md`](scrypto/README.md) for blueprint documentation and deployment guide.
 See [`apps/vote-collector/README.md`](apps/vote-collector/README.md) for architecture details, SST configuration, and custom domains.
