@@ -99,6 +99,42 @@ After deployment, update the governance config in `packages/shared/src/governanc
 
 See the [root README](../README.md) for full web app setup and deployment instructions.
 
+### 6. Set up the dApp definition
+
+After instantiating the component, link it to a **dApp definition account**. This establishes a two-way relationship between your dApp and the component, which the Radix wallet uses to display dApp metadata when users interact with it.
+
+> **Tip**: Use an entirely fresh account as the dApp definition — don't reuse a personal account.
+
+#### Configure the dApp definition account
+
+Go to [console.radixdlt.com/configure-metadata](https://console.radixdlt.com/configure-metadata), input the dApp definition **account address**, and select **Account type: dApp Definition**.
+
+Set the following metadata fields:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `name` | Name of the dApp | `Radix Consultation V2` |
+| `description` | Short description | `Governance on Radix, by the Radix community` |
+| `icon_url` | *(optional)* URL to a dApp icon (displayed in the wallet) | `https://example.com/icon.png` |
+| `claimed_entities` | The component address from step 4 — click "Add claimed entity" | `component_rdx1c...` |
+| `claimed_websites` | URL of the consultation front-end you're hosting | `https://consultation.example.com` |
+
+Send the transaction to the wallet.
+
+#### Configure the component metadata
+
+Go to the same [configure-metadata](https://console.radixdlt.com/configure-metadata) page again, but this time input the **component address** from step 4.
+
+Set the following metadata fields:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `name` | Short name | `Radix Consultation V2` |
+| `description` | Short description | `Component that manages voting for Consultation V2` |
+| `dapp_definition` | The dApp definition account address from above | `account_rdx1...` |
+
+Send the transaction. You've now established a two-way link between the dApp definition and the component.
+
 ## Governance Component
 
 ### Methods
