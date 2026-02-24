@@ -6,6 +6,7 @@
 		"check-types": "tsc --noEmit",
 		"dev": "tsx --watch src/http-server.ts",
 		"dev:inspect": "tsx --inspect-brk src/index.ts",
+		"tally": "tsx scripts/tally.ts",
 		"test": "vitest",
 		"sst:dev": "sst dev --stage local",
 		"sst:remove:local": "sst remove --stage local",

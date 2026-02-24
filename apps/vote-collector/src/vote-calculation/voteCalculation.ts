@@ -4,19 +4,21 @@ import BigNumber from 'bignumber.js'
 import {
   Array as A,
   Effect,
-  flow,
   Option,
   pipe,
   Record as R,
   Schedule
 } from 'effect'
 import { GovernanceComponent } from 'shared/governance/index'
+import {
+  type DedupedVote,
+  fetchDedupedProposalVotes,
+  fetchDedupedTemperatureCheckVotes
+} from './dedupeVotes'
 import type { VoteCalculationPayload } from './types'
 import { VoteCalculationRepo } from './voteCalculationRepo'
 import { VotePowerSnapshot } from './votePowerSnapshot'
 import { getVotePowerConfig } from './voteSourceConfig'
-
-type DedupedVote = { accountAddress: AccountAddress; votes: string[] }
 
 const flattenVotes = (
   dedupedVotes: ReadonlyArray<DedupedVote>,
@@ -140,35 +142,9 @@ export class VoteCalculation extends Effect.Service<VoteCalculation>()(
         }
 
         if (payload.type === 'temperature_check') {
-          return governance.getTemperatureCheckVotesByIndex(params).pipe(
-            Effect.map(
-              flow(
-                A.reverse,
-                A.dedupeWith((a, b) => a.accountAddress === b.accountAddress),
-                A.map(
-                  (v): DedupedVote => ({
-                    accountAddress: v.accountAddress,
-                    votes: [v.vote]
-                  })
-                )
-              )
-            )
-          )
+          return fetchDedupedTemperatureCheckVotes(governance, params)
         }
-        return governance.getProposalVotesByIndex(params).pipe(
-          Effect.map(
-            flow(
-              A.reverse,
-              A.dedupeWith((a, b) => a.accountAddress === b.accountAddress),
-              A.map(
-                (v): DedupedVote => ({
-                  accountAddress: v.accountAddress,
-                  votes: v.options.map(String)
-                })
-              )
-            )
-          )
-        )
+        return fetchDedupedProposalVotes(governance, params)
       }
 
       const classifyVotes = (

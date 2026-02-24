@@ -58,11 +58,47 @@ This way each epoch is a self-contained snapshot: past proposals always recalcul
 }
 ```
 
+## Verify Vote Results (Tally Script)
+
+The `tally` script lets you independently verify the result of any temperature check or proposal by reading votes directly from the Radix blockchain. No database, no API, no running services required -- just a network connection to the Radix Gateway.
+
+This is useful when you want to confirm that what someone else's front-end is showing you is actually true. The script fetches everything from the ledger itself, so the results are independently verifiable.
+
+### Usage
+
+```bash
+# Tally a temperature check
+pnpm tally tc <id>
+
+# Tally a proposal
+pnpm tally proposal <id>
+```
+
+| Variable | Required | Description |
+|---|---|---|
+| `NETWORK_ID` | Yes | `1` for mainnet, `2` for stokenet |
+| `COMPONENT_ADDRESS` | No | Override the governance component address (defaults to the address for the given network) |
+
+### Example
+
+```powershell
+# PowerShell
+$env:NETWORK_ID = 1
+$env:COMPONENT_ADDRESS = "component_rdx1czn9hrgd30x742k6jw2e6psj9jlkqvu2cj4hcry60p7f38hxd3k3xt"
+pnpm tally tc 0
+```
+
+```bash
+# bash / macOS / Linux
+NETWORK_ID=1 COMPONENT_ADDRESS=component_rdx1czn9hrgd30x742k6jw2e6psj9jlkqvu2cj4hcry60p7f38hxd3k3xt pnpm tally tc 0
+```
+
 ## Scripts
 
 | Script | Command | Description |
 | --- | --- | --- |
 | `dev` | `tsx --watch src/http-server.ts` | Hono HTTP server with hot reload |
+| `tally` | `tsx scripts/tally.ts` | Independently verify vote results from the blockchain |
 | `sst:dev` | `sst dev --stage local` | Local dev with live Lambda emulation |
 | `sst:deploy:stokenet` | `sst deploy --stage stokenet` | Deploy to stokenet stage |
 | `sst:deploy:mainnet` | `sst deploy --stage production` | Deploy to production stage |
