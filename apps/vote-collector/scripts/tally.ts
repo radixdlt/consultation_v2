@@ -16,19 +16,22 @@ import { GetLedgerStateService } from '@radix-effects/gateway'
 import type { AccountAddress } from '@radix-effects/shared'
 import { ComponentAddress, StateVersion } from '@radix-effects/shared'
 import BigNumber from 'bignumber.js'
+import { NodeRuntime } from '@effect/platform-node'
 import {
   Config,
   Effect,
   Layer,
   Logger,
-  ManagedRuntime,
   Option,
   Record as R,
   Schedule,
   pipe
 } from 'effect'
 import { GovernanceComponent } from 'shared/governance/index'
-import { GovernanceConfig } from 'shared/governance/config'
+import {
+  GovernanceConfig,
+  UnsupportedNetworkIdError
+} from 'shared/governance/config'
 import type { ProposalId, TemperatureCheckId } from 'shared/governance/brandedTypes'
 import { GatewayApiClientLayer } from 'shared/gateway'
 import {
@@ -53,7 +56,13 @@ const TallyGovernanceConfigLayer = Layer.unwrapEffect(
     const baseConfig =
       networkId === 1
         ? GovernanceConfig.MainnetLive
-        : GovernanceConfig.StokenetLive
+        : networkId === 2
+          ? GovernanceConfig.StokenetLive
+          : yield* Effect.fail(
+              new UnsupportedNetworkIdError({
+                message: `NETWORK_ID must be 1 (mainnet) or 2 (stokenet), got: ${networkId}`,
+              })
+            )
 
     if (Option.isSome(overrideAddress)) {
       return Layer.effect(
@@ -78,8 +87,6 @@ const TallyLayer = Layer.mergeAll(
   Layer.provideMerge(TallyGovernanceConfigLayer),
   Layer.provideMerge(Logger.pretty)
 )
-
-const runtime = ManagedRuntime.make(TallyLayer)
 
 const tallyTemperatureCheck = (id: number) =>
   Effect.gen(function* () {
@@ -215,10 +222,12 @@ const printResults = (
       R.get(votePower, voter.accountAddress),
       Option.getOrElse(() => new BigNumber(0))
     )
+    if (voter.votes.length > 0) {
+      totalPower = totalPower.plus(power)
+    }
     for (const vote of voter.votes) {
       const current = optionTotals.get(vote) ?? new BigNumber(0)
       optionTotals.set(vote, current.plus(power))
-      totalPower = totalPower.plus(power)
     }
   }
 
@@ -306,10 +315,4 @@ const program =
       ? tallyProposal(id)
       : Effect.die(`Unknown type: ${type}. Use "tc" or "proposal".`)
 
-runtime.runPromise(program).then(
-  () => process.exit(0),
-  (error) => {
-    console.error('Tally failed:', error)
-    process.exit(1)
-  }
-)
+NodeRuntime.runMain(program.pipe(Effect.provide(TallyLayer)))
